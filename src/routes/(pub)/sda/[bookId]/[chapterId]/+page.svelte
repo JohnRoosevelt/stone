@@ -6,7 +6,6 @@
   function onselectionchange() {
     selection = document.getSelection().toString();
     console.log(selection);
-    
   }
 </script>
 
