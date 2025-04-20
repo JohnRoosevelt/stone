@@ -87,6 +87,6 @@ export default defineConfig({
     ['flex-cx', 'flex justify-center'],
     ['flex-cy', 'flex items-center'],
     ['scroll-y', 'overflow-y-auto custom-noscrollbar'],
-    ['my-transition', 'duration-500 ease-in-out transition-all'],
+    ['transition300', 'duration-300 ease-in-out transition-all'],
   ],
 })
