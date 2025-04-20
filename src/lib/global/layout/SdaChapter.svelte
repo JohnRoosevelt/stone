@@ -1,5 +1,6 @@
 <script>
   import { page } from "$app/state";
+  import { DATAS } from "$lib/data.svelte";
 
   const { children, data } = $props();
 
@@ -69,6 +70,16 @@
   <button aria-label="setting">
     <span i-carbon-settings></span>
   </button>
+
+  <button
+    aria-label="lang"
+    onclick={() => {
+      DATAS.showEnglish = !DATAS.showEnglish;
+    }}
+  >
+    <span i-carbon-language></span>
+  </button>
+
   <button aria-label="media" text-gray>
     <span i-carbon-media-library></span>
   </button>
