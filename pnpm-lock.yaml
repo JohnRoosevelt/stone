@@ -29,6 +29,9 @@ importers:
       '@unocss/extractor-svelte':
         specifier: 66.1.0-beta.11
         version: 66.1.0-beta.11
+      '@zerodevx/svelte-toast':
+        specifier: ^0.9.6
+        version: 0.9.6(svelte@5.25.9)
       svelte:
         specifier: ^5.0.0
         version: 5.25.9
@@ -525,6 +528,11 @@ packages:
 
   '@vue/shared@3.5.13':
     resolution: {integrity: sha512-/hnE/qP5ZoGpol0a5mDi45bOd7t3tjYJBjsgCsivow7D48cJeV5l05RD82lPqi7gRiphZM37rnhW1l6ZoCNNnQ==}
+
+  '@zerodevx/svelte-toast@0.9.6':
+    resolution: {integrity: sha512-nHlTrCjverlPK9yukK6fqbG3e/R+f10ldrc4nJHOe2qNDScuPTuYVSFEk2dDDtzWAwTN5pmdEXgA3M2RbT8jiw==}
+    peerDependencies:
+      svelte: ^3.57.0 || ^4.0.0 || ^5.0.0
 
   acorn@8.14.1:
     resolution: {integrity: sha512-OvQ/2pUDKmgfCg++xsTX1wGxfTaszcHVcTctW4UJB4hibJx2HXxxO5UmVgyjMa+ZDsiaf5wWLXYpRWMmBI0QHg==}
@@ -1366,6 +1374,10 @@ snapshots:
       vue: 3.5.13
 
   '@vue/shared@3.5.13': {}
+
+  '@zerodevx/svelte-toast@0.9.6(svelte@5.25.9)':
+    dependencies:
+      svelte: 5.25.9
 
   acorn@8.14.1: {}
 

@@ -1,7 +1,9 @@
 <script>
   import { DATAS } from "$lib/data.svelte";
+  import RouteLoading from "$lib/global/RouteLoading.svelte";
   import { setTheme } from "$lib/setTheme.svelte";
   import { wakeLock } from "$lib/wakeLock";
+  import { SvelteToast } from "@zerodevx/svelte-toast";
 
   const { children } = $props();
 
@@ -19,6 +21,9 @@
     setTheme(DATAS.isDarkMode ? "dark" : "light");
   });
 </script>
+
+<SvelteToast options={{}} />
+<RouteLoading />
 
 <svelte:window bind:online={DATAS.online} />
 <!-- <svelte:window bind:online={DATAS.online} /> -->

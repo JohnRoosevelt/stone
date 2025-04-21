@@ -20,7 +20,7 @@
 
 <article w-full px-5 pb-12 space-y-2>
   {#each data.chapterZh as { t, p, c }, i}
-    {#if DATAS.showEnglish}
+    {#if DATAS.showSdaEnglish}
       <p
         data-t={t}
         data-p={p + "˼"}
@@ -32,9 +32,8 @@
         class:top-0={t == 4}
         bg={t == 4 ? "white dark:black" : ""}
         class:z-2={t == 4}
-        class:indent-2={t == 7}
-        before={t == 7
-          ? `content-[attr(data-p)] absolute -indent-2 text-green`
+        before={t == 7 && true
+          ? `content-[attr(data-p)] absolute text-green`
           : ""}
         after={t == 7 && false ? `content-[attr(data-p)] ml-3 text-green` : ""}
       >
