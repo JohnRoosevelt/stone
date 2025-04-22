@@ -35,6 +35,7 @@
   overflow-hidden
   flex-col
   flex-bc
+  z-0
   bg="#EDF1F0"
   text="black/85"
   dark="bg-[#111615] text-white"

@@ -1,30 +1,54 @@
 <script>
   import { navigating } from "$app/state";
-  import Dialog from "./Dialog.svelte";
+  import { Diamonds } from "svelte-loading-spinners";
 
-  let open = $state(true);
+  let p = $state(0);
+
+  $effect(() => {
+    if (!navigating.to) {
+      p = 1;
+      return;
+    }
+    p = 0;
+    function next() {
+      p += 0.1;
+      const remaining = 1 - p;
+      if (remaining > 0.15) setTimeout(next, 500 / remaining);
+    }
+    setTimeout(next, 250);
+  });
 </script>
 
-<Dialog bind:open={navigating.to} autoClose={false}>
-  <section flex-cc p-4 bg="white dark:black" text-10 rounded-2>
-    <span i-carbon-download></span>
+{#if navigating.to}
+  <section class="fade" flex-col flex-bc>
+    <div justify="self-start" w-full h-1>
+      <div h-full bg="#5cb85c" style="width: {p * 100}%"></div>
+    </div>
+    <div flex-1 flex-cc>
+      <div bg="white dark:black" size="20" border="1 green/20" inset-shadow="sm green/40" rounded="full" flex-cc>
+          <Diamonds size="32" color="green" unit="px" duration="1s" />
+      </div>
+    </div>
   </section>
-</Dialog>
+{/if}
 
 <style>
-  span {
-    opacity: 0;
-    animation: slideDown 2s infinite ease-in-out forwards;
+  .fade {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.3);
+    /* pointer-events: none; */
+    z-index: 999;
+    animation: fade 0.4s;
   }
 
-  @keyframes slideDown {
-    0% {
+  @keyframes fade {
+    from {
       opacity: 0;
-      transform: translateY(-30px);
     }
-    100% {
+    to {
       opacity: 1;
-      transform: translateY(0);
     }
   }
 </style>
