@@ -1,21 +1,28 @@
 <script>
-	let { open = $bindable(false), children, autoClose = true } = $props();
+	let {
+		open = $bindable(false),
+		children,
+		autoClose = true,
+		animate = {},
+	} = $props();
 
 	function show(dialog) {
-		const handleClick = (event) => {
+		function handleClick(event) {
 			event.stopPropagation();
 
 			if (open && event.target == dialog && autoClose) {
 				open = false;
 			}
-		};
+		}
 
-		$effect(() => {
+		$effect(async () => {
 			if (open) {
 				dialog.showModal();
+				await setAnimate(dialog);
 				document.body.style.overflow = "hidden";
 				document.addEventListener("click", handleClick);
 			} else {
+				await setAnimate(dialog, false);
 				dialog.close();
 				document.body.style.overflow = "";
 				document.removeEventListener("click", handleClick);
@@ -23,44 +30,38 @@
 		});
 	}
 
-	function slideFromBottom(node, { duration = 300 }) {
-		return {
-			duration,
-			css: (t) => {
-				const eased = cubicOut(t);
-				return `
-          transform: translateY(${(1 - eased) * 100}%); 
-          opacity: ${eased};
-        `;
-			},
-		};
-	}
+	async function setAnimate(dialog, isIn = true) {
+		const child = Array.from(dialog.children)[0];
+		for (let [key, value] of Object.entries(animate)) {
+			child.style[key] = value[isIn ? 0 : 1];
+		}
 
-	function slideToBottom(node, { duration = 300 }) {
-		return {
-			duration,
-			css: (t) => {
-				const eased = cubicOut(t);
-				return `
-          transform: translateY(${(1 - eased) * -100}%); 
-          opacity: ${eased};
-        `;
-			},
-		};
+		child.style.transition = `all 300ms ease-${isIn ? "in-out" : "in-out"}`;
+
+		for (let [key, value] of Object.entries(animate)) {
+			child.style[key] = value[isIn ? 1 : 0];
+		}
+		return new Promise((resove) => {
+			setTimeout(resove, 300);
+		});
 	}
 </script>
 
-<!-- in:slideFromBottom={{ duration: 500 }}
-      out:slideToBottom={{ duration: 500 }} -->
 <dialog overflow="visible" use:show bg="transparent" m="auto">
 	{@render children?.()}
 </dialog>
 
 <style>
-	::backdrop {
+	dialog::backdrop {
 		background: black;
-		backdrop-filter: blur(70px);
-		box-shadow: 0 3px 5px rgba(0, 0, 0, 0.3);
+		transition: all 300ms ease-in-out;
+	}
+
+	dialog[open]::backdrop {
 		opacity: 0.6;
+	}
+
+	dialog:not([open])::backdrop {
+		opacity: 0;
 	}
 </style>

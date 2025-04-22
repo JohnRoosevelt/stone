@@ -13,15 +13,15 @@
 
 <Setting />
 
-<svelte:window
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<section
+  flex-1
+  h-full
+  bind:clientHeight
   onmousedown={() => {
-    setTimeout(() => {
-      isShow = !isShow;
-    }, 0);
+    isShow = !isShow;
   }}
-/>
-
-<section flex-1 h-full bind:clientHeight>
+>
   <article
     w-full
     style:height="{clientHeight}px"
@@ -83,6 +83,7 @@
       aria-label="setting"
       onclick={() => {
         DATAS.isOpenSdaSeting = true;
+        isShow = false;
       }}
     >
       <span i-carbon-settings></span>
@@ -93,6 +94,7 @@
       class:text-gray={DATAS.showSdaEnglish}
       onclick={() => {
         DATAS.showSdaEnglish = !DATAS.showSdaEnglish;
+        isShow = false;
       }}
     >
       <span i-carbon-language></span>
@@ -110,6 +112,7 @@
           document.getElementById("top").scrollIntoView({
             behavior: "smooth",
           });
+          isShow = false;
         }}
         href="/sda/{page.params.bookId}"
       >
@@ -123,6 +126,7 @@
           document.getElementById("top").scrollIntoView({
             behavior: "smooth",
           });
+          isShow = false;
         }}
         href="/sda/{page.params.bookId}/{page.params.chapterId - 1}"
       >
@@ -136,6 +140,7 @@
           document.getElementById("top").scrollIntoView({
             behavior: "smooth",
           });
+          isShow = false;
         }}
         href="/sda/{page.params.bookId}/{Number(page.params.chapterId) + 1}"
       >

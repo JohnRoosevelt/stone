@@ -2,5 +2,6 @@ export const DATAS = $state({
   online: false,
   isDarkMode: false,
   showSdaEnglish: false,
-  isOpenSdaSeting: false
+  isOpenSdaSeting: false,
+  test: false
 })
