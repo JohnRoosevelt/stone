@@ -1,7 +1,7 @@
 <script>
   import { page } from "$app/state";
   import { showId } from "$lib";
-  import { DATAS } from "$lib/data.svelte";
+  import { DATAS, TOUCHP } from "$lib/data.svelte";
   import { info } from "$lib/global/Toast";
   import Chapter from "$lib/sda/Chapter.svelte";
   import DialogChapter from "$lib/sda/DialogChapter.svelte";
@@ -26,23 +26,53 @@
   });
 
   function articleSection(node) {
+    let isLongPress = false;
+    let pressTimer = 0;
+
     function handleClick(event) {
       isShow = !isShow;
     }
 
-    function handleDblClick(event) {
+    function handleMousedown(event) {
       // console.log(event.target, event.target.getAttribute("data-area"));
       // if (!event.target.getAttribute("data-area")) {
       // }
-      info("test");
+
+      const lang = event.target.getAttribute("data-lang");
+      const pIndex = event.target.getAttribute("data-i");
+
+       if (!lang || !pIndex) {
+        return
+       }
+
+      pressTimer = setTimeout(() => {
+        isLongPress = true;
+        console.log("长按触发！", {lang, pIndex});
+        // info("test");
+        TOUCHP[pIndex] = TOUCHP[pIndex] || {}
+        TOUCHP[pIndex][lang] = true
+      }, 500);
+    }
+
+    function handleMouseup() {
+      clearTimeout(pressTimer);
     }
 
     $effect(() => {
       node.addEventListener("click", handleClick);
-      node.addEventListener("dblclick", handleDblClick);
+      node.addEventListener("mousedown", handleMousedown);
+      node.addEventListener("mouseup", handleMouseup);
+      node.addEventListener("touchstart", handleMousedown);
+      node.addEventListener("touchend", handleMouseup);
+      node.addEventListener("touchmove", handleMouseup);
 
       return () => {
         node.removeEventListener("click", handleClick);
+        node.removeEventListener("mousedown", handleMousedown);
+        node.removeEventListener("mouseup", handleMouseup);
+        node.removeEventListener("touchstart", handleMousedown);
+        node.removeEventListener("touchend", handleMouseup);
+        node.removeEventListener("touchmove", handleMouseup);
       };
     });
   }
@@ -103,12 +133,7 @@
       bg="gray-100 dark:gray-900"
     >
       <div flex-cc>
-        <a
-          href="/sda"
-          data-sveltekit-replacestate
-          flex-cc
-          gap-px
-        >
+        <a href="/sda" data-sveltekit-replacestate flex-cc gap-px>
           <span i-carbon-chevron-left text-6 text-green></span>
           <span underline underline-offset-4 flex-shrink-0 text-3
             >{data.book.name}</span

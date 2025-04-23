@@ -6,3 +6,5 @@ export const DATAS = $state({
   isOpenChapterDir: false,
   test: false
 })
+
+export const TOUCHP = $state({})

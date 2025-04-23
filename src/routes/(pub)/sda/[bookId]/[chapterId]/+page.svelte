@@ -1,10 +1,11 @@
 <script>
   import { afterNavigate } from "$app/navigation";
-  import { DATAS } from "$lib/data.svelte.js";
+  import { DATAS, TOUCHP } from "$lib/data.svelte.js";
   import { onMount } from "svelte";
 
   const { data } = $props();
   // console.log(data);
+  $inspect(TOUCHP);
 
   let selection = $state("");
 </script>
@@ -20,10 +21,12 @@
   }}
 /> -->
 
-<article w-full px-5 pb-12 space-y-2 sm="pb-0">
+<article w-full pb-12 space-y-2 sm="pb-0">
   {#each data.chapterZh as { t, p, c }, i}
     {#if DATAS.showSdaEnglish}
       <p
+        px-5
+      class:bg-blue-100={TOUCHP[i]?.zh}
         data-lang="en"
         data-t={t}
         data-p={p + "˼"}
@@ -45,6 +48,8 @@
     {/if}
 
     <p
+      px-5
+      class:bg-blue-100={TOUCHP[i]?.zh}
       data-lang="zh"
       data-t={t}
       data-p={p + "˼"}
