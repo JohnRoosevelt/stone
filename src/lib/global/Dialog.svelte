@@ -32,6 +32,7 @@
 
 	async function setAnimate(dialog, isIn = true) {
 		const child = Array.from(dialog.children)[0];
+		if (!child) return;
 		for (let [key, value] of Object.entries(animate)) {
 			child.style[key] = value[isIn ? 0 : 1];
 		}

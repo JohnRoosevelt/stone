@@ -1,16 +1,40 @@
 <script>
   import { page } from "$app/state";
+  import { DATAS } from "$lib/data.svelte";
+  import { onMount } from "svelte";
 
   const { data } = $props();
   let clientHeight = $state(0);
-  console.log(data);
+  // console.log(data);
 
   $effect(() => {
     data.bookId;
-    document.getElementById("top-chapter").scrollIntoView({
-      behavior: "smooth",
-    });
+    showId("chapter-top");
   });
+
+  $effect(() => {
+    DATAS.isOpenChapterDir;
+    if (DATAS.isOpenChapterDir) {
+      // showId(`chapter-${page.data.chapterId}`);
+      setTimeout(() => {
+        showId(`chapter-${page.data.chapterId}`);
+      }, 0);
+    }
+  });
+
+  let scrollPercentage = $state(0);
+
+  function showId(id) {
+    const element = document.getElementById(id);
+    console.log(id, element);
+    if (element) {
+      element.scrollIntoView({
+        block: "end",
+        inline: "end",
+        behavior: "smooth",
+      });
+    }
+  }
 </script>
 
 <article w-full h-full overflow-hidden relative bind:clientHeight>
@@ -20,12 +44,21 @@
     relative
     space-y-px
     scroll-y
-    pb-12
-    sm="pb-0"
+    pt-12
+    sm="pt-0"
+    onscroll={(event) => {
+      const { scrollTop, scrollHeight, clientHeight } = event.target;
+
+      scrollPercentage = Math.round(
+        (scrollTop / (scrollHeight - clientHeight)) * 100,
+      );
+      // console.log({ scrollPercentage, scrollTop, scrollHeight, clientHeight });
+    }}
   >
-    <div h-1px id="top-chapter"></div>
-    {#each data.dirZh as { n }, i}
+    <div h-1px id="chapter-top"></div>
+    {#each data?.dirZh as { n }, i}
       <a
+        id="chapter-{i + 1}"
         data-sveltekit-replacestate
         href="/sda/{data.bookId}/{i + 1}"
         h-10
@@ -41,16 +74,69 @@
         {n}
       </a>
     {/each}
-    <div h-1px id="foot-chapter"></div>
+    <div h-1px id="chapter-bottom"></div>
   </section>
 
-  <div absolute bottom-0 w-full h-12 flex-bc px-3 bg="white dark:black" sm="hidden">
+  <div
+    absolute
+    top-0
+    w-full
+    h-12
+    flex-bc
+    px-3
+    bg="white dark:black"
+    sm="hidden"
+  >
     <button>
       {data.book.name} 目录
     </button>
 
-    <a data-sveltekit-replacestate text-green href="/sda">
+    <!-- <a data-sveltekit-replacestate text-green href="/sda">
       书籍目录
-    </a>
+    </a> -->
+  </div>
+
+  <div
+    absolute
+    z-3
+    bottom-4
+    right-4
+    text-5
+    grid="~ cols-1"
+    gap-2
+    bg="gray-200"
+    px-2
+    py-4
+    rounded-4
+  >
+    {#if scrollPercentage > 5}
+      <button
+        aria-label="scroll-to-top"
+        flex-cc
+        text-green
+        onclick={() => {
+          showId("chapter-top");
+        }}
+      >
+        <span i-carbon-up-to-top></span>
+      </button>
+    {/if}
+
+    <div size-5 overflow-visible flex-cc>
+      <span text-3> {scrollPercentage}% </span>
+    </div>
+
+    {#if scrollPercentage < 95}
+      <button
+        aria-label="scroll-to-bottom"
+        flex-cc
+        text-green
+        onclick={() => {
+          showId("chapter-bottom");
+        }}
+      >
+        <span i-carbon-down-to-bottom></span>
+      </button>
+    {/if}
   </div>
 </article>

@@ -5,6 +5,7 @@
 
   let clientHeight = $state(0);
   let activeId = $state("");
+  let selectId = $state("");
 
   const fav = [
     { name: "先祖与先知", id: 1 },
@@ -105,7 +106,10 @@
 
   <section absolute w-auto h-full top-0 right-4 z-3 flex-col flex-cc gap-px>
     <button
-      onclick={() => showId("fav")}
+      onclick={() => {
+        selectId = "fav";
+        showId("fav");
+      }}
       aria-label="fav"
       size-6
       flex-cc
@@ -113,14 +117,19 @@
       rounded-1
       class={activeId === "fav"
         ? "text-green font-700 bg-gray-200 dark:(bg-gray-600)"
-        : "bg-gray-300 dark:(bg-gray-800)"}
+        : selectId == "fav"
+          ? "text-red bg-gray-300 dark:(bg-gray-800)"
+          : "bg-gray-300 dark:(bg-gray-800)"}
     >
       <span i-carbon-star-filled></span>
     </button>
 
     {#each Object.entries(groupByTag) as [tag]}
       <button
-        onclick={() => showId(tag)}
+        onclick={() => {
+          selectId = tag;
+          showId(tag);
+        }}
         aria-label={tag}
         size-6
         flex-cc
@@ -128,7 +137,9 @@
         rounded-1
         class={activeId === tag
           ? "text-green font-700 bg-gray-200 dark:(bg-gray-600)"
-          : "bg-gray-300 dark:(bg-gray-800)"}
+          : selectId == tag
+            ? "text-red bg-gray-300 dark:(bg-gray-800)"
+            : "bg-gray-300 dark:(bg-gray-800)"}
         >{tag}
       </button>
     {/each}
@@ -137,7 +148,7 @@
 
 {#snippet Rbook(book)}
   <div flex-bc h-12 px-3 pr-12 bg-gray-100 dark="bg-gray-700">
-    <a flex-1 href="/sda/{book.id}">
+    <a flex-1 href="/sda/{book.id}/1">
       <p class:text-green={page.params.bookId == book.id}>
         {book.name}
       </p>

@@ -14,7 +14,7 @@
 <svelte:document
   onselectionchange={() => {
     selection = document.getSelection().toString();
-    console.log(selection);
+    console.log({selection});
   }}
 />
 

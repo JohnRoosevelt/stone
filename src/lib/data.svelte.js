@@ -3,5 +3,6 @@ export const DATAS = $state({
   isDarkMode: false,
   showSdaEnglish: false,
   isOpenSdaSeting: false,
+  isOpenChapterDir: false,
   test: false
 })
