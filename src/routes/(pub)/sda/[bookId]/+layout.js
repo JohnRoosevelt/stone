@@ -1,7 +1,10 @@
 import { PUBLIC_R2 } from '$env/static/public';
 import books from "$lib/sda.json";
 
-export async function load({ parent, fetch, params: { bookId } }) {  
+export async function load(args) {  
+  const { parent, fetch, params: { bookId } } = args
+  // console.log(args);
+  
   const book = books.find(i => i.id == bookId)
 
   async function getBookDir(bookId, lang) {

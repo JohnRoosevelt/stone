@@ -1,12 +1,13 @@
 <script>
   import { page } from "$app/state";
+  import { showId } from "$lib";
   import { DATAS } from "$lib/data.svelte";
   import Chapter from "$lib/sda/Chapter.svelte";
   import DialogChapter from "$lib/sda/DialogChapter.svelte";
   import Setting from "$lib/sda/Setting.svelte";
+  import { onMount } from "svelte";
   import { slide } from "svelte/transition";
 
-  $inspect(page);
   const { data, children } = $props();
 
   let clientHeight = $state(0);
@@ -17,19 +18,16 @@
   let isShow = $state(false);
   let scrollPercentage = $state(0);
 
+  onMount(() => {
+    return () => {
+      DATAS.isOpenChapterDir = false;
+    };
+  });
+
   $effect(() => {
     page.params.chapterId;
     showId("article-top");
   });
-
-  function showId(id) {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({
-        behavior: "smooth",
-      });
-    }
-  }
 
   function articleSection(node) {
     function handleClick(event) {
@@ -50,14 +48,14 @@
 
 <svelte:window bind:innerWidth />
 {#if isMobile}
-  <DialogChapter {data} />
+  <DialogChapter />
 {/if}
 <Setting />
 
 <article data-layout="bookId" w-full h-full flex-bc>
   {#if !isMobile}
     <section w-60 h-full flex-shrink-0>
-      <Chapter {data} />
+      <Chapter />
     </section>
   {/if}
 
@@ -108,7 +106,6 @@
           gap-px
           onclick={() => {
             history.back();
-            console.log("xxx");
           }}
         >
           <span i-carbon-chevron-left text-6 text-green></span>

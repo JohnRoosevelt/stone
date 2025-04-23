@@ -5,6 +5,7 @@
   import { wakeLock } from "$lib/wakeLock";
   import { SvelteToast } from "@zerodevx/svelte-toast";
 
+  // $inspect(DATAS.isOpenChapterDir).with(console.trace);
   const { children } = $props();
 
   function handleVisibilityChange() {

@@ -2,6 +2,8 @@
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import books from "$lib/sda.json";
+  import { DATAS } from "$lib/data.svelte";
+  import { showId } from "$lib";
 
   let clientHeight = $state(0);
   let activeId = $state("");
@@ -51,15 +53,6 @@
   onMount(() => {
     observeHeaders();
   });
-
-  function showId(id) {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({
-        behavior: "smooth",
-      });
-    }
-  }
 </script>
 
 <article bind:clientHeight w-full h-full relative overflow-hidden>
@@ -108,7 +101,7 @@
     <button
       onclick={() => {
         selectId = "fav";
-        showId("fav");
+        showId("fav", 'start');
       }}
       aria-label="fav"
       size-6
@@ -128,7 +121,7 @@
       <button
         onclick={() => {
           selectId = tag;
-          showId(tag);
+          showId(tag, 'start');
         }}
         aria-label={tag}
         size-6

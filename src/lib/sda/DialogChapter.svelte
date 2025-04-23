@@ -3,16 +3,7 @@
   import Dialog from "$lib/global/Dialog.svelte";
   import Chapter from "./Chapter.svelte";
 
-  const { data } = $props();
-
-  let open = {
-    get value() {
-      return DATAS.isOpenChapterDir;
-    },
-    set value(v) {
-      DATAS.isOpenChapterDir = v;
-    },
-  };
+  // const { data } = $props();
 
   function chapterWrap(node) {
     function handleClick() {
@@ -33,7 +24,7 @@
 </script>
 
 <Dialog
-  bind:open={open.value}
+  bind:open={DATAS.isOpenChapterDir}
   animate={{
     opacity: [0, 1],
     transform: ["translateX(-100%)", "translateX(0)"],
@@ -49,6 +40,6 @@
     overflow-hidden
     use:chapterWrap
   >
-    <Chapter {data} />
+    <Chapter />
   </article>
 </Dialog>

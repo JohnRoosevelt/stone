@@ -1,5 +1,7 @@
 <script>
+  import { afterNavigate } from "$app/navigation";
   import { DATAS } from "$lib/data.svelte.js";
+  import { onMount } from "svelte";
 
   const { data } = $props();
   // console.log(data);
@@ -11,12 +13,12 @@
   <title>{data.book.name} {data.titleZh}</title>
 </svelte:head>
 
-<svelte:document
+<!-- <svelte:document
   onselectionchange={() => {
     selection = document.getSelection().toString();
     console.log({selection});
   }}
-/>
+/> -->
 
 <article w-full px-5 pb-12 space-y-2 sm="pb-0">
   {#each data.chapterZh as { t, p, c }, i}

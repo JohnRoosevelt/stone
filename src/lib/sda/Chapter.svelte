@@ -1,40 +1,41 @@
 <script>
+  import { afterNavigate } from "$app/navigation";
   import { page } from "$app/state";
+  import { showId } from "$lib";
   import { DATAS } from "$lib/data.svelte";
-  import { onMount } from "svelte";
 
-  const { data } = $props();
-  let clientHeight = $state(0);
+  // const { data } = $props();
   // console.log(data);
 
-  $effect(() => {
-    data.bookId;
-    showId("chapter-top");
-  });
-
-  $effect(() => {
-    DATAS.isOpenChapterDir;
-    if (DATAS.isOpenChapterDir) {
-      // showId(`chapter-${page.data.chapterId}`);
-      setTimeout(() => {
-        showId(`chapter-${page.data.chapterId}`);
-      }, 0);
-    }
-  });
+  let clientHeight = $state(0);
 
   let scrollPercentage = $state(0);
 
-  function showId(id) {
-    const element = document.getElementById(id);
-    console.log(id, element);
-    if (element) {
-      element.scrollIntoView({
-        block: "end",
-        inline: "end",
-        behavior: "smooth",
-      });
+  $effect(() => {
+    if (DATAS.isOpenChapterDir) {
+      showId(`chapter-${page.data.chapterId}`);
     }
-  }
+  });
+
+  afterNavigate(({ from, to }) => {
+    console.log({ from, to });
+
+    // if (!from.route.id) return;
+
+    const isSameRoute = from.route.id === to.route.id;
+    if (!isSameRoute) {
+      return setTimeout(() => {
+        DATAS.isOpenChapterDir = true;
+      }, 300);
+    }
+
+    const isSameBook = from.params.bookId === to.params.bookId;
+    if (isSameBook) {
+      return showId(`chapter-${page.data.chapterId}`);
+    }
+
+    showId("chapter-top");
+  });
 </script>
 
 <article w-full h-full overflow-hidden relative bind:clientHeight>
@@ -56,11 +57,11 @@
     }}
   >
     <div h-1px id="chapter-top"></div>
-    {#each data?.dirZh as { n }, i}
+    {#each page.data?.dirZh as { n }, i}
       <a
         id="chapter-{i + 1}"
         data-sveltekit-replacestate
-        href="/sda/{data.bookId}/{i + 1}"
+        href="/sda/{page.data.bookId}/{i + 1}"
         h-10
         flex
         pl-3
@@ -88,7 +89,7 @@
     sm="hidden"
   >
     <button>
-      {data.book.name} 目录
+      {page.data.book.name} 目录
     </button>
 
     <!-- <a data-sveltekit-replacestate text-green href="/sda">
