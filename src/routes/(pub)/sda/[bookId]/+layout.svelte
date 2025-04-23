@@ -26,7 +26,7 @@
 
   $effect(() => {
     page.params.chapterId;
-    showId("article-top");
+    showId("article-top", "end");
   });
 
   function articleSection(node) {
@@ -125,8 +125,8 @@
               text-green
               onclick={(event) => {
                 // event.stopPropagation();
-                event.preventDefault();
-                showId("article-top");
+                // event.preventDefault();
+                showId("article-top", "end");
               }}
             >
               <span i-carbon-up-to-top></span>

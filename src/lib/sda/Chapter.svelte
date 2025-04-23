@@ -34,7 +34,7 @@
       return showId(`chapter-${page.data.chapterId}`);
     }
 
-    showId("chapter-top");
+    showId("chapter-top", "end");
   });
 </script>
 
@@ -116,7 +116,7 @@
         flex-cc
         text-green
         onclick={() => {
-          showId("chapter-top");
+          showId("chapter-top", "end");
         }}
       >
         <span i-carbon-up-to-top></span>
