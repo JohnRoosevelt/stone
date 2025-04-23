@@ -24,6 +24,7 @@
   {#each data.chapterZh as { t, p, c }, i}
     {#if DATAS.showSdaEnglish}
       <p
+        data-lang="en"
         data-t={t}
         data-p={p + "˼"}
         data-i={i}
@@ -44,6 +45,7 @@
     {/if}
 
     <p
+      data-lang="zh"
       data-t={t}
       data-p={p + "˼"}
       data-i={i}

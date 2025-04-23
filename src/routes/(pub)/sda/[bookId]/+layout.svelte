@@ -2,6 +2,7 @@
   import { page } from "$app/state";
   import { showId } from "$lib";
   import { DATAS } from "$lib/data.svelte";
+  import { info } from "$lib/global/Toast";
   import Chapter from "$lib/sda/Chapter.svelte";
   import DialogChapter from "$lib/sda/DialogChapter.svelte";
   import Setting from "$lib/sda/Setting.svelte";
@@ -31,13 +32,19 @@
 
   function articleSection(node) {
     function handleClick(event) {
+      isShow = !isShow;
+    }
+
+    function handleDblClick(event) {
       // console.log(event.target, event.target.getAttribute("data-area"));
       // if (!event.target.getAttribute("data-area")) {
       // }
-      isShow = !isShow;
+      info("test");
     }
+
     $effect(() => {
       node.addEventListener("click", handleClick);
+      node.addEventListener("dblclick", handleDblClick);
 
       return () => {
         node.removeEventListener("click", handleClick);
@@ -112,51 +119,49 @@
           <span underline underline-offset-4 flex-shrink-0 text-3
             >{data.book.name}</span
           >
-          <span text-3 truncate mx-2>{page.data.titleZh}</span>
+          <span text-3 truncate mx-1>{page.data.titleZh}</span>
         </button>
       </div>
 
-      <div text-5 flex-cc gap-2 flex="shrink-0">
-        <div flex-cc gap-2px>
-          {#if scrollPercentage > 5}
-            <button
-              aria-label="scroll-to-top"
-              flex-cc
-              text-green
-              onclick={(event) => {
-                // event.stopPropagation();
-                // event.preventDefault();
-                showId("article-top", "end");
-              }}
-            >
-              <span i-carbon-up-to-top></span>
-            </button>
-          {/if}
+      <div
+        text-5
+        grid="~ cols-3"
+        text="gray"
+        flex="shrink-0"
+        bg="gray-200"
+        divide="x-2 gray-100"
+        rounded-4
+      >
+        <button
+          aria-label="scroll-to-top"
+          flex-cc
+          px-1
+          py-px
+          class:text-green={scrollPercentage !== 0}
+          onclick={(event) => {
+            // event.stopPropagation();
+            // event.preventDefault();
+            showId("article-top", "end");
+          }}
+        >
+          <span i-carbon-up-to-top></span>
+        </button>
 
+        <div overflow-visible flex-cc size="auto">
           <span text-3> {scrollPercentage}% </span>
-
-          {#if scrollPercentage < 95}
-            <button
-              aria-label="scroll-to-bottom"
-              flex-cc
-              text-green
-              onclick={() => {
-                showId("article-bottom");
-              }}
-            >
-              <span i-carbon-down-to-bottom></span>
-            </button>
-          {/if}
         </div>
 
         <button
-          aria-label="share"
+          aria-label="scroll-to-bottom"
           flex-cc
+          px-1
+          py-px
+          class:text-green={scrollPercentage !== 100}
           onclick={() => {
-            console.log("to search");
+            showId("article-bottom");
           }}
         >
-          <span i-carbon-search></span>
+          <span i-carbon-down-to-bottom></span>
         </button>
       </div>
     </section>
@@ -198,6 +203,19 @@
 
       <button aria-label="media" text-gray>
         <span i-carbon-media-library></span>
+      </button>
+
+      <button
+        aria-label="search"
+        flex-cc
+        px-1
+        py-px
+        text-gray
+        onclick={() => {
+          console.log("to search");
+        }}
+      >
+        <span i-carbon-search></span>
       </button>
 
       <div flex-cc gap-4>

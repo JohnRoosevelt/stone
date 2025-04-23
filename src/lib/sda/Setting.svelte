@@ -1,19 +1,10 @@
 <script>
   import { DATAS } from "$lib/data.svelte";
   import Dialog from "$lib/global/Dialog.svelte";
-
-  let open = {
-    get value() {
-      return DATAS.isOpenSdaSeting;
-    },
-    set value(v) {
-      DATAS.isOpenSdaSeting = v;
-    },
-  };
 </script>
 
 <Dialog
-  bind:open={open.value}
+  bind:open={DATAS.isOpenSdaSeting}
   animate={{
     opacity: [0, 1],
     transform: ["translateY(100%)", "translateY(0)"],
@@ -32,17 +23,7 @@
     p-4
     flex-cc
   >
-    <button
-      absolute
-      top-1
-      right-1
-      aria-label="close"
-      onclick={() => {
-        DATAS.isOpenSdaSeting = false;
-      }}
-    >
-      <span i-carbon-close font-700 text-6></span>
-    </button>
+    
     setting
   </article>
 </Dialog>

@@ -104,40 +104,52 @@
     right-4
     text-5
     grid="~ cols-1"
-    gap-2
     bg="gray-200"
-    px-2
-    py-4
+    divide="y-2 gray-100"
     rounded-4
+    text-gray
   >
-    {#if scrollPercentage > 5}
-      <button
-        aria-label="scroll-to-top"
-        flex-cc
-        text-green
-        onclick={() => {
-          showId("chapter-top", "end");
-        }}
-      >
-        <span i-carbon-up-to-top></span>
-      </button>
-    {/if}
+    <button
+      aria-label="scroll-to-back"
+      flex-cc
+      text-green
+      px-2
+      py-4
+      onclick={() => {
+        history.back();
+      }}
+    >
+      <span i-carbon-chevron-left></span>
+    </button>
 
-    <div size-5 overflow-visible flex-cc>
+    <button
+      aria-label="scroll-to-top"
+      flex-cc
+      px-2
+      py-4
+      class:text-green={scrollPercentage !== 0}
+      onclick={() => {
+        showId("chapter-top", "end");
+      }}
+    >
+      <span i-carbon-up-to-top></span>
+    </button>
+
+    <div size-auto overflow-visible flex-cc py-2>
       <span text-3> {scrollPercentage}% </span>
     </div>
 
-    {#if scrollPercentage < 95}
-      <button
-        aria-label="scroll-to-bottom"
-        flex-cc
-        text-green
-        onclick={() => {
-          showId("chapter-bottom");
-        }}
-      >
-        <span i-carbon-down-to-bottom></span>
-      </button>
-    {/if}
+    <button
+      aria-label="scroll-to-bottom"
+      flex-cc
+      px-2
+      py-4
+      class:text-green={scrollPercentage !== 100}
+      onclick={() => {
+        showId("chapter-bottom");
+      }}
+    >
+      <span i-carbon-down-to-bottom></span>
+    </button>
   </div>
 </article>
