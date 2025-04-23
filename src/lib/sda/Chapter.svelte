@@ -8,6 +8,8 @@
   // console.log(data);
 
   let clientHeight = $state(0);
+  let innerWidth = $state(0);
+  const isMobile = $derived(innerWidth < 640);
 
   let scrollPercentage = $state(0);
 
@@ -17,25 +19,29 @@
     }
   });
 
+  $effect(() => {
+    page.params.chapterId;
+    if (!isMobile) {
+      showId(`chapter-${page.data.chapterId}`);
+    }
+    showId("article-top", "end");
+  });
+
   afterNavigate(({ from, to }) => {
     // console.log({ from, to });
 
     const isSameRoute = from.route.id === to.route.id;
     if (!isSameRoute) {
       if (!from.route.id) return;
+      if (!isMobile) return;
       return setTimeout(() => {
         DATAS.isOpenChapterDir = true;
       }, 300);
     }
-
-    const isSameBook = from.params.bookId === to.params.bookId;
-    if (isSameBook) {
-      return showId(`chapter-${page.data.chapterId}`);
-    }
-
-    showId("chapter-top", "end");
   });
 </script>
+
+<svelte:window bind:innerWidth />
 
 <article w-full h-full overflow-hidden relative bind:clientHeight>
   <section
@@ -102,25 +108,24 @@
     z-3
     bottom-4
     right-4
-    text-5
+    text-6
     grid="~ cols-1"
     bg="gray-200"
     divide="y-2 gray-100"
     rounded-4
     text-gray
   >
-    <button
+    <a
+      href="/sda"
+      data-sveltekit-replacestate
       aria-label="scroll-to-back"
       flex-cc
       text-green
       px-2
       py-4
-      onclick={() => {
-        history.back();
-      }}
     >
       <span i-carbon-chevron-left></span>
-    </button>
+    </a>
 
     <button
       aria-label="scroll-to-top"

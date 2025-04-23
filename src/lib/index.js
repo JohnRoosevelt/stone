@@ -1,6 +1,6 @@
 // place files you want to import through the `$lib` alias in this folder.
 export function showId(id, block = 'center', inline = 'center') {
-  // console.trace({ block, inline });
+  // console.trace({ id, block, inline });
 
   // 'start'（顶部）、'center'（居中）、'end'（底部）、'nearest'（最近）,  block -> y,   inline -> x
   setTimeout(() => {
@@ -13,5 +13,5 @@ export function showId(id, block = 'center', inline = 'center') {
         behavior: "smooth",
       });
     }
-  }, 0);
+  }, 300);
 }

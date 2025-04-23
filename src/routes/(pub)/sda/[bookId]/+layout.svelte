@@ -25,11 +25,6 @@
     };
   });
 
-  $effect(() => {
-    page.params.chapterId;
-    showId("article-top", "end");
-  });
-
   function articleSection(node) {
     function handleClick(event) {
       isShow = !isShow;
@@ -108,19 +103,18 @@
       bg="gray-100 dark:gray-900"
     >
       <div flex-cc>
-        <button
+        <a
+          href="/sda"
+          data-sveltekit-replacestate
           flex-cc
           gap-px
-          onclick={() => {
-            history.back();
-          }}
         >
           <span i-carbon-chevron-left text-6 text-green></span>
           <span underline underline-offset-4 flex-shrink-0 text-3
             >{data.book.name}</span
           >
           <span text-3 truncate mx-1>{page.data.titleZh}</span>
-        </button>
+        </a>
       </div>
 
       <div
