@@ -20,10 +20,9 @@
   afterNavigate(({ from, to }) => {
     // console.log({ from, to });
 
-    // if (!from.route.id) return;
-
     const isSameRoute = from.route.id === to.route.id;
     if (!isSameRoute) {
+      if (!from.route.id) return;
       return setTimeout(() => {
         DATAS.isOpenChapterDir = true;
       }, 300);
@@ -50,9 +49,10 @@
     onscroll={(event) => {
       const { scrollTop, scrollHeight, clientHeight } = event.target;
 
-      scrollPercentage = Math.round(
-        (scrollTop / (scrollHeight - clientHeight)) * 100,
-      );
+      scrollPercentage =
+        scrollHeight - clientHeight == 0
+          ? 0
+          : Math.round((scrollTop / (scrollHeight - clientHeight)) * 100);
       // console.log({ scrollPercentage, scrollTop, scrollHeight, clientHeight });
     }}
   >
