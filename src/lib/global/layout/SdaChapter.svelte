@@ -9,6 +9,16 @@
   let clientHeight = $state(0);
 
   let isShow = $state(false);
+  let scrollPercentage = $state(0);
+
+  function showId(id) {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({
+        behavior: "smooth",
+      });
+    }
+  }
 </script>
 
 <Setting />
@@ -28,10 +38,20 @@
     relative
     leading="170%"
     scroll-y
-    onscroll={() => (isShow = false)}
+    onscroll={(event) => {
+      isShow = false;
+
+      const { scrollTop, scrollHeight, clientHeight } = event.target;
+
+      scrollPercentage = Math.round(
+        (scrollTop / (scrollHeight - clientHeight)) * 100,
+      );
+      // console.log({ scrollPercentage, scrollTop, scrollHeight, clientHeight });
+    }}
   >
     <div h-1px id="top"></div>
     {@render children()}
+    <div h-1px id="bottom"></div>
   </article>
 </section>
 
@@ -58,9 +78,46 @@
         <span text-3 truncate mx-2>{data.titleZh}</span>
       </button>
     </div>
-    <div text-3 flex="shrink-0">
-      <button aria-label="share">
-        <span i-carbon-share></span>
+
+    <div text-5 flex-cc gap-2 flex="shrink-0">
+      <div flex-cc gap-2px>
+        {#if scrollPercentage > 5}
+          <button
+            aria-label="scroll-to-top"
+            flex-cc
+            text-green
+            onclick={() => {
+              showId('top')
+            }}
+          >
+            <span i-carbon-up-to-top></span>
+          </button>
+        {/if}
+
+        <span text-3> {scrollPercentage}% </span>
+
+        {#if scrollPercentage < 95}
+          <button
+            aria-label="scroll-to-bottom"
+            flex-cc
+            text-green
+            onclick={() => {
+              showId('bottom')
+            }}
+          >
+            <span i-carbon-down-to-bottom></span>
+          </button>
+        {/if}
+      </div>
+
+      <button
+        aria-label="share"
+        flex-cc
+        onclick={() => {
+          console.log("to search");
+        }}
+      >
+        <span i-carbon-search></span>
       </button>
     </div>
   </section>

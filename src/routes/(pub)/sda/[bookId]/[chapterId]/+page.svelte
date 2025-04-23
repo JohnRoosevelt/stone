@@ -18,7 +18,7 @@
   }}
 />
 
-<article w-full px-5 pb-12 space-y-2>
+<article w-full px-5 pb-12 space-y-2 sm="pb-0">
   {#each data.chapterZh as { t, p, c }, i}
     {#if DATAS.showSdaEnglish}
       <p

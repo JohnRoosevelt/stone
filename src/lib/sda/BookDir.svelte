@@ -103,7 +103,7 @@
     {/each}
   </section>
 
-  <section absolute w-auto h-full top-0 right-2 z-3 flex-col flex-cc gap-px>
+  <section absolute w-auto h-full top-0 right-4 z-3 flex-col flex-cc gap-px>
     <button
       onclick={() => showId("fav")}
       aria-label="fav"
