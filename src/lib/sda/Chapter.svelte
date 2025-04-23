@@ -18,7 +18,7 @@
   });
 
   afterNavigate(({ from, to }) => {
-    console.log({ from, to });
+    // console.log({ from, to });
 
     // if (!from.route.id) return;
 
