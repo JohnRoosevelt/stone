@@ -284,6 +284,8 @@
 
         <button
           aria-label="next"
+          disabled={page.params.chapterId == page.data.dirZh?.length}
+          class:text-gray={page.params.chapterId == page.data.dirZh?.length}
           onclick={(e) => {
             goto(page.params.chapterId - 1 + 2, { replaceState: true });
             isShow = false;
