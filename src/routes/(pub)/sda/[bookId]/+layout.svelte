@@ -273,12 +273,9 @@
         <button
           aria-label="pre"
           onclick={(e) => {
-            goto(`/sda/${page.params.bookId}/${page.params.chapterId - 1}`, {
-              replaceState: true,
-            });
+            goto("/", { replaceState: true });
             isShow = false;
           }}
-          href="/sda/{page.params.bookId}/{page.params.chapterId - 1}"
         >
           <span i-carbon-chevron-left></span>
         </button>
@@ -286,13 +283,9 @@
         <button
           aria-label="next"
           onclick={(e) => {
-            goto(
-              `/sda/${page.params.bookId}/${Number(page.params.chapterId) + 1}`,
-              { replaceState: true },
-            );
+            goto("/", { replaceState: true });
             isShow = false;
           }}
-          href="/sda/{page.params.bookId}/{Number(page.params.chapterId) + 1}"
         >
           <span i-carbon-chevron-right></span>
         </button>
