@@ -273,7 +273,7 @@
         <button
           aria-label="pre"
           onclick={(e) => {
-            goto("/", { replaceState: true });
+            goto(page.params.chapterId - 1, { replaceState: true });
             isShow = false;
           }}
         >
@@ -283,7 +283,7 @@
         <button
           aria-label="next"
           onclick={(e) => {
-            goto("/", { replaceState: true });
+            goto(page.params.chapterId - 1 + 2, { replaceState: true });
             isShow = false;
           }}
         >
