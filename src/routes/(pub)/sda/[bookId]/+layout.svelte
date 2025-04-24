@@ -7,7 +7,7 @@
   import Setting from "$lib/sda/Setting.svelte";
   import { onMount } from "svelte";
   import { slide } from "svelte/transition";
-  import { afterNavigate } from "$app/navigation";
+  import { afterNavigate, goto } from "$app/navigation";
 
   const { data, children } = $props();
 
@@ -273,8 +273,8 @@
         <button
           aria-label="pre"
           onclick={(e) => {
-            document.getElementById("article-top").scrollIntoView({
-              behavior: "smooth",
+            goto(`/sda/${page.params.bookId}/${page.params.chapterId - 1}`, {
+              replaceState: true,
             });
             isShow = false;
           }}
@@ -286,9 +286,10 @@
         <button
           aria-label="next"
           onclick={(e) => {
-            document.getElementById("article-top").scrollIntoView({
-              behavior: "smooth",
-            });
+            goto(
+              `/sda/${page.params.bookId}/${Number(page.params.chapterId) + 1}`,
+              { replaceState: true },
+            );
             isShow = false;
           }}
           href="/sda/{page.params.bookId}/{Number(page.params.chapterId) + 1}"
