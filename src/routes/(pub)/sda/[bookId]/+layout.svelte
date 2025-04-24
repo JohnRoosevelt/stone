@@ -274,7 +274,6 @@
           disabled={page.params.chapterId == 1}
           class:text-gray={page.params.chapterId == 1}
           aria-label="pre"
-          data-sveltekit-replacestate
           onclick={(e) => {
             e.preventDefault();
             goto(`/sda/${page.params.bookId}/${page.params.chapterId - 1}`, {
@@ -285,16 +284,14 @@
             });
             isShow = false;
           }}
-          href="/sda/{page.params.bookId}/{page.params.chapterId - 1}"
         >
           <span i-carbon-chevron-left></span>
         </button>
 
         <button
-          disabled={page.params.chapterId == page.data.dirZh.length}
-          class:text-gray={page.params.chapterId == page.data.dirZh.length}
+          disabled={page.params.chapterId == page.data.dirZh?.length}
+          class:text-gray={page.params.chapterId == page.data.dirZh?.length}
           aria-label="next"
-          data-sveltekit-replacestate
           onclick={(e) => {
             goto(
               `/sda/${page.params.bookId}/${Number(page.params.chapterId) + 1}`,
@@ -305,7 +302,6 @@
             });
             isShow = false;
           }}
-          href="/sda/{page.params.bookId}/{Number(page.params.chapterId) + 1}"
         >
           <span i-carbon-chevron-right></span>
         </button>
