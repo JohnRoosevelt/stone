@@ -288,7 +288,7 @@
           <span i-carbon-chevron-left></span>
         </button>
 
-        <button
+        <!-- <button
           disabled={page.params.chapterId == page.data.dirZh?.length}
           class:text-gray={page.params.chapterId == page.data.dirZh?.length}
           aria-label="next"
@@ -304,7 +304,7 @@
           }}
         >
           <span i-carbon-chevron-right></span>
-        </button>
+        </button> -->
       </div>
     </section>
   {/if}

@@ -7,8 +7,4 @@ export const DATAS = $state({
   }
 })
 
-export const DIALOG = $state({
-  show: false, animate: {}, p: 'c', c: null
-})
-
 export const TOUCHP = $state({})
