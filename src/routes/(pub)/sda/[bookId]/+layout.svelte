@@ -1,7 +1,7 @@
 <script>
   import { page } from "$app/state";
   import { showId } from "$lib";
-  import { DATAS, DIALOG, TOUCHP } from "$lib/data.svelte";
+  import { DATAS, TOUCHP } from "$lib/data.svelte";
   import { info } from "$lib/global/Toast";
   import Chapter from "$lib/sda/Chapter.svelte";
   import Setting from "$lib/sda/Setting.svelte";
@@ -22,14 +22,14 @@
   onMount(() => {
     return () => {
       if (isMobile) {
-        DIALOG.SX = { show: false, l: true, c: null };
+        DATAS.dialog = { c: null, show: false };
       }
     };
   });
 
   $effect(() => {
     if (!isMobile) {
-      DIALOG.SX = { show: false, l: true, c: null };
+      DATAS.dialog = { c: null, show: false };
     }
   });
 
@@ -46,7 +46,7 @@
     if (!isSameRoute) {
       if (!from.route.id) return;
       if (!isMobile) return;
-      DIALOG.SX = { show: true, l: true, c: Chapter };
+      DATAS.dialog = { c: Chapter, show: true, p: "l" };
     }
   });
 
@@ -104,7 +104,6 @@
 </script>
 
 <svelte:window bind:innerWidth />
-<Setting />
 
 <article data-layout="bookId" w-full h-full flex-bc>
   {#if !isMobile}
@@ -224,7 +223,7 @@
       <button
         aria-label="setting"
         onclick={() => {
-          DATAS.isOpenSdaSeting = true;
+          DATAS.dialog = { c: Setting, show: true, p: "b" };
           isShow = false;
         }}
       >
@@ -264,8 +263,8 @@
           sm="hidden"
           aria-label="menu"
           onclick={(e) => {
+            DATAS.dialog = { c: Chapter, show: true, p: "l" };
             isShow = false;
-            DIALOG.SX = { show: true, l: true, c: Chapter };
           }}
         >
           <span i-carbon-menu></span>

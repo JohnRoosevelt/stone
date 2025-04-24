@@ -1,5 +1,5 @@
 <script>
-  import { DIALOG } from "$lib/data.svelte";
+  import { DATAS } from "$lib/data.svelte";
   import Test from "./test.svelte";
 </script>
 
@@ -17,8 +17,7 @@
   <button
     aria-label="test"
     onclick={() => {
-      DIALOG.C = Test;
-      DIALOG.SC.show = true;
+      DATAS.dialog = { c: Test, show: true, p: "c" };
     }}
   >
     <span hover="text-red" i-carbon-play></span>
@@ -27,9 +26,7 @@
   <button
     aria-label="test"
     onclick={() => {
-      DIALOG.C = Test;
-      DIALOG.SX.l = true;
-      DIALOG.SX.show = true;
+      DATAS.dialog = { c: Test, show: true, p: "l" };
     }}
   >
     <span hover="text-red" i-carbon-arrow-right></span>
@@ -38,9 +35,7 @@
   <button
     aria-label="test"
     onclick={() => {
-      DIALOG.C = Test;
-      DIALOG.SX.l = false;
-      DIALOG.SX.show = true;
+      DATAS.dialog = { c: Test, show: true, p: "r" };
     }}
   >
     <span hover="text-red" i-carbon-arrow-left></span>
@@ -49,9 +44,7 @@
   <button
     aria-label="test"
     onclick={() => {
-      DIALOG.C = Test;
-      DIALOG.SY.b = true;
-      DIALOG.SY.show = true;
+      DATAS.dialog = { c: Test, show: true, p: "b" };
     }}
   >
     <span hover="text-red" i-carbon-arrow-up></span>
@@ -60,9 +53,7 @@
   <button
     aria-label="test"
     onclick={() => {
-      DIALOG.C = Test;
-      DIALOG.SY.b = false;
-      DIALOG.SY.show = true;
+      DATAS.dialog = { c: Test, show: true, p: "t" };
     }}
   >
     <span hover="text-red" i-carbon-arrow-down></span>

@@ -1,83 +1,92 @@
 <script>
-	import { delay } from "$lib";
+	import { DATAS } from "$lib/data.svelte";
+	import DialogMeta from "./DialogMeta.svelte";
 
-	let {
-		open = $bindable(false),
-		children,
-		autoClose = true,
-		animate = {},
-	} = $props();
+	const animate = $derived.by(() => {
+		const rz = {
+			opacity: [0, 1],
+			...DATAS.dialog.animate,
+		};
 
-	function show(dialog) {
-		function handleClick(event) {
-			event.stopPropagation();
+		let transform;
 
-			if (open && event.target == dialog && autoClose) {
-				open = false;
-			}
+		switch (DATAS.dialog.p) {
+			case "l":
+				transform = [`translateX(-100%)`, "translateX(0)"];
+				break;
+
+			case "r":
+				transform = [`translateX(100%)`, "translateX(0)"];
+				break;
+
+			case "b":
+				transform = ["translateY(100%)", "translateY(0)"];
+				break;
+
+			case "t":
+				transform = ["translateY(-100%)", "translateY(0)"];
+				break;
+
+			default:
+				break;
 		}
 
-		$effect(() => {
-			animate;
-			// console.log('dialog animate chage');
-			setAnimate(dialog, false);
-		});
-
-		$effect(async () => {
-			if (open) {
-				// console.log("dialog open");
-				dialog.showModal();
-				setAnimate(dialog);
-				document.body.style.overflow = "hidden";
-				document.addEventListener("click", handleClick);
-				return;
-			}
-
-			if (!dialog.open) {
-				// console.log("dialog init");
-				setAnimate(dialog, false);
-				return;
-			}
-
-			// console.log("dialog close");
-			setAnimate(dialog, false);
-			await delay(300);
-			dialog.close();
-			document.body.style.overflow = "";
-			document.removeEventListener("click", handleClick);
-		});
-	}
-
-	function setAnimate(dialog, isIn = true) {
-		const child = Array.from(dialog.children)[0];
-		if (!child) return;
-		for (let [key, value] of Object.entries(animate)) {
-			child.style[key] = value[isIn ? 0 : 1];
+		if (transform) {
+			rz.transform = transform;
 		}
 
-		child.style.transition = `all 300ms ease-${isIn ? "in-out" : "in-out"}`;
+		return rz;
+	});
 
-		for (let [key, value] of Object.entries(animate)) {
-			child.style[key] = value[isIn ? 1 : 0];
-		}
-	}
+	const C = $derived(DATAS.dialog.c);
 </script>
 
-<dialog overflow="visible" use:show bg="transparent" m="auto">
-	{@render children?.()}
-</dialog>
+<DialogMeta bind:open={DATAS.dialog.show} {animate}>
+	{#if ["l", "r"].includes(DATAS.dialog.p)}
+		{@render RX()}
+	{:else if ["t", "b"].includes(DATAS.dialog.p)}
+		{@render RY()}
+	{:else}
+		{@render RC()}
+	{/if}
+</DialogMeta>
 
-<style>
-	dialog::backdrop {
-		background: black;
-		transition: all 300ms ease-in-out;
-	}
+{#snippet RC()}
+	<C />
+{/snippet}
 
-	dialog[open]::backdrop {
-		opacity: 0.6;
-	}
+{#snippet RX()}
+	<article
+		fixed
+		inset-0
+		bg="white"
+		w="80vw"
+		h-screen
+		class:rounded-r-4={DATAS.dialog.p === "l"}
+		class:rounded-l-4={DATAS.dialog.p === "r"}
+		class:ml-20vw={DATAS.dialog.p === "r"}
+		overflow-hidden
+	>
+		<C />
+	</article>
+{/snippet}
 
-	dialog:not([open])::backdrop {
-		opacity: 0;
-	}
-</style>
+{#snippet RY()}
+	<article
+		bg="white dark:black"
+		fixed
+		class:bottom-0={DATAS.dialog.p === "b"}
+		class:rounded-t-4={DATAS.dialog.p === "b"}
+		class:top-0={DATAS.dialog.p === "t"}
+		class:rounded-b-4={DATAS.dialog.p === "t"}
+		left-0
+		w-screen
+		min-h-30
+		max-h="[calc(100vh-120px)]"
+		scroll-y
+		p-4
+		flex-cc
+	>
+		<C />
+	</article>
+{/snippet}

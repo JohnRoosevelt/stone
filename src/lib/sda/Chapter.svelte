@@ -2,7 +2,7 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { showId } from "$lib";
-  import { DIALOG } from "$lib/data.svelte";
+  import { DATAS } from "$lib/data.svelte";
   import { onMount } from "svelte";
 
   // const { data } = $props();
@@ -51,7 +51,7 @@
       <a
         onclick={async (e) => {
           if (isMobile) {
-            DIALOG.SX.show = false;
+            DATAS.dialog.show = false;
           }
         }}
         id="chapter-{i + 1}"
@@ -84,7 +84,7 @@
     sm="hidden"
   >
     <button>
-      {page.data.book.name} 目录
+      {page.data.book?.name} 目录
     </button>
 
     <!-- <a data-sveltekit-replacestate text-green href="/sda">
@@ -96,7 +96,7 @@
     absolute
     z-3
     bottom-4
-    right-4
+    right-1
     text-6
     grid="~ cols-1"
     bg="gray-200"
@@ -105,11 +105,6 @@
     text-gray
   >
     <a
-      onclick={async (e) => {
-        if (isMobile) {
-          DIALOG.SX = { show: false, l: true, c: null };
-        }
-      }}
       href="/sda"
       data-sveltekit-replacestate
       aria-label="scroll-to-back"
