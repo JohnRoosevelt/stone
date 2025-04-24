@@ -3,16 +3,12 @@ export const DATAS = $state({
   isDarkMode: false,
   showSdaEnglish: false,
   isOpenSdaSeting: false,
-  isOpenChapterDir: false,
-  test: false
 })
 
 export const DIALOG = $state({
-  SX: { show: false, l: true },
-  SY: { show: false, b: true },
-  SC: { show: false },
-  animate: {},
-  C: null
+  SX: { show: false, l: true, animate: {}, c: null },
+  SY: { show: false, b: true, animate: {}, c: null },
+  SC: { show: false, animate: {}, c: null },
 })
 
 export const TOUCHP = $state({})

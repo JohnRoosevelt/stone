@@ -4,13 +4,13 @@
 
   const animate = $derived({
     opacity: [0, 1],
-    transform: ["translateY(100%)", "translateY(0)"],
     transform: DIALOG.SY.b
       ? ["translateY(100%)", "translateY(0)"]
-      : ["translateY(-100%)", "translateY(0)"]
+      : ["translateY(-100%)", "translateY(0)"],
+    ...DIALOG.SY.animate,
   });
 
-  const C = $derived(DIALOG.C);
+  const C = $derived(DIALOG.SY.c);
 </script>
 
 <Dialog bind:open={DIALOG.SY.show} {animate}>

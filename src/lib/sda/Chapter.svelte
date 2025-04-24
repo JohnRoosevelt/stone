@@ -1,8 +1,9 @@
 <script>
-  import { afterNavigate } from "$app/navigation";
+  import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { showId } from "$lib";
-  import { DATAS } from "$lib/data.svelte";
+  import { DIALOG } from "$lib/data.svelte";
+  import { onMount } from "svelte";
 
   // const { data } = $props();
   // console.log(data);
@@ -13,30 +14,13 @@
 
   let scrollPercentage = $state(0);
 
-  $effect(() => {
-    if (DATAS.isOpenChapterDir) {
-      showId(`chapter-${page.data.chapterId}`);
-    }
-  });
+  // onMount(() => {
+  //   showId(`chapter-${page.data.chapterId}`);
+  // });
 
   $effect(() => {
-    page.params.chapterId;
-    if (!isMobile) {
+    if (clientHeight > 0) {
       showId(`chapter-${page.data.chapterId}`);
-    }
-    showId("article-top", "end");
-  });
-
-  afterNavigate(({ from, to }) => {
-    // console.log({ from, to });
-
-    const isSameRoute = from.route.id === to.route.id;
-    if (!isSameRoute) {
-      if (!from.route.id) return;
-      if (!isMobile) return;
-      return setTimeout(() => {
-        DATAS.isOpenChapterDir = true;
-      }, 300);
     }
   });
 </script>
@@ -65,6 +49,11 @@
     <div h-1px id="chapter-top"></div>
     {#each page.data?.dirZh as { n }, i}
       <a
+        onclick={async (e) => {
+          if (isMobile) {
+            DIALOG.SX.show = false;
+          }
+        }}
         id="chapter-{i + 1}"
         data-sveltekit-replacestate
         href="/sda/{page.data.bookId}/{i + 1}"
@@ -116,6 +105,11 @@
     text-gray
   >
     <a
+      onclick={async (e) => {
+        if (isMobile) {
+          DIALOG.SX = { show: false, l: true, c: null };
+        }
+      }}
       href="/sda"
       data-sveltekit-replacestate
       aria-label="scroll-to-back"

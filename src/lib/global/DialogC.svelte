@@ -5,10 +5,10 @@
   const animate = $derived({
     opacity: [0, 1],
     // transform: ["translateY(100%)", "translateY(0)"],
-    ...DIALOG.animate,
+    ...DIALOG.SC.animate,
   });
 
-  const C = $derived(DIALOG.C);
+  const C = $derived(DIALOG.SC.c);
 </script>
 
 <Dialog bind:open={DIALOG.SC.show} {animate}>

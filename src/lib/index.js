@@ -1,11 +1,11 @@
 // place files you want to import through the `$lib` alias in this folder.
 export function showId(id, block = 'center', inline = 'center') {
-  // console.trace({ id, block, inline });
+  // 'start'（顶部）、'center'（居中）、'end'（底部）、'nearest'（最近）, 
+  //  block -> y,   inline -> x
 
-  // 'start'（顶部）、'center'（居中）、'end'（底部）、'nearest'（最近）,  block -> y,   inline -> x
   setTimeout(() => {
     const element = document.getElementById(id);
-    // console.log(id, element);
+    // console.log({ id, element, block, inline });
     if (element) {
       element.scrollIntoView({
         block,
@@ -13,7 +13,7 @@ export function showId(id, block = 'center', inline = 'center') {
         behavior: "smooth",
       });
     }
-  }, 300);
+  }, 0);
 }
 
 export async function delay(ms) {

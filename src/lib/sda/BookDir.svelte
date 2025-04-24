@@ -37,6 +37,9 @@
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             activeId = entry.target.id;
+            if (activeId == selectId) {
+              selectId = "";
+            }
           }
         });
       },
@@ -101,7 +104,7 @@
     <button
       onclick={() => {
         selectId = "fav";
-        showId("fav", 'start');
+        showId("fav", "start");
       }}
       aria-label="fav"
       size-6
@@ -121,7 +124,7 @@
       <button
         onclick={() => {
           selectId = tag;
-          showId(tag, 'start');
+          showId(tag, "start");
         }}
         aria-label={tag}
         size-6

@@ -7,10 +7,10 @@
     transform: DIALOG.SX.l
       ? [`translateX(-100%)`, "translateX(0)"]
       : [`translateX(100%)`, "translateX(0)"],
-    ...DIALOG.animate,
+    ...DIALOG.SX.animate,
   });
 
-  const C = $derived(DIALOG.C);
+  const C = $derived(DIALOG.SX.c);
 </script>
 
 <Dialog bind:open={DIALOG.SX.show} {animate}>

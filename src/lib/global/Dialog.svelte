@@ -33,7 +33,7 @@
 				return;
 			}
 
-			if (!dialog.open && !open) {
+			if (!dialog.open) {
 				// console.log("dialog init");
 				setAnimate(dialog, false);
 				return;

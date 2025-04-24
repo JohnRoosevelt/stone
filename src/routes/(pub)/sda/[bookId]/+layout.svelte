@@ -1,13 +1,13 @@
 <script>
   import { page } from "$app/state";
   import { showId } from "$lib";
-  import { DATAS, TOUCHP } from "$lib/data.svelte";
+  import { DATAS, DIALOG, TOUCHP } from "$lib/data.svelte";
   import { info } from "$lib/global/Toast";
   import Chapter from "$lib/sda/Chapter.svelte";
-  import DialogChapter from "$lib/sda/DialogChapter.svelte";
   import Setting from "$lib/sda/Setting.svelte";
   import { onMount } from "svelte";
   import { slide } from "svelte/transition";
+  import { afterNavigate } from "$app/navigation";
 
   const { data, children } = $props();
 
@@ -21,8 +21,33 @@
 
   onMount(() => {
     return () => {
-      DATAS.isOpenChapterDir = false;
+      if (isMobile) {
+        DIALOG.SX = { show: false, l: true, c: null };
+      }
     };
+  });
+
+  $effect(() => {
+    if (!isMobile) {
+      DIALOG.SX = { show: false, l: true, c: null };
+    }
+  });
+
+  $effect(() => {
+    page.params.chapterId;
+    showId(`chapter-${page.data.chapterId}`);
+    showId("article-top", "end");
+  });
+
+  afterNavigate(({ from, to }) => {
+    // console.log({ from, to });
+
+    const isSameRoute = from.route.id === to.route.id;
+    if (!isSameRoute) {
+      if (!from.route.id) return;
+      if (!isMobile) return;
+      DIALOG.SX = { show: true, l: true, c: Chapter };
+    }
   });
 
   function articleSection(node) {
@@ -41,16 +66,16 @@
       const lang = event.target.getAttribute("data-lang");
       const pIndex = event.target.getAttribute("data-i");
 
-       if (!lang || !pIndex) {
-        return
-       }
+      if (!lang || !pIndex) {
+        return;
+      }
 
       pressTimer = setTimeout(() => {
         isLongPress = true;
-        console.log("长按触发！", {lang, pIndex});
+        console.log("长按触发！", { lang, pIndex });
         // info("test");
-        TOUCHP[pIndex] = TOUCHP[pIndex] || {}
-        TOUCHP[pIndex][lang] = true
+        TOUCHP[pIndex] = TOUCHP[pIndex] || {};
+        TOUCHP[pIndex][lang] = true;
       }, 500);
     }
 
@@ -79,9 +104,6 @@
 </script>
 
 <svelte:window bind:innerWidth />
-{#if isMobile}
-  <DialogChapter />
-{/if}
 <Setting />
 
 <article data-layout="bookId" w-full h-full flex-bc>
@@ -243,7 +265,7 @@
           aria-label="menu"
           onclick={(e) => {
             isShow = false;
-            DATAS.isOpenChapterDir = true;
+            DIALOG.SX = { show: true, l: true, c: Chapter };
           }}
         >
           <span i-carbon-menu></span>
