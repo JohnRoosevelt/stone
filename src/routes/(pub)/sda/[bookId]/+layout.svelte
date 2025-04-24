@@ -270,7 +270,7 @@
           <span i-carbon-menu></span>
         </button>
 
-        <button
+        <!-- <button
           disabled={page.params.chapterId == 1}
           class:text-gray={page.params.chapterId == 1}
           aria-label="pre"
@@ -286,7 +286,7 @@
           }}
         >
           <span i-carbon-chevron-left></span>
-        </button>
+        </button> -->
 
         <!-- <button
           disabled={page.params.chapterId == page.data.dirZh?.length}
