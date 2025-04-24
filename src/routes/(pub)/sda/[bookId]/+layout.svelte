@@ -270,9 +270,8 @@
           <span i-carbon-menu></span>
         </button>
 
-        <a
+        <button
           aria-label="pre"
-          data-sveltekit-replacestate
           onclick={(e) => {
             document.getElementById("article-top").scrollIntoView({
               behavior: "smooth",
@@ -282,11 +281,10 @@
           href="/sda/{page.params.bookId}/{page.params.chapterId - 1}"
         >
           <span i-carbon-chevron-left></span>
-        </a>
+        </button>
 
-        <a
+        <button
           aria-label="next"
-          data-sveltekit-replacestate
           onclick={(e) => {
             document.getElementById("article-top").scrollIntoView({
               behavior: "smooth",
@@ -296,7 +294,7 @@
           href="/sda/{page.params.bookId}/{Number(page.params.chapterId) + 1}"
         >
           <span i-carbon-chevron-right></span>
-        </a>
+        </button>
       </div>
     </section>
   {/if}
