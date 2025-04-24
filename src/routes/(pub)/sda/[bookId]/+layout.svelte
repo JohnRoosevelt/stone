@@ -272,6 +272,8 @@
 
         <button
           aria-label="pre"
+          disabled={page.params.chapterId == 1}
+          class:text-gray={page.params.chapterId == 1}
           onclick={(e) => {
             goto(page.params.chapterId - 1, { replaceState: true });
             isShow = false;
