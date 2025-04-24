@@ -1,6 +1,6 @@
 <script>
-  import { DATAS } from "$lib/data.svelte";
-    import Test from "$lib/global/Test.svelte";
+  import { DIALOG } from "$lib/data.svelte";
+  import Test from "./test.svelte";
 </script>
 
 <p class="bg-red-500 hover:(bg-blue-500 font-700 text-8)">tpl</p>
@@ -8,7 +8,7 @@
 <p bg-red-500>tpl</p>
 <p flex-cc text-8>tpl</p>
 
-<div grid="~ cols-8" justify="items-center" text-8 text-blue>
+<div w-full grid="~ cols-10" justify="items-center" text-8 text-blue>
   <span hover="text-red" i-carbon-close></span>
   <span hover="text-red" i-icons-sda></span>
   <span hover="text-red" i-icons-bible></span>
@@ -17,12 +17,54 @@
   <button
     aria-label="test"
     onclick={() => {
-      DATAS.test = true;
+      DIALOG.C = Test;
+      DIALOG.SC.show = true;
     }}
   >
     <span hover="text-red" i-carbon-play></span>
   </button>
+
+  <button
+    aria-label="test"
+    onclick={() => {
+      DIALOG.C = Test;
+      DIALOG.SX.l = true;
+      DIALOG.SX.show = true;
+    }}
+  >
+    <span hover="text-red" i-carbon-arrow-right></span>
+  </button>
+
+  <button
+    aria-label="test"
+    onclick={() => {
+      DIALOG.C = Test;
+      DIALOG.SX.l = false;
+      DIALOG.SX.show = true;
+    }}
+  >
+    <span hover="text-red" i-carbon-arrow-left></span>
+  </button>
+
+  <button
+    aria-label="test"
+    onclick={() => {
+      DIALOG.C = Test;
+      DIALOG.SY.b = true;
+      DIALOG.SY.show = true;
+    }}
+  >
+    <span hover="text-red" i-carbon-arrow-up></span>
+  </button>
+
+  <button
+    aria-label="test"
+    onclick={() => {
+      DIALOG.C = Test;
+      DIALOG.SY.b = false;
+      DIALOG.SY.show = true;
+    }}
+  >
+    <span hover="text-red" i-carbon-arrow-down></span>
+  </button>
 </div>
-
-
-<Test />

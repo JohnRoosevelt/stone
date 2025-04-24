@@ -1,5 +1,9 @@
 <script>
   import { DATAS } from "$lib/data.svelte";
+  import Dialog from "$lib/global/Dialog.svelte";
+  import DialogC from "$lib/global/DialogC.svelte";
+  import DialogX from "$lib/global/DialogX.svelte";
+  import DialogY from "$lib/global/DialogY.svelte";
   import RouteLoading from "$lib/global/RouteLoading.svelte";
   import { setTheme } from "$lib/setTheme.svelte";
   import { wakeLock } from "$lib/wakeLock";
@@ -25,6 +29,9 @@
 
 <SvelteToast options={{}} />
 <RouteLoading />
+<DialogC />
+<DialogX />
+<DialogY />
 
 <svelte:window bind:online={DATAS.online} />
 <!-- <svelte:window bind:online={DATAS.online} /> -->

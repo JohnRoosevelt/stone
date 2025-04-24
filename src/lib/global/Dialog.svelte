@@ -1,4 +1,6 @@
 <script>
+	import { delay } from "$lib";
+
 	let {
 		open = $bindable(false),
 		children,
@@ -15,22 +17,38 @@
 			}
 		}
 
+		$effect(() => {
+			animate;
+			// console.log('dialog animate chage');
+			setAnimate(dialog, false);
+		});
+
 		$effect(async () => {
 			if (open) {
+				// console.log("dialog open");
 				dialog.showModal();
-				await setAnimate(dialog);
+				setAnimate(dialog);
 				document.body.style.overflow = "hidden";
 				document.addEventListener("click", handleClick);
-			} else {
-				await setAnimate(dialog, false);
-				dialog.close();
-				document.body.style.overflow = "";
-				document.removeEventListener("click", handleClick);
+				return;
 			}
+
+			if (!dialog.open && !open) {
+				// console.log("dialog init");
+				setAnimate(dialog, false);
+				return;
+			}
+
+			// console.log("dialog close");
+			setAnimate(dialog, false);
+			await delay(300);
+			dialog.close();
+			document.body.style.overflow = "";
+			document.removeEventListener("click", handleClick);
 		});
 	}
 
-	async function setAnimate(dialog, isIn = true) {
+	function setAnimate(dialog, isIn = true) {
 		const child = Array.from(dialog.children)[0];
 		if (!child) return;
 		for (let [key, value] of Object.entries(animate)) {
@@ -42,9 +60,6 @@
 		for (let [key, value] of Object.entries(animate)) {
 			child.style[key] = value[isIn ? 1 : 0];
 		}
-		return new Promise((resove) => {
-			setTimeout(resove, 300);
-		});
 	}
 </script>
 

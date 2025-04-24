@@ -1,0 +1,1 @@
+<section size-30 flex-cc bg-white rounded-2>test</section>

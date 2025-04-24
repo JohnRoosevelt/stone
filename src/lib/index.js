@@ -15,3 +15,7 @@ export function showId(id, block = 'center', inline = 'center') {
     }
   }, 300);
 }
+
+export async function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
