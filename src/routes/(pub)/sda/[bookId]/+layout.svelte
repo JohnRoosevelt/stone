@@ -7,7 +7,7 @@
   import Setting from "$lib/sda/Setting.svelte";
   import { onMount } from "svelte";
   import { slide } from "svelte/transition";
-  import { afterNavigate } from "$app/navigation";
+  import { afterNavigate, goto } from "$app/navigation";
 
   const { data, children } = $props();
 
@@ -270,10 +270,16 @@
           <span i-carbon-menu></span>
         </button>
 
-        <a
+        <button
+          disabled={page.params.chapterId == 1}
+          class:text-gray={page.params.chapterId == 1}
           aria-label="pre"
           data-sveltekit-replacestate
           onclick={(e) => {
+            e.preventDefault();
+            goto(`/sda/${page.params.bookId}/${page.params.chapterId - 1}`, {
+              replaceState: true,
+            });
             document.getElementById("article-top").scrollIntoView({
               behavior: "smooth",
             });
@@ -282,12 +288,18 @@
           href="/sda/{page.params.bookId}/{page.params.chapterId - 1}"
         >
           <span i-carbon-chevron-left></span>
-        </a>
+        </button>
 
-        <a
+        <button
+          disabled={page.params.chapterId == page.data.dirZh.length}
+          class:text-gray={page.params.chapterId == page.data.dirZh.length}
           aria-label="next"
           data-sveltekit-replacestate
           onclick={(e) => {
+            goto(
+              `/sda/${page.params.bookId}/${Number(page.params.chapterId) + 1}`,
+              { replaceState: true },
+            );
             document.getElementById("article-top").scrollIntoView({
               behavior: "smooth",
             });
@@ -296,7 +308,7 @@
           href="/sda/{page.params.bookId}/{Number(page.params.chapterId) + 1}"
         >
           <span i-carbon-chevron-right></span>
-        </a>
+        </button>
       </div>
     </section>
   {/if}
