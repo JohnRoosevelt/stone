@@ -114,7 +114,8 @@
     <article
       style:height="{clientHeight}px"
       style:font-size="{DATAS.fontSize}px"
-      style:background-color="{DATAS.bg}"
+      style:background-color="{DATAS.bg}
+      "
       w-full
       relative
       scroll-y
