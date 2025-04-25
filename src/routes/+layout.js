@@ -8,6 +8,6 @@ export const prerender = true;
 export async function load(params) {
   wakeLock()
   DATAS.isDarkMode = localStorage.getItem("theme") == 'dark';
-  
-  return { fontSize: 7 }
+
+  return {}
 }

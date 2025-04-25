@@ -39,9 +39,8 @@
     showId("article-top", "end");
   });
 
+  // in mobile, open the chapter dir at left
   afterNavigate(({ from, to }) => {
-    // console.log({ from, to });
-
     const isSameRoute = from.route.id === to.route.id;
     if (!isSameRoute) {
       if (!from.route.id) return;
@@ -50,6 +49,8 @@
     }
   });
 
+  // onclick show the top info and bottom ctrl
+  // handel long press fun
   function articleSection(node) {
     let isLongPress = false;
     let pressTimer = 0;
@@ -59,10 +60,6 @@
     }
 
     function handleMousedown(event) {
-      // console.log(event.target, event.target.getAttribute("data-area"));
-      // if (!event.target.getAttribute("data-area")) {
-      // }
-
       const lang = event.target.getAttribute("data-lang");
       const pIndex = event.target.getAttribute("data-i");
 
@@ -116,6 +113,8 @@
     <article
       w-full
       style:height="{clientHeight}px"
+      style:font-size="{DATAS.fontSize}px"
+      style:background="{DATAS.bg}"
       relative
       scroll-y
       leading="170%"
@@ -146,7 +145,7 @@
       z-9
       top-0
       w-full
-      h-10
+      h-12
       px-3
       flex-bc
       transition300
@@ -155,11 +154,11 @@
     >
       <div flex-cc>
         <a href="/sda" data-sveltekit-replacestate flex-cc gap-px>
-          <span i-carbon-chevron-left text-6 text-green></span>
-          <span underline underline-offset-4 flex-shrink-0 text-3
+          <span i-carbon-chevron-left text-6 text-green font-700></span>
+          <span underline underline-offset-4 flex-shrink-0 font-500
             >{data.book.name}</span
           >
-          <span text-3 truncate mx-1>{page.data.titleZh}</span>
+          <span truncate mx-1>{page.data.titleZh}</span>
         </a>
       </div>
 
@@ -169,7 +168,7 @@
         text="gray"
         flex="shrink-0"
         bg="gray-200"
-        divide="x-2 gray-100"
+        divide="x-1 gray-100"
         rounded-4
       >
         <button
@@ -216,11 +215,13 @@
       flex-bc
       transition300
       overflow-hidden
-      h-10
+      h-12
       bg="gray-100 dark:gray-900"
       text="green 6"
     >
       <button
+        px-2
+        py-1
         aria-label="setting"
         onclick={() => {
           DATAS.dialog = { c: Setting, show: true, p: "b" };
@@ -231,6 +232,8 @@
       </button>
 
       <button
+        px-2
+        py-1
         aria-label="lang"
         class:text-gray={DATAS.showSdaEnglish}
         onclick={() => {
@@ -241,11 +244,21 @@
         <span i-carbon-language></span>
       </button>
 
-      <button aria-label="media" text-gray>
+      <button
+        px-2
+        py-1
+        aria-label="media"
+        text-gray
+        onclick={() => {
+          info("暂无相关媒体资源");
+        }}
+      >
         <span i-carbon-media-library></span>
       </button>
 
       <button
+        px-2
+        py-1
         aria-label="search"
         flex-cc
         px-1
@@ -253,6 +266,9 @@
         text-gray
         onclick={() => {
           console.log("to search");
+          // goto(`?s=${page.params.chapterId}`, {replaceState: true})
+          // DATAS.dialog = { c: Setting, show: true, p: "b" };
+          info("搜索功能网页中暂不支持");
         }}
       >
         <span i-carbon-search></span>
@@ -260,6 +276,8 @@
 
       <div flex-cc gap-4>
         <button
+          px-2
+          py-1
           sm="hidden"
           aria-label="menu"
           onclick={(e) => {
@@ -271,6 +289,8 @@
         </button>
 
         <button
+          px-2
+          py-1
           aria-label="pre"
           disabled={page.params.chapterId == 1}
           class:text-gray={page.params.chapterId == 1}
@@ -283,6 +303,8 @@
         </button>
 
         <button
+          px-2
+          py-1
           aria-label="next"
           disabled={page.params.chapterId == page.data.dirZh?.length}
           class:text-gray={page.params.chapterId == page.data.dirZh?.length}
