@@ -114,7 +114,6 @@
     <article
       style:height="{clientHeight}px"
       style:font-size="{DATAS.fontSize}px"
-      style:background-color={true ? DATAS.bg : ""}
       w-full
       relative
       scroll-y
@@ -227,7 +226,7 @@
       z-9
       bottom-0
       w-full
-      px-5
+      px-8
       flex-bc
       transition300
       overflow-hidden
@@ -272,7 +271,7 @@
         <span i-carbon-search></span>
       </button>
 
-      <div flex-cc gap-2>
+      <div flex-cc gap-4>
         <button
           bg-transparent
           sm="hidden"
