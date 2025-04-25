@@ -28,6 +28,7 @@
   sm="pb-0"
   leading="170%"
   style:font-size="{DATAS.fontSize}px"
+  style:background={!DATAS.isDarkMode ? DATAS.bg : ""}
 >
   {#each data.chapterZh as { t, p, c }, i}
     {#if DATAS.showSdaEnglish}

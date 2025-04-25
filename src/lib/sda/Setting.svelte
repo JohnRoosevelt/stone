@@ -51,7 +51,7 @@
     />
   </div>
 
-  <div w-full flex-bc gap-4>
+  <!-- <div w-full flex-bc gap-4>
     <p>行间距:</p>
 
     <div>...</div>
@@ -61,7 +61,7 @@
     <p>段间距:</p>
 
     <div>...</div>
-  </div>
+  </div> -->
 
   <div w-full flex justify-between gap-px>
     <p

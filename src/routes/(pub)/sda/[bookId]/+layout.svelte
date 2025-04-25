@@ -113,7 +113,6 @@
   <section flex-1 h-full relative bind:clientHeight use:articleSection>
     <article
       style:height="{clientHeight}px"
-      style:background={!DATAS.isDarkMode ? DATAS.bg : ""}
       w-full
       relative
       scroll-y
@@ -263,7 +262,7 @@
         onclick={() => {
           console.log("to search");
           // goto(`?s=${page.params.chapterId}`, {replaceState: true})
-          // DATAS.dialog = { c: Setting, show: true, p: "b" };
+          DATAS.dialog = { c: Setting, show: true, p: "b" };
           info("网页中暂不支持搜索");
         }}
       >
