@@ -6,7 +6,7 @@
       mark: false,
       name: "柔和米色",
       value: "#F5F5DC",
-      desc: "温暖、接近纸张颜色，减少眼睛疲劳",
+      desc: "温暖、接近纸张颜色",
     },
     {
       mark: false,
@@ -59,7 +59,7 @@
         <button
           w-full
           flex-bc
-          border-3
+          border-1
           rounded-1
           style:border-color={color.value === DATAS.bg
             ? color.value
@@ -69,7 +69,7 @@
           }}
         >
           <div flex-cc gap-1>
-            <span inline-block size-5 rounded-1 style:background={color.value}
+            <span inline-block size-6 rounded-r-1 style:background={color.value}
             ></span>
             <span text-14px>{color.name}</span>
           </div>

@@ -56,6 +56,8 @@
     let pressTimer = 0;
 
     function handleClick(event) {
+      console.log(event.target);
+
       isShow = !isShow;
     }
 
@@ -70,9 +72,9 @@
       pressTimer = setTimeout(() => {
         isLongPress = true;
         console.log("长按触发！", { lang, pIndex });
-        // info("test");
-        TOUCHP[pIndex] = TOUCHP[pIndex] || {};
-        TOUCHP[pIndex][lang] = true;
+        info(`长按了第 ${pIndex} 段`);
+        // TOUCHP[pIndex] = TOUCHP[pIndex] || {};
+        // TOUCHP[pIndex][lang] = true;
       }, 500);
     }
 
@@ -114,7 +116,7 @@
       w-full
       style:height="{clientHeight}px"
       style:font-size="{DATAS.fontSize}px"
-      style:background="{DATAS.bg}"
+      style:background={DATAS.bg}
       relative
       scroll-y
       leading="170%"
@@ -211,7 +213,7 @@
       z-9
       bottom-0
       w-full
-      px-8
+      px-4
       flex-bc
       transition300
       overflow-hidden
@@ -274,7 +276,7 @@
         <span i-carbon-search></span>
       </button>
 
-      <div flex-cc gap-4>
+      <div flex-cc gap-2>
         <button
           px-2
           py-1
