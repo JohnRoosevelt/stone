@@ -99,6 +99,29 @@
           <span opacity-85 text-3 pr-1>{color.desc}</span>
         </button>
       {/each}
+      <button
+          w-full
+          flex-bc
+          border-1
+          rounded-1
+          style:border-color={'#000' === DATAS.bg
+            ? '#000'
+            : "transparent"}
+          onclick={() => {
+            DATAS.bg = '#000';
+          }}
+        >
+          <div flex-cc gap-1>
+            <span
+              inline-block
+              size-6
+              rounded-r-1
+              style:background-color="#000"
+            ></span>
+            <span text-14px>黑色模式</span>
+          </div>
+          <span opacity-85 text-3 pr-1>调整系统模式为黑色模式</span>
+        </button>
     </div>
   </div>
 </section>

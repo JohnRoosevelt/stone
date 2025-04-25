@@ -113,7 +113,6 @@
   <section flex-1 h-full relative bind:clientHeight use:articleSection>
     <article
       style:height="{clientHeight}px"
-      style:background-color={true ? DATAS.bg : ""}
       w-full
       relative
       scroll-y
