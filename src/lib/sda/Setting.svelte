@@ -105,16 +105,16 @@
         flex-bc
         border-1
         rounded-1
-        style:border-color={DATAS.isDarkMode ? "#000" : "transparent"}
+        style:border-color={DATAS.isDarkMode ? "white" : "transparent"}
         onclick={() => {
           DATAS.bg = "#000";
           DATAS.isDarkMode = true;
         }}
       >
         <div flex-cc gap-1>
-          <span inline-block size-6 rounded-r-1 style:background-color="#000"
+          <span inline-block size-6 rounded-r-1 style:background-color="black"
           ></span>
-          <span>黑色模式</span>
+          <span>黑色模式 {DATAS.isDarkMode}</span>
         </div>
         <span opacity-65 pr-1>调整系统模式为黑色模式</span>
       </button>
