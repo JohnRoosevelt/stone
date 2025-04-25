@@ -66,8 +66,9 @@
   <div w-full flex justify-between gap-px>
     <p
       p-2
+      flex-cc
       style:background-color={DATAS.bg}
-      style="writing-mode: vertical-rl; line-height: 3.5;"
+      style="writing-mode: vertical-rl; letter-spacing: 1em"
     >
       背景颜色
     </p>
