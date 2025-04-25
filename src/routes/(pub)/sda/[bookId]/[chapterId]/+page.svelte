@@ -21,7 +21,7 @@
   }}
 /> -->
 
-<article w-full pb-12 space-y-2 sm="pb-0" style:background-color="{DATAS.bg}">
+<article w-full pb-12 space-y-2 sm="pb-0">
   {#each data.chapterZh as { t, p, c }, i}
     {#if DATAS.showSdaEnglish}
       <p
