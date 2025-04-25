@@ -21,12 +21,12 @@
   }}
 /> -->
 
-<article w-full pb-12 space-y-2 sm="pb-0">
+<article w-full pb-12 space-y-2 sm="pb-0" style:background-color={DATAS.bg}>
   {#each data.chapterZh as { t, p, c }, i}
     {#if DATAS.showSdaEnglish}
       <p
         px-5
-      class:bg-blue-100={TOUCHP[i]?.zh}
+        class:bg-blue-100={TOUCHP[i]?.zh}
         data-lang="en"
         data-t={t}
         data-p={p + "˼"}
@@ -66,7 +66,9 @@
       before={t == 7
         ? `content-[attr(data-p)] absolute -indent-8 text-green`
         : ""}
-      after={t == 7 && false ? `content-[attr(data-lang-origin)] ml-3 text-green` : ""}
+      after={t == 7 && false
+        ? `content-[attr(data-lang-origin)] ml-3 text-green`
+        : ""}
     >
       {c}
     </p>
