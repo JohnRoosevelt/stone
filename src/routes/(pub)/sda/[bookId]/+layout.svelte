@@ -112,10 +112,10 @@
 
   <section flex-1 h-full relative bind:clientHeight use:articleSection>
     <article
-      w-full
       style:height="{clientHeight}px"
       style:font-size="{DATAS.fontSize}px"
-      style:background="{DATAS.bg}"
+      style:background="{DATAS.bg};"
+      w-full
       relative
       scroll-y
       leading="170%"
