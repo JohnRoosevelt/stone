@@ -67,6 +67,7 @@
     <p
       p-2
       flex-cc
+      rounded-l-2
       style:background-color={DATAS.bg}
       style="writing-mode: vertical-rl; letter-spacing: 1em"
     >
@@ -79,7 +80,7 @@
           w-full
           flex-bc
           border-1
-          rounded-1
+          rounded-r-2
           style:border-color={color.value === DATAS.bg
             ? color.value
             : "transparent"}
@@ -104,7 +105,7 @@
         w-full
         flex-bc
         border-1
-        rounded-1
+        rounded-r-2
         style:border-color={DATAS.isDarkMode ? "white" : "transparent"}
         onclick={() => {
           DATAS.bg = "#000";
@@ -114,7 +115,7 @@
         <div flex-cc gap-1>
           <span inline-block size-6 rounded-r-1 style:background-color="black"
           ></span>
-          <span>黑色模式 {DATAS.isDarkMode}</span>
+          <span>黑色模式</span>
         </div>
         <span opacity-65 pr-1>调整系统模式为黑色模式</span>
       </button>

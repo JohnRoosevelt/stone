@@ -113,7 +113,7 @@
       px-2
       py-4
     >
-      <span i-carbon-chevron-left></span>
+      <span i-carbon-arrow-left></span>
     </a>
 
     <button

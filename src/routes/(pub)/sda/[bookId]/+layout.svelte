@@ -8,6 +8,7 @@
   import { onMount } from "svelte";
   import { slide } from "svelte/transition";
   import { afterNavigate, goto } from "$app/navigation";
+    import LongpressCtrl from "$lib/sda/LongpressCtrl.svelte";
 
   const { data, children } = $props();
 
@@ -16,7 +17,8 @@
   const isMobile = $derived(innerWidth < 640);
   const hidden = $derived(isMobile);
 
-  let isShow = $state(false);
+  let isShowCtrl = $state(false);
+  let isShowLongpressCtrl = $state(false);
   let scrollPercentage = $state(0);
 
   onMount(() => {
@@ -56,8 +58,8 @@
     let pressTimer = 0;
 
     function handleClick(event) {
-      console.log(event.target);
-      isShow = !isShow;
+      // console.log(event.target);
+      isShowCtrl = !isShowCtrl;
     }
 
     function handleMousedown(event) {
@@ -71,7 +73,11 @@
       pressTimer = setTimeout(() => {
         isLongPress = true;
         console.log("长按触发！", { lang, pIndex });
-        info(`长按了第 ${pIndex} 段`);
+        if (isShowCtrl) {
+          isShowCtrl = false
+        }
+        isShowLongpressCtrl = true
+        // info(`长按了第 ${pIndex} 段`);
         // TOUCHP[pIndex] = TOUCHP[pIndex] || {};
         // TOUCHP[pIndex][lang] = true;
       }, 500);
@@ -102,6 +108,7 @@
 </script>
 
 <svelte:window bind:innerWidth />
+<LongpressCtrl bind:isShow={isShowLongpressCtrl} />
 
 <article data-layout="bookId" w-full h-full flex-bc>
   {#if !isMobile}
@@ -118,7 +125,7 @@
       relative
       scroll-y
       onscroll={(event) => {
-        isShow = false;
+        isShowCtrl = false;
 
         const { scrollTop, scrollHeight, clientHeight } = event.target;
 
@@ -137,7 +144,7 @@
 </article>
 
 {#snippet RArticleMobile()}
-  {#if isShow}
+  {#if isShowCtrl}
     <section
       transition:slide
       absolute
@@ -154,7 +161,7 @@
     >
       <div flex-cc>
         <a href="/sda" data-sveltekit-replacestate flex-cc gap-px>
-          <span i-carbon-chevron-left text-green></span>
+          <span i-carbon-arrow-left text-green></span>
           <!-- <span underline underline-offset-4 flex-shrink-0 font-500
             >{data.book.name}</span
           >
@@ -186,8 +193,8 @@
           <span i-carbon-up-to-top></span>
         </button>
 
-        <div overflow-visible flex-cc size="auto">
-          <span text-3> {scrollPercentage}% </span>
+        <div overflow-visible flex-cc size="auto" text="4">
+          <span> {scrollPercentage}% </span>
         </div>
 
         <button
@@ -208,10 +215,10 @@
           flex-cc
           px-4
           py-2
-          class:text-green={scrollPercentage !== 100}
+          text="green"
           onclick={() => {
             DATAS.dialog = { c: Setting, show: true, p: "b" };
-            isShow = false;
+            isShowCtrl = false;
           }}
         >
           <span i-carbon-settings></span>
@@ -239,7 +246,7 @@
         class:text-gray={DATAS.showSdaEnglish}
         onclick={() => {
           DATAS.showSdaEnglish = !DATAS.showSdaEnglish;
-          isShow = false;
+          isShowCtrl = false;
         }}
       >
         <span i-carbon-language></span>
@@ -277,7 +284,7 @@
           aria-label="menu"
           onclick={(e) => {
             DATAS.dialog = { c: Chapter, show: true, p: "l" };
-            isShow = false;
+            isShowCtrl = false;
           }}
         >
           <span i-carbon-menu></span>
@@ -290,7 +297,7 @@
           class:text-gray={page.params.chapterId == 1}
           onclick={(e) => {
             goto(page.params.chapterId - 1, { replaceState: true });
-            isShow = false;
+            isShowCtrl = false;
           }}
         >
           <span i-carbon-chevron-left></span>
@@ -303,7 +310,7 @@
           class:text-gray={page.params.chapterId == page.data.dirZh?.length}
           onclick={(e) => {
             goto(page.params.chapterId - 1 + 2, { replaceState: true });
-            isShow = false;
+            isShowCtrl = false;
           }}
         >
           <span i-carbon-chevron-right></span>
