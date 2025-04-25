@@ -52,7 +52,7 @@
   </div>
 
   <div w-full flex justify-between gap-px>
-    <p p-2 style:background={DATAS.bg}>背景颜色:</p>
+    <p p-2 style:background-color={DATAS.bg}>背景颜色:</p>
 
     <div flex-1 flex-cc flex-col gap-4>
       {#each backgroundColors as color}
@@ -69,7 +69,7 @@
           }}
         >
           <div flex-cc gap-1>
-            <span inline-block size-6 rounded-r-1 style:background={color.value}
+            <span inline-block size-6 rounded-r-1 style:background-color={color.value}
             ></span>
             <span text-14px>{color.name}</span>
           </div>
