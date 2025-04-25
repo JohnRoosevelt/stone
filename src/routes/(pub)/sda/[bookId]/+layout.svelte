@@ -113,8 +113,6 @@
   <section flex-1 h-full relative bind:clientHeight use:articleSection>
     <article
       style:height="{clientHeight}px"
-      style:font-size="{DATAS.fontSize}px"
-      style:background-color={true ? DATAS.bg : ""}
       w-full
       relative
       scroll-y
@@ -147,25 +145,26 @@
       top-0
       w-full
       h-12
-      px-3
+      px-2
       flex-bc
+      text-7
       transition300
       overflow-hidden
       bg="gray-100 dark:gray-900"
     >
       <div flex-cc>
         <a href="/sda" data-sveltekit-replacestate flex-cc gap-px>
-          <span i-carbon-chevron-left text-6 text-green font-700></span>
-          <span underline underline-offset-4 flex-shrink-0 font-500
+          <span i-carbon-chevron-left text-green></span>
+          <!-- <span underline underline-offset-4 flex-shrink-0 font-500
             >{data.book.name}</span
           >
-          <span truncate mx-1>{page.data.titleZh}</span>
+          <span truncate mx-1>{page.data.titleZh}</span> -->
         </a>
       </div>
 
       <div
         text-5
-        grid="~ cols-3"
+        grid="~ cols-4"
         text="gray"
         flex="shrink-0"
         bg="gray-200"
@@ -175,8 +174,8 @@
         <button
           aria-label="scroll-to-top"
           flex-cc
-          px-1
-          py-px
+          px-4
+          py-2
           class:text-green={scrollPercentage !== 0}
           onclick={(event) => {
             // event.stopPropagation();
@@ -194,14 +193,28 @@
         <button
           aria-label="scroll-to-bottom"
           flex-cc
-          px-1
-          py-px
+          px-4
+          py-2
           class:text-green={scrollPercentage !== 100}
           onclick={() => {
             showId("article-bottom");
           }}
         >
           <span i-carbon-down-to-bottom></span>
+        </button>
+
+        <button
+          aria-label="setting"
+          flex-cc
+          px-4
+          py-2
+          class:text-green={scrollPercentage !== 100}
+          onclick={() => {
+            DATAS.dialog = { c: Setting, show: true, p: "b" };
+            isShow = false;
+          }}
+        >
+          <span i-carbon-settings></span>
         </button>
       </div>
     </section>
@@ -212,29 +225,16 @@
       z-9
       bottom-0
       w-full
-      px-4
+      px-5
       flex-bc
       transition300
       overflow-hidden
       h-12
       bg="gray-100 dark:gray-900"
-      text="green 6"
+      text="green 7"
     >
       <button
-        px-2
-        py-1
-        aria-label="setting"
-        onclick={() => {
-          DATAS.dialog = { c: Setting, show: true, p: "b" };
-          isShow = false;
-        }}
-      >
-        <span i-carbon-settings></span>
-      </button>
-
-      <button
-        px-2
-        py-1
+        bg-transparent
         aria-label="lang"
         class:text-gray={DATAS.showSdaEnglish}
         onclick={() => {
@@ -246,8 +246,7 @@
       </button>
 
       <button
-        px-2
-        py-1
+        bg-transparent
         aria-label="media"
         text-gray
         onclick={() => {
@@ -258,18 +257,14 @@
       </button>
 
       <button
-        px-2
-        py-1
+        bg-transparent
         aria-label="search"
-        flex-cc
-        px-1
-        py-px
         text-gray
         onclick={() => {
           console.log("to search");
           // goto(`?s=${page.params.chapterId}`, {replaceState: true})
           // DATAS.dialog = { c: Setting, show: true, p: "b" };
-          info("搜索功能网页中暂不支持");
+          info("网页中暂不支持搜索");
         }}
       >
         <span i-carbon-search></span>
@@ -277,8 +272,7 @@
 
       <div flex-cc gap-2>
         <button
-          px-2
-          py-1
+          bg-transparent
           sm="hidden"
           aria-label="menu"
           onclick={(e) => {
@@ -290,8 +284,7 @@
         </button>
 
         <button
-          px-2
-          py-1
+          bg-transparent
           aria-label="pre"
           disabled={page.params.chapterId == 1}
           class:text-gray={page.params.chapterId == 1}
@@ -304,8 +297,7 @@
         </button>
 
         <button
-          px-2
-          py-1
+          bg-transparent
           aria-label="next"
           disabled={page.params.chapterId == page.data.dirZh?.length}
           class:text-gray={page.params.chapterId == page.data.dirZh?.length}

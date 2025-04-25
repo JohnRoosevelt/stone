@@ -83,7 +83,7 @@
     bg="white dark:black"
     sm="hidden"
   >
-    <button>
+    <button font-500>
       {page.data.book?.name} 目录
     </button>
 
@@ -97,7 +97,7 @@
     z-3
     bottom-4
     right-1
-    text-6
+    text-7
     grid="~ cols-1"
     bg="gray-200"
     divide="y-2 gray-100"

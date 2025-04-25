@@ -58,7 +58,7 @@
   });
 </script>
 
-<article bind:clientHeight w-full h-full relative overflow-hidden>
+<article bind:clientHeight w-full h-full relative overflow-hidden font-500>
   <section
     id="booksContainer"
     style:height="{clientHeight}px"
