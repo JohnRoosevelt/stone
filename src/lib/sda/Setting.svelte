@@ -73,7 +73,7 @@
       背景颜色
     </p>
 
-    <div flex-1 flex-cc flex-col gap-4>
+    <div flex-1 flex-cc flex-col gap-4 text-14px>
       {#each backgroundColors as color}
         <button
           w-full
@@ -94,9 +94,9 @@
               rounded-r-1
               style:background-color={color.value}
             ></span>
-            <span text-14px>{color.name}</span>
+            <span>{color.name}</span>
           </div>
-          <span opacity-85 text-3 pr-1>{color.desc}</span>
+          <span opacity-65 pr-1>{color.desc}</span>
         </button>
       {/each}
       <button
@@ -118,9 +118,9 @@
               rounded-r-1
               style:background-color="#000"
             ></span>
-            <span text-14px>黑色模式</span>
+            <span>黑色模式</span>
           </div>
-          <span opacity-85 text-3 pr-1>调整系统模式为黑色模式</span>
+          <span opacity-65 pr-1>调整系统模式为黑色模式</span>
         </button>
     </div>
   </div>
