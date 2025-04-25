@@ -63,7 +63,13 @@
 	}
 </script>
 
-<dialog overflow="visible" use:show bg="transparent" m="auto">
+<dialog
+	overflow="visible"
+	use:show
+	bg="transparent"
+	m="auto"
+	text="black/85 dark:white"
+>
 	{@render children?.()}
 </dialog>
 

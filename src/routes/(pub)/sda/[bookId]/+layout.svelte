@@ -117,7 +117,6 @@
       w-full
       relative
       scroll-y
-      leading="170%"
       onscroll={(event) => {
         isShow = false;
 
