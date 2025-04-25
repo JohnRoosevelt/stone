@@ -44,7 +44,7 @@
     <input
       flex-1
       type="range"
-      min="12"
+      min="14"
       max="24"
       step="1"
       bind:value={DATAS.fontSize}

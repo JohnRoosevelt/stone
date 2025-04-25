@@ -113,6 +113,7 @@
   <section flex-1 h-full relative bind:clientHeight use:articleSection>
     <article
       style:height="{clientHeight}px"
+      style=""
       w-full
       relative
       scroll-y
