@@ -64,7 +64,13 @@
   </div>
 
   <div w-full flex justify-between gap-px>
-    <p p-2 style:background-color={DATAS.bg}>背景颜色:</p>
+    <p
+      p-2
+      style:background-color={DATAS.bg}
+      style="writing-mode: vertical-rl; line-height: 3.5;"
+    >
+      背景颜色
+    </p>
 
     <div flex-1 flex-cc flex-col gap-4>
       {#each backgroundColors as color}
@@ -81,7 +87,11 @@
           }}
         >
           <div flex-cc gap-1>
-            <span inline-block size-6 rounded-r-1 style:background-color={color.value}
+            <span
+              inline-block
+              size-6
+              rounded-r-1
+              style:background-color={color.value}
             ></span>
             <span text-14px>{color.name}</span>
           </div>
@@ -89,11 +99,5 @@
         </button>
       {/each}
     </div>
-  </div>
-
-  <div w-full flex-bc gap-4>
-    <p>文字标记:</p>
-
-    <div>...</div>
   </div>
 </section>
