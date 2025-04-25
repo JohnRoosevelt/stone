@@ -1,14 +1,14 @@
 <script>
   import { page } from "$app/state";
   import { showId } from "$lib";
-  import { DATAS, TOUCHP } from "$lib/data.svelte";
+  import { DATAS } from "$lib/data.svelte";
   import { info } from "$lib/global/Toast";
   import Chapter from "$lib/sda/Chapter.svelte";
   import Setting from "$lib/sda/Setting.svelte";
   import { onMount } from "svelte";
   import { slide } from "svelte/transition";
   import { afterNavigate, goto } from "$app/navigation";
-    import LongpressCtrl from "$lib/sda/LongpressCtrl.svelte";
+  import LongpressCtrl from "$lib/sda/LongpressCtrl.svelte";
 
   const { data, children } = $props();
 
@@ -59,6 +59,9 @@
 
     function handleClick(event) {
       // console.log(event.target);
+      if (isShowLongpressCtrl) {
+        return;
+      }
       isShowCtrl = !isShowCtrl;
     }
 
@@ -74,12 +77,11 @@
         isLongPress = true;
         console.log("长按触发！", { lang, pIndex });
         if (isShowCtrl) {
-          isShowCtrl = false
+          isShowCtrl = false;
         }
-        isShowLongpressCtrl = true
+        isShowLongpressCtrl = true;
         // info(`长按了第 ${pIndex} 段`);
-        // TOUCHP[pIndex] = TOUCHP[pIndex] || {};
-        // TOUCHP[pIndex][lang] = true;
+        DATAS.touchInfo = {pIndex, lang}
       }, 500);
     }
 
@@ -108,7 +110,6 @@
 </script>
 
 <svelte:window bind:innerWidth />
-<LongpressCtrl bind:isShow={isShowLongpressCtrl} />
 
 <article data-layout="bookId" w-full h-full flex-bc>
   {#if !isMobile}
@@ -140,6 +141,7 @@
       <div h-1px id="article-bottom"></div>
     </article>
     {@render RArticleMobile()}
+    <LongpressCtrl bind:isShow={isShowLongpressCtrl} />
   </section>
 </article>
 
@@ -161,7 +163,7 @@
     >
       <div flex-cc>
         <a href="/sda" data-sveltekit-replacestate flex-cc gap-px>
-          <span i-carbon-arrow-left text-green></span>
+          <span i-carbon-chevron-left text-green></span>
           <!-- <span underline underline-offset-4 flex-shrink-0 font-500
             >{data.book.name}</span
           >
@@ -300,7 +302,7 @@
             isShowCtrl = false;
           }}
         >
-          <span i-carbon-chevron-left></span>
+          <span i-carbon-arrow-left></span>
         </button>
 
         <button
@@ -313,7 +315,7 @@
             isShowCtrl = false;
           }}
         >
-          <span i-carbon-chevron-right></span>
+          <span i-carbon-arrow-right></span>
         </button>
       </div>
     </section>

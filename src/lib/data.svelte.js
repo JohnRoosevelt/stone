@@ -6,7 +6,8 @@ export const DATAS = $state({
   showSdaEnglish: false,
   dialog: {
     show: false, animate: {}, p: 'c', c: null
-  }
+  },
+  touchInfo: {}
 })
 
 export const TOUCHP = $state({})
