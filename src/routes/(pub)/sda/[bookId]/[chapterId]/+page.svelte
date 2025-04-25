@@ -23,7 +23,7 @@
 
 <article w-full pb-12 space-y-2 sm="pb-0">
   {#each data.chapterZh as { t, p, c }, i}
-    {#if DATAS.showSdaEnglish}
+    <!-- {#if DATAS.showSdaEnglish}
       <p
         px-5
       class:bg-blue-100={TOUCHP[i]?.zh}
@@ -45,12 +45,13 @@
       >
         {data.chapterEn[i].c}
       </p>
-    {/if}
+    {/if} -->
 
     <p
       px-5
       class:bg-blue-100={TOUCHP[i]?.zh}
       data-lang="zh"
+      data-lang-origin="en"
       data-t={t}
       data-p={p + "˼"}
       data-i={i}
@@ -65,7 +66,7 @@
       before={t == 7
         ? `content-[attr(data-p)] absolute -indent-8 text-green`
         : ""}
-      after={t == 7 && false ? `content-[attr(data-p)] ml-3 text-green` : ""}
+      after={t == 7 && DATAS.showSdaEnglish ? `content-[attr(data-lang-origin)] ml-3 text-green` : ""}
     >
       {c}
     </p>

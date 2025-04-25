@@ -60,15 +60,18 @@
           w-full
           flex-bc
           border-3
-          rounded-3
-          style:border-color={color.value === DATAS.bg ? color.value : 'transparent'}
+          rounded-1
+          style:border-color={color.value === DATAS.bg
+            ? color.value
+            : "transparent"}
           onclick={() => {
             DATAS.bg = color.value;
           }}
         >
           <div flex-cc gap-1>
-            <span inline-block size-7 rounded-1 bg="[{color.value}]"></span>
-            <span>{color.name}</span>
+            <span inline-block size-5 rounded-1 style:background={color.value}
+            ></span>
+            <span text-14px>{color.name}</span>
           </div>
           <span opacity-85 text-3 pr-1>{color.desc}</span>
         </button>
