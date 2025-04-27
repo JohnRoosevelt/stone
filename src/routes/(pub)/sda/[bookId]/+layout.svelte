@@ -69,6 +69,8 @@
       const lang = event.target.getAttribute("data-lang");
       const pIndex = event.target.getAttribute("data-i");
 
+      console.log({ pIndex, lang });
+
       if (!lang || !pIndex) {
         return;
       }
@@ -81,12 +83,23 @@
         }
         isShowLongpressCtrl = true;
         // info(`长按了第 ${pIndex} 段`);
-        DATAS.touchInfo = {pIndex, lang}
+        DATAS.touchInfo = { pIndex, lang };
       }, 500);
     }
 
     function handleMouseup() {
       clearTimeout(pressTimer);
+      if (isShowLongpressCtrl) {
+        let selectedText;
+        const selection = window.getSelection();
+        if (selection.toString()) {
+          selectedText = selection.toString();
+        }
+
+        if (!selectedText) {
+          isShowLongpressCtrl = false;
+        }
+      }
     }
 
     $effect(() => {

@@ -5,21 +5,13 @@
 
   const { data } = $props();
   // console.log(data);
-  $inspect(TOUCHP);
+  // $inspect(TOUCHP);
 
-  let selection = $state("");
 </script>
 
 <svelte:head>
   <title>{data.book.name} {data.titleZh}</title>
 </svelte:head>
-
-<!-- <svelte:document
-  onselectionchange={() => {
-    selection = document.getSelection().toString();
-    console.log({selection});
-  }}
-/> -->
 
 <article
   w-full
@@ -33,6 +25,7 @@
   {#each data.chapterZh as { t, p, c }, i}
     {#if DATAS.showSdaEnglish}
       <p
+        id="en-{i}"
         px-5
         class:bg-blue-100={TOUCHP[i]?.zh}
         data-lang="en"
@@ -56,6 +49,7 @@
     {/if}
 
     <p
+      id="zh-{i}"
       px-5
       class:bg-blue-100={TOUCHP[i]?.zh}
       data-lang="zh"
@@ -82,7 +76,3 @@
     </p>
   {/each}
 </article>
-
-<!-- <div fixed top-0 bg-red-100>
-  {selection}
-</div> -->

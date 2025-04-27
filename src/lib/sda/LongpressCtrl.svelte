@@ -7,6 +7,13 @@
   let { isShow = $bindable(false) } = $props();
 </script>
 
+<!-- <svelte:document
+  onselectionchange={() => {
+    selection = document.getSelection().toString();
+    console.log({selection});
+  }}
+/> -->
+
 {#if isShow}
   <div
     absolute
@@ -24,11 +31,19 @@
     <button
       aria-label="select"
       onclick={(event) => {
-        const target = event.currentTarget;
+        let selectedText;
+        const selection = window.getSelection();
+        if (selection.toString()) {
+          selectedText = selection.toString();
+        }
+        const target = document.getElementById(`${DATAS.touchInfo.lang}-${DATAS.touchInfo.pIndex}`);
+        console.log({ selectedText, target });
+
         const range = document.createRange();
         range.selectNodeContents(target); // 选择目标元素的内容
 
-        const selection = window.getSelection();
+        console.log('...', {range, target});
+        
         selection.removeAllRanges(); // 清除之前的选择
         selection.addRange(range); // 添加新的选择范围
         // isShow = false;
@@ -53,7 +68,7 @@
         } catch (err) {
           console.error("复制失败:", err);
         }
-        // isShow = false;
+        isShow = false;
       }}
     >
       <span i-carbon-copy></span>
