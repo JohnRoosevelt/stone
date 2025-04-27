@@ -1,10 +1,40 @@
 <script>
   import { page } from "$app/state";
-  import { DATAS } from "$lib/data.svelte";
   import { info } from "$lib/global/Toast";
   import { slide } from "svelte/transition";
 
   let { isShow = $bindable(false) } = $props();
+
+  function saveHighlight(text, range) {
+    let parent = range.commonAncestorContainer;
+
+    if (parent.nodeType === Node.TEXT_NODE) {
+      parent = parent.parentNode;
+    }
+
+    const pIndex = parent.getAttribute("data-i");
+
+    const preRange = document.createRange();
+    preRange.setStart(parent.firstChild, 0);
+    preRange.setEnd(range.startContainer, range.startOffset);
+
+    // console.log(target.firstChild, range.startContainer, range.startOffset, preRange);
+    const startOffset = preRange.toString().length;
+
+    const highlight = {
+      pIndex,
+      text,
+      startOffset,
+      length: text.length,
+    };
+
+    console.log({ highlight });
+
+    // 从 localStorage 获取现有高亮或初始化空数组
+    // let highlights = JSON.parse(localStorage.getItem("highlights") || "[]");
+    // highlights.push(highlight);
+    // localStorage.setItem("highlights", JSON.stringify(highlights));
+  }
 </script>
 
 <!-- <svelte:document
@@ -31,21 +61,25 @@
     <button
       aria-label="select"
       onclick={(event) => {
-        let selectedText;
         const selection = window.getSelection();
-        if (selection.toString()) {
-          selectedText = selection.toString();
+        const selectedText = selection.toString();
+
+        if (!selectedText) {
+          return;
         }
-        const target = document.getElementById(`${DATAS.touchInfo.lang}-${DATAS.touchInfo.pIndex}`);
-        console.log({ selectedText, target });
+        const range = selection.getRangeAt(0);
 
-        const range = document.createRange();
-        range.selectNodeContents(target); // 选择目标元素的内容
+        let parent = range.commonAncestorContainer;
 
-        console.log('...', {range, target});
-        
-        selection.removeAllRanges(); // 清除之前的选择
-        selection.addRange(range); // 添加新的选择范围
+        if (parent.nodeType === Node.TEXT_NODE) {
+          parent = parent.parentNode;
+        }
+
+        const newRange = document.createRange();
+        newRange.selectNodeContents(parent); // 选择目标元素的内容
+
+        selection.removeAllRanges();
+        selection.addRange(newRange);
         // isShow = false;
       }}
     >
@@ -55,16 +89,27 @@
       aria-label="copy"
       onclick={async () => {
         try {
-          let selectedText;
           const selection = window.getSelection();
-          if (selection.toString()) {
-            selectedText = selection.toString();
+          const selectedText = selection.toString();
+
+          if (!selectedText) {
+            return;
+          }
+          const range = selection.getRangeAt(0);
+
+          let parent = range.commonAncestorContainer;
+
+          if (parent.nodeType === Node.TEXT_NODE) {
+            parent = parent.parentNode;
           }
 
-          const content = `${selectedText}   ${DATAS.touchInfo.pIndex}˼ \n\n —— ${page.data.book.name} ${page.data.titleZh} `;
+          const pp = parent.getAttribute("data-pp");
+
+          const content = `${selectedText}   ${pp}˼ \n\n —— ${page.data.book.name} ${page.data.titleZh} `;
           console.log({ content });
           await navigator.clipboard.writeText(content);
           info("已复制到剪贴板!");
+          selection.removeAllRanges();
         } catch (err) {
           console.error("复制失败:", err);
         }
@@ -77,6 +122,20 @@
       aria-label="edit"
       onclick={() => {
         isShow = false;
+        const selection = window.getSelection();
+        const selectedText = selection.toString();
+
+        if (!selectedText) {
+          return;
+        }
+        const range = selection.getRangeAt(0);
+        const span = document.createElement("span");
+        span.className = "bg-red";
+        range.surroundContents(span);
+
+        saveHighlight(selectedText, range);
+
+        selection.removeAllRanges();
       }}
     >
       <span i-carbon-edit></span>
