@@ -53,7 +53,7 @@
       // const target = e.currentTarget;
       const selection = window.getSelection();
       const range = document.createRange();
-      range.selectNodeContents(e.target.parentNode);
+      range.selectNodeContents(e.target);
       selection.removeAllRanges();
       selection.addRange(range);
 
