@@ -19,6 +19,7 @@
 
   let isShowCtrl = $state(false);
   let isShowLongpressCtrl = $state(false);
+  let isShowEdit = $state(false);
   let scrollPercentage = $state(0);
 
   onMount(() => {
@@ -58,18 +59,33 @@
     let pressTimer = 0;
 
     function handleClick(event) {
-      // console.log(event.target);
+      console.log(event.target.tagName);
       if (isShowLongpressCtrl) {
         return;
+      }
+
+      if (["BUTTON", "SPAN"].includes(event.target.tagName)) {
+        return isShowCtrl = false;
       }
       isShowCtrl = !isShowCtrl;
     }
 
     function handleMousedown(event) {
+      // console.log(
+      //   event.target,
+      //   event.target.nodeType,
+      //   event.target.tagName,
+      //   Node.TEXT_NODE,
+      // );
+
+      if (event.target.nodeType === Node.TEXT_NODE) {
+        return;
+      }
+
       const lang = event.target.getAttribute("data-lang");
       const pIndex = event.target.getAttribute("data-i");
 
-      console.log({ pIndex, lang });
+      // console.log({ pIndex, lang });
 
       if (!lang || !pIndex) {
         return;
@@ -89,16 +105,13 @@
 
     function handleMouseup() {
       clearTimeout(pressTimer);
-      if (isShowLongpressCtrl) {
-        let selectedText;
-        const selection = window.getSelection();
-        if (selection.toString()) {
-          selectedText = selection.toString();
-        }
+      const selection = window.getSelection();
+      const selectedText = selection.toString();
 
-        if (!selectedText) {
-          isShowLongpressCtrl = false;
-        }
+      if (!selectedText) {
+        isShowLongpressCtrl = false;
+        isShowEdit = false;
+        return;
       }
     }
 
@@ -154,7 +167,7 @@
       <div h-1px id="article-bottom"></div>
     </article>
     {@render RArticleMobile()}
-    <LongpressCtrl bind:isShow={isShowLongpressCtrl} />
+    <LongpressCtrl bind:isShowLongpressCtrl bind:isShowEdit />
   </section>
 </article>
 
