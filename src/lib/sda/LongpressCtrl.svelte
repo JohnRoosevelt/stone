@@ -4,69 +4,112 @@
   import { slide } from "svelte/transition";
 
   let { isShowLongpressCtrl = $bindable(false) } = $props();
+  let type = $state("");
+
+  $effect(() => {
+    if (isShowLongpressCtrl) {
+      const selection = window.getSelection();
+      const range = selection.getRangeAt(0);
+      const parent = range.commonAncestorContainer;
+      // console.log(parent.nodeName, parent.nodeType, Node.TEXT_NODE);
+      if (parent.nodeType === Node.TEXT_NODE) {
+        type = "";
+        return;
+      }
+      const dataType = parent.getAttribute("data-type");
+      // console.log("set type", dataType);
+      type = dataType;
+    }
+  });
 
   function selectionEdit(event) {
+    event.stopPropagation();
+
+    const dataType = event.target.getAttribute("data-type");
     const bg = event.target.getAttribute("bg");
     const text = event.target.getAttribute("text");
     const underline = event.target.getAttribute("underline");
     const decoration = event.target.getAttribute("decoration");
-    console.log({ bg, text, underline, decoration });
+    console.log({ dataType, bg, text, underline, decoration });
+    type = dataType;
 
-    const selection = window.getSelection();
-    const selectedText = selection.toString();
-
-    if (!selectedText) {
-      return;
-    }
-
-    const range = selection.getRangeAt(0);
-    const span = document.createElement("span");
-
+    let className;
     if (underline) {
       const underlineAtribite = underline.replace("~ ", "").split(" ");
       const decorationAtribite = decoration.split(" ");
 
-      span.className = "underline ";
+      className = "underline ";
       for (let i of underlineAtribite) {
-        span.className += `underline-${i} `;
+        className += `underline-${i} `;
       }
 
       for (let i of decorationAtribite) {
-        span.className += `decoration-${i} `;
+        className += `decoration-${i} `;
       }
 
-      console.log({ underlineAtribite, decorationAtribite }, span.className);
+      console.log({ underlineAtribite, decorationAtribite });
     }
 
     if (bg) {
-      span.className = `bg-${bg}`;
+      className = `bg-${bg}`;
     }
 
     if (text) {
-      span.className = `text-${text}`;
+      className = `text-${text}`;
     }
 
+    console.log({ className });
+
+    const selection = window.getSelection();
+    const range = selection.getRangeAt(0);
+    const parent = range.commonAncestorContainer;
+    console.log(parent.nodeName, parent.nodeType, Node.TEXT_NODE);
+
+    if (parent.nodeType !== Node.TEXT_NODE) {
+      console.log("has style", parent.nodeName, parent.className);
+
+      if (parent.className !== className) {
+        parent.className = className;
+        parent.setAttribute("data-type", dataType);
+        return;
+      }
+      console.log(".... remove");
+      const target = parent.parentNode;
+      while (parent.firstChild) {
+        target.insertBefore(parent.firstChild, parent);
+      }
+      target.removeChild(parent);
+      target.normalize();
+
+      return;
+    }
+
+    console.log("set new ...");
+
+    const span = document.createElement("span");
+    span.className = className;
+    span.setAttribute("data-type", dataType);
+
     span.addEventListener("click", (e) => {
+      e.stopPropagation();
+
       // const target = e.currentTarget;
       const selection = window.getSelection();
       const range = document.createRange();
       range.selectNodeContents(e.target);
       selection.removeAllRanges();
       selection.addRange(range);
-
-      const selectedText = selection.toString();
-      console.log("xxx", { selectedText }, e.target.parentNode);
-      info(selectedText);
-      isShowEdit = true;
     });
+
+    // removeEdit(span)
     range.surroundContents(span);
 
-    saveHighlight(selectedText, range);
+    saveHighlight(selection.toString(), range);
 
+    const newRange = document.createRange();
+    newRange.selectNodeContents(span);
     selection.removeAllRanges();
-    isShowEdit = false;
-
-    //     event.stopPropagation();
+    selection.addRange(newRange);
   }
 
   function saveHighlight(text, range) {
@@ -99,41 +142,6 @@
     // highlights.push(highlight);
     // localStorage.setItem("highlights", JSON.stringify(highlights));
   }
-
-  function removeEdit(event) {
-    // event.stopPropagation();
-
-    const span = event.target;
-    const text = span.textContent;
-    const range = document.createRange();
-    range.selectNodeContents(span);
-
-    // 计算高亮的 startOffset
-    // const preRange = document.createRange();
-    // preRange.setStart(paragraph.firstChild, 0);
-    // preRange.setEnd(range.startContainer, range.startOffset);
-    // const startOffset = preRange.toString().length;
-
-    // 从 localStorage 中移除对应的标记
-    // let highlights = JSON.parse(localStorage.getItem("highlights") || "[]");
-    // highlights = highlights.filter(
-    //   (highlight) =>
-    //     !(
-    //       highlight.text === text &&
-    //       highlight.startOffset === startOffset &&
-    //       highlight.length === text.length
-    //     ),
-    // );
-    // localStorage.setItem("highlights", JSON.stringify(highlights));
-
-    // 从 DOM 中移除高亮，恢复原始文本
-    const parent = span.parentNode;
-    while (span.firstChild) {
-      parent.insertBefore(span.firstChild, span);
-    }
-    parent.removeChild(span);
-    parent.normalize(); // 合并相邻的文本节点
-  }
 </script>
 
 {#if isShowLongpressCtrl}
@@ -151,73 +159,56 @@
     overflow-hidden
   >
     <button
-      aria-label="scroll-to-top"
+      data-type="underline-wavy"
+      aria-label="select-edit"
       flex-cc
       w-10
-      h-16
+      h={type === "underline-wavy" ? 24 : 14}
       underline="~ offset-4"
       decoration="2 wavy red-500"
-      onclick={() => {
-        showId("article-top", "end");
-      }}
+      onclick={selectionEdit}
     >
       A
     </button>
 
     <button
-      aria-label="scroll-to-top"
+      data-type="underline"
+      aria-label="select-edit"
       flex-cc
       w-10
-      h-16
+      h={type === "underline" ? 24 : 14}
       underline="~ offset-4"
       decoration="2 red-500"
       class:text-green={false}
-      onclick={() => {
-        showId("article-top", "end");
-      }}
+      onclick={selectionEdit}
     >
       A
     </button>
 
     <button
-      aria-label="scroll-to-bottom"
+      data-type="bg"
+      aria-label="select-edit"
       flex-cc
       w-10
-      h-16
-      text="red"
-      class:text-green={false}
-      onclick={() => {
-        showId("article-bottom");
-      }}
-    >
-      A
-    </button>
-
-    <button
-      aria-label="scroll-to-bottom"
-      flex-cc
-      w-10
-      h-16
+      h={type === "bg" ? 24 : 14}
       bg="red"
       class:text-green={false}
-      onclick={() => {
-        DATAS.dialog = { c: Setting, show: true, p: "b" };
-      }}
+      onclick={selectionEdit}
     >
       A
     </button>
 
     <button
-      aria-label="scroll-to-bottom"
+      data-type="text"
+      aria-label="select-edit"
       flex-cc
       w-10
-      h-16
+      h={type === "text" ? 24 : 14}
+      text="red"
       class:text-green={false}
-      onclick={() => {
-        console.log("...");
-      }}
+      onclick={selectionEdit}
     >
-      <span i-carbon-edit-off></span>
+      A
     </button>
   </section>
 

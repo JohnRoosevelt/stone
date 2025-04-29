@@ -78,7 +78,7 @@
     relative
     bind:clientHeight
     onclick={(event) => {
-      console.log(2, event.target, event.type, event.eventPhase);
+      // console.log(2, event.target, event.type, event.eventPhase);
 
       if (isShowLongpressCtrl) {
         return;
