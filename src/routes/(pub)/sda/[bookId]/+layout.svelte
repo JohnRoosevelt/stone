@@ -52,61 +52,18 @@
 
   // onclick show the top info and bottom ctrl
   // handel long press fun
-  function articleSection(node) {
-    let pressTimer = 0;
-
-    function handleMousedown(event) {
-      pressTimer = setTimeout(() => {
-        if (isShowCtrl) {
-          isShowCtrl = false;
-        }
-
-        const lang = event.target.getAttribute("data-lang");
-        const pIndex = event.target.getAttribute("data-i");
-
-        console.log({ pIndex, lang });
-
-        if (!lang || !pIndex) {
-          return;
-        }
-        // info(`长按了第 ${pIndex} 段`);
-        DATAS.touchInfo = { pIndex, lang };
-        isShowLongpressCtrl = true;
-      }, 500);
-    }
-
+  function action(node) {
     function handleMouseup(event) {
-      clearTimeout(pressTimer);
-
-      const selection = window.getSelection();
-      const selectedText = selection.toString();
-      console.log("mouseup", { selectedText });
-      console.log(event.target, event.target.nodeType, event.target.tagName);
-
-
-      if (selectedText) {
+      if (isShowLongpressCtrl) {
+        isShowCtrl = false;
         return;
       }
-
       isShowCtrl = !isShowCtrl;
     }
 
     $effect(() => {
-      if (isMobile) {
-        node.addEventListener("touchstart", handleMousedown, { passive: true });
-        node.addEventListener("touchend", handleMouseup, { passive: true });
-        node.addEventListener("touchmove", handleMouseup, { passive: true });
-        return () => {
-          node.removeEventListener("touchstart", handleMousedown);
-          node.removeEventListener("touchend", handleMouseup);
-          node.removeEventListener("touchmove", handleMouseup);
-        };
-      }
-
-      node.addEventListener("mousedown", handleMousedown);
       node.addEventListener("mouseup", handleMouseup);
       return () => {
-        node.removeEventListener("mousedown", handleMousedown);
         node.removeEventListener("mouseup", handleMouseup);
       };
     });
@@ -115,12 +72,13 @@
 
 <svelte:window bind:innerWidth />
 
-<!-- <svelte:document
+<svelte:document
   onselectionchange={() => {
     const selection = document.getSelection().toString();
     console.log({ selection });
+    isShowLongpressCtrl = selection;
   }}
-/> -->
+/>
 
 <article data-layout="bookId" w-full h-full flex-bc>
   {#if !isMobile}
@@ -129,7 +87,7 @@
     </section>
   {/if}
 
-  <section flex-1 h-full relative bind:clientHeight use:articleSection>
+  <section flex-1 h-full relative bind:clientHeight use:action>
     <article
       style:height="{clientHeight}px"
       style=""
@@ -153,7 +111,6 @@
     </article>
 
     <ArticleCtrl bind:isShowCtrl {scrollPercentage} />
-    <!-- {@render RArticleMobile()} -->
-    <!-- <LongpressCtrl bind:isShowLongpressCtrl bind:isShowEdit /> -->
+    <LongpressCtrl bind:isShowLongpressCtrl />
   </section>
 </article>

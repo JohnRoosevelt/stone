@@ -77,9 +77,7 @@
 
 <article
   w-full
-  pb-12
   space-y-2
-  sm="pb-0"
   leading="170%"
   style:font-size="{DATAS.fontSize}px"
   style:background={!DATAS.isDarkMode ? DATAS.bg : ""}

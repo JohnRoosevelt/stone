@@ -3,7 +3,10 @@
   import { info } from "$lib/global/Toast";
   import { slide } from "svelte/transition";
 
-  let { isShowLongpressCtrl = $bindable(false) } = $props();
+  let {
+    isShowLongpressCtrl = $bindable(false),
+    isShowEdit = $bindable(false),
+  } = $props();
 
   function selectionEdit(event) {
     const bg = event.target.getAttribute("bg");
@@ -238,6 +241,50 @@
       }}
     >
       <span i-carbon-close></span>
+    </button>
+  </div>
+{/if}
+
+{#if isShowEdit}
+  <div
+    absolute
+    z-9
+    bottom-0
+    left-0
+    w-full
+    h-12
+    flex-bc
+    px-8
+    text="7"
+    transition:slide
+    bg="gray-100 dark:gray-900"
+  >
+    <button
+      aria-label="edit"
+      underline="~ offset-4"
+      decoration="2 wavy red-500"
+      onclick={selectionEdit}
+    >
+      A
+    </button>
+
+    <button
+      aria-label="edit"
+      underline="~ offset-4"
+      decoration="2 red-500"
+      onclick={selectionEdit}
+    >
+      A
+    </button>
+
+    <button aria-label="edit" text="red" onclick={selectionEdit}> A </button>
+
+    <button bg="red" px="2" aria-label="edit" onclick={selectionEdit}>
+      A
+    </button>
+
+    <button aria-label="close" text-red onclick={removeEdit}>
+      <span i-carbon-edit-off></span>
     </button>
   </div>
 {/if}
