@@ -49,24 +49,6 @@
       DATAS.dialog = { c: Chapter, show: true, p: "l" };
     }
   });
-
-  // onclick show the top info and bottom ctrl
-  // handel long press fun
-  function action(node) {
-    function handleMouseup(event) {
-      if (isShowLongpressCtrl) {
-        return;
-      }
-      isShowCtrl = !isShowCtrl;
-    }
-
-    $effect(() => {
-      node.addEventListener("mouseup", handleMouseup);
-      return () => {
-        node.removeEventListener("mouseup", handleMouseup);
-      };
-    });
-  }
 </script>
 
 <svelte:window bind:innerWidth />
@@ -88,7 +70,22 @@
     </section>
   {/if}
 
-  <section flex-1 h-full relative bind:clientHeight use:action>
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <section
+    flex-1
+    h-full
+    relative
+    bind:clientHeight
+    onclick={(event) => {
+      // console.log(2, event.target, event.type, event.eventPhase);
+
+      if (isShowLongpressCtrl) {
+        return;
+      }
+      isShowCtrl = !isShowCtrl;
+    }}
+  >
     <article
       style:height="{clientHeight}px"
       style=""

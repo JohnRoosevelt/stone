@@ -75,52 +75,10 @@
       text-green
       onclick={() => {
         DATAS.dialog = { c: Setting, show: true, p: "b" };
-        isShowCtrl = false;
       }}
     >
       <span i-carbon-settings></span>
     </button>
-  </section>
-
-  <section
-    transition:slide
-    hidden
-    absolute
-    z-9
-    bottom-12
-    right-0
-    w-12
-    h-100
-    flex-bc
-    flex-col
-    text-7
-    transition300
-    overflow-hidden
-    bg="gray-700 dark:gray-900"
-  >
-    <div
-      text-5
-      grid="~ cols-1"
-      text="gray"
-      flex="shrink-0"
-      bg="gray-200"
-      divide="x-1 gray-100"
-      rounded-4
-    >
-      <button
-        aria-label="setting"
-        flex-cc
-        px-4
-        py-2
-        text="green"
-        onclick={() => {
-          DATAS.dialog = { c: Setting, show: true, p: "b" };
-          isShowCtrl = false;
-        }}
-      >
-        <span i-carbon-settings></span>
-      </button>
-    </div>
   </section>
 
   <section
@@ -141,9 +99,11 @@
       bg-transparent
       aria-label="lang"
       class:text-gray={DATAS.showSdaEnglish}
-      onclick={() => {
+      onclick={(event) => {
+        event.stopPropagation();
+        // console.log(1, event.target, event.type, event.eventPhase);
+
         DATAS.showSdaEnglish = !DATAS.showSdaEnglish;
-        isShowCtrl = false;
       }}
     >
       <span i-carbon-language></span>
@@ -181,7 +141,6 @@
         aria-label="menu"
         onclick={(e) => {
           DATAS.dialog = { c: Chapter, show: true, p: "l" };
-          isShowCtrl = false;
         }}
       >
         <span i-carbon-menu></span>
@@ -194,7 +153,6 @@
         class:text-gray={page.params.chapterId == 1}
         onclick={(e) => {
           goto(page.params.chapterId - 1, { replaceState: true });
-          isShowCtrl = false;
         }}
       >
         <span i-carbon-arrow-left></span>
@@ -207,7 +165,6 @@
         class:text-gray={page.params.chapterId == page.data.dirZh?.length}
         onclick={(e) => {
           goto(page.params.chapterId - 1 + 2, { replaceState: true });
-          isShowCtrl = false;
         }}
       >
         <span i-carbon-arrow-right></span>
