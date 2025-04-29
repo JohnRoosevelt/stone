@@ -96,7 +96,8 @@
     text="green 7"
   >
     <button
-      bg-transparent
+      flex-1
+      h-full
       aria-label="lang"
       class:text-gray={DATAS.showSdaEnglish}
       onclick={(event) => {
@@ -110,7 +111,8 @@
     </button>
 
     <button
-      bg-transparent
+      flex-1
+      h-full
       aria-label="media"
       text-gray
       onclick={() => {
@@ -121,7 +123,8 @@
     </button>
 
     <button
-      bg-transparent
+      flex-1
+      h-full
       aria-label="search"
       text-gray
       onclick={() => {
@@ -134,9 +137,10 @@
       <span i-carbon-search></span>
     </button>
 
-    <div flex-cc gap-4>
+    <div flex-1 h-full flex-cc gap-px>
       <button
-        bg-transparent
+        w-12
+        h-full
         sm="hidden"
         aria-label="menu"
         onclick={(e) => {
@@ -147,7 +151,8 @@
       </button>
 
       <button
-        bg-transparent
+        w-12
+        h-full
         aria-label="pre"
         disabled={page.params.chapterId == 1}
         class:text-gray={page.params.chapterId == 1}
@@ -159,7 +164,8 @@
       </button>
 
       <button
-        bg-transparent
+        w-12
+        h-full
         aria-label="next"
         disabled={page.params.chapterId == page.data.dirZh?.length}
         class:text-gray={page.params.chapterId == page.data.dirZh?.length}

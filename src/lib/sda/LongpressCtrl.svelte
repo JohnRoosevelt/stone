@@ -136,18 +136,92 @@
   }
 </script>
 
-<!-- <svelte:document
-  onselectionchange={() => {
-    const selection = document.getSelection().toString();
-    console.log({selection});
-    if (!selection) {
-      isShowEdit = false
-    }
-  }}
-/> -->
-
 {#if isShowLongpressCtrl}
-  <div
+  <section
+    transition:slide
+    absolute
+    z-9
+    bottom-14
+    right-2
+    text-7
+    grid="~ cols-1"
+    bg="gray-200"
+    divide="y-2 gray-100"
+    rounded-4
+    overflow-hidden
+  >
+    <button
+      aria-label="scroll-to-top"
+      flex-cc
+      w-10
+      h-16
+      underline="~ offset-4"
+      decoration="2 wavy red-500"
+      onclick={() => {
+        showId("article-top", "end");
+      }}
+    >
+      A
+    </button>
+
+    <button
+      aria-label="scroll-to-top"
+      flex-cc
+      w-10
+      h-16
+      underline="~ offset-4"
+      decoration="2 red-500"
+      class:text-green={false}
+      onclick={() => {
+        showId("article-top", "end");
+      }}
+    >
+      A
+    </button>
+
+    <button
+      aria-label="scroll-to-bottom"
+      flex-cc
+      w-10
+      h-16
+      text="red"
+      class:text-green={false}
+      onclick={() => {
+        showId("article-bottom");
+      }}
+    >
+      A
+    </button>
+
+    <button
+      aria-label="scroll-to-bottom"
+      flex-cc
+      w-10
+      h-16
+      bg="red"
+      class:text-green={false}
+      onclick={() => {
+        DATAS.dialog = { c: Setting, show: true, p: "b" };
+      }}
+    >
+      A
+    </button>
+
+    <button
+      aria-label="scroll-to-bottom"
+      flex-cc
+      w-10
+      h-16
+      class:text-green={false}
+      onclick={() => {
+        console.log("...");
+      }}
+    >
+      <span i-carbon-edit-off></span>
+    </button>
+  </section>
+
+  <section
     absolute
     z-9
     bottom-0
@@ -162,9 +236,12 @@
   >
     <button
       aria-label="select"
+      flex-1
+      h-full
       onclick={(event) => {
         const selection = window.getSelection();
         const selectedText = selection.toString();
+        console.log({ selectedText });
 
         if (!selectedText) {
           return;
@@ -172,22 +249,25 @@
 
         const range = selection.getRangeAt(0);
         let parent = range.commonAncestorContainer;
+
         if (parent.nodeType === Node.TEXT_NODE) {
           parent = parent.parentNode;
         }
 
         const newRange = document.createRange();
-        newRange.selectNodeContents(parent); // 选择目标元素的内容
+        newRange.selectNodeContents(parent);
 
         selection.removeAllRanges();
         selection.addRange(newRange);
-        // isShowLongpressCtrl = false;
       }}
     >
       <span i-carbon-select-window></span>
     </button>
+
     <button
       aria-label="copy"
+      flex-1
+      h-full
       onclick={async () => {
         try {
           const selection = window.getSelection();
@@ -219,19 +299,26 @@
     >
       <span i-carbon-copy></span>
     </button>
+
     <button
       aria-label="edit"
+      flex-1
+      h-full
       onclick={() => {
-        isShowLongpressCtrl = false;
-        isShowEdit = true;
+        // isShowLongpressCtrl = false;
+        console.log("show color select");
       }}
     >
       <span i-carbon-tag-edit></span>
     </button>
+
     <button
       aria-label="close"
+      flex-1
+      h-full
       text-red
-      onclick={() => {
+      onclick={(event) => {
+        event.stopPropagation();
         isShowLongpressCtrl = false;
         const selection = window.getSelection();
         selection.removeAllRanges();
@@ -239,5 +326,5 @@
     >
       <span i-carbon-close></span>
     </button>
-  </div>
+  </section>
 {/if}
