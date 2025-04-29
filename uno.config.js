@@ -77,6 +77,7 @@ export default defineConfig({
     ...Array.from('text-3 text-4 text-5 text-6 text-7'.split(' ')),
     ...Array.from('text-white/100 text-white/45'.split(' ')),
     ...Array.from('bg-white/100 bg-white/50 bg-[#1B2120]/100 bg-[#1B2120]/50'.split(' ')),
+    ...Array.from('underline underline-offset-4 decoration-2 decoration-wavy decoration-red-500"'.split(' ')),
   ],
   shortcuts: [
     ['flex-ac', 'flex justify-around items-center'],

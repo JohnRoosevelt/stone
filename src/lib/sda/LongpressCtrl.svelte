@@ -16,9 +16,6 @@
         type = "";
         return;
       }
-      const dataType = parent.getAttribute("data-type");
-      // console.log("set type", dataType);
-      type = dataType;
     }
   });
 
@@ -99,6 +96,10 @@
       range.selectNodeContents(e.target);
       selection.removeAllRanges();
       selection.addRange(range);
+
+      const dataType = e.target.getAttribute("data-type");
+      // console.log("set type", dataType);
+      type = dataType;
     });
 
     // removeEdit(span)
@@ -179,7 +180,6 @@
       h={type === "underline" ? 24 : 14}
       underline="~ offset-4"
       decoration="2 red-500"
-      class:text-green={false}
       onclick={selectionEdit}
     >
       A
@@ -192,7 +192,6 @@
       w-10
       h={type === "bg" ? 24 : 14}
       bg="red"
-      class:text-green={false}
       onclick={selectionEdit}
     >
       A
@@ -205,7 +204,6 @@
       w-10
       h={type === "text" ? 24 : 14}
       text="red"
-      class:text-green={false}
       onclick={selectionEdit}
     >
       A
@@ -220,7 +218,7 @@
     w-full
     h-12
     flex-bc
-    px-8
+    px-0
     text="7 green"
     transition:slide
     bg="gray-100 dark:gray-900"
@@ -301,21 +299,6 @@
       }}
     >
       <span i-carbon-tag-edit></span>
-    </button>
-
-    <button
-      aria-label="close"
-      flex-1
-      h-full
-      text-red
-      onclick={(event) => {
-        event.stopPropagation();
-        isShowLongpressCtrl = false;
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-      }}
-    >
-      <span i-carbon-close></span>
     </button>
   </section>
 {/if}

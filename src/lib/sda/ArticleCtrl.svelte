@@ -87,7 +87,7 @@
     z-9
     bottom-0
     w-full
-    px-8
+    px-4
     flex-bc
     transition300
     overflow-hidden
