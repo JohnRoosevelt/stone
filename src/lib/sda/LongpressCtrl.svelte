@@ -3,7 +3,7 @@
   import { info } from "$lib/global/Toast";
   import { slide } from "svelte/transition";
 
-  let { isShowLongpressCtrl = $bindable(false) } = $props();
+  let { isShowLongpressCtrl = $bindable(false), color = "red" } = $props();
   let type = $state("");
 
   $effect(() => {
@@ -23,39 +23,33 @@
     event.stopPropagation();
 
     const dataType = event.target.getAttribute("data-type");
-    const bg = event.target.getAttribute("bg");
-    const text = event.target.getAttribute("text");
-    const underline = event.target.getAttribute("underline");
-    const decoration = event.target.getAttribute("decoration");
-    console.log({ dataType, bg, text, underline, decoration });
     type = dataType;
 
-    let className;
-    if (underline) {
-      const underlineAtribite = underline.replace("~ ", "").split(" ");
-      const decorationAtribite = decoration.split(" ");
-
-      className = "underline ";
-      for (let i of underlineAtribite) {
-        className += `underline-${i} `;
-      }
-
-      for (let i of decorationAtribite) {
-        className += `decoration-${i} `;
-      }
-
-      console.log({ underlineAtribite, decorationAtribite });
+    let cssText;
+    if (dataType === "underline-wavy") {
+      cssText = `text-decoration-line: underline;
+        text-underline-offset: 4px;
+        text-decoration-thickness: 2px;
+        text-decoration-style: wavy;
+        text-decoration-color: ${color};`;
     }
 
-    if (bg) {
-      className = `bg-${bg}`;
+    if (dataType === "underline") {
+      cssText = `text-decoration-line: underline;
+        text-underline-offset: 4px;
+        text-decoration-thickness: 2px;
+        text-decoration-color: ${color};`;
     }
 
-    if (text) {
-      className = `text-${text}`;
+    if (dataType === "bg") {
+      cssText = `background-color: ${color};`;
     }
 
-    console.log({ className });
+    if (dataType === "text") {
+      cssText = `color: ${color};`;
+    }
+
+    console.log({ cssText });
 
     const selection = window.getSelection();
     const range = selection.getRangeAt(0);
@@ -63,11 +57,15 @@
     console.log(parent.nodeName, parent.nodeType, Node.TEXT_NODE);
 
     if (parent.nodeType !== Node.TEXT_NODE) {
-      console.log("has style", parent.nodeName, parent.className);
+      const dataType = parent.getAttribute("data-type");
 
-      if (parent.className !== className) {
-        parent.className = className;
-        parent.setAttribute("data-type", dataType);
+      // console.log("has style", parent, parent.nodeName, dataType, type);
+
+      if (dataType !== type) {
+        console.log(".... change", dataType, "to ", type);
+        parent.setAttribute("data-type", type);
+        parent.style.cssText = cssText;
+
         return;
       }
       console.log(".... remove");
@@ -84,7 +82,7 @@
     console.log("set new ...");
 
     const span = document.createElement("span");
-    span.className = className;
+    span.style.cssText = cssText;
     span.setAttribute("data-type", dataType);
 
     span.addEventListener("click", (e) => {
@@ -158,6 +156,7 @@
     divide="y-2 gray-100"
     rounded-4
     overflow-hidden
+    style="--color: {color}"
   >
     <button
       data-type="underline-wavy"
@@ -165,8 +164,8 @@
       flex-cc
       w-10
       h={type === "underline-wavy" ? 24 : 14}
-      underline="~ offset-4"
-      decoration="2 wavy red-500"
+      class="underline underline-offset-4 decoration-2 decoration-wavy"
+      style="text-decoration-color: var(--color);"
       onclick={selectionEdit}
     >
       A
@@ -178,8 +177,8 @@
       flex-cc
       w-10
       h={type === "underline" ? 24 : 14}
-      underline="~ offset-4"
-      decoration="2 red-500"
+      class="underline underline-offset-4 decoration-2"
+      style="text-decoration-color: var(--color);"
       onclick={selectionEdit}
     >
       A
@@ -191,7 +190,7 @@
       flex-cc
       w-10
       h={type === "bg" ? 24 : 14}
-      bg="red"
+      style="background-color: var(--color);"
       onclick={selectionEdit}
     >
       A
@@ -203,7 +202,7 @@
       flex-cc
       w-10
       h={type === "text" ? 24 : 14}
-      text="red"
+      style="color: var(--color);"
       onclick={selectionEdit}
     >
       A
@@ -222,6 +221,7 @@
     text="7 green"
     transition:slide
     bg="gray-100 dark:gray-900"
+    style="--color: {color}"
   >
     <button
       aria-label="select"
@@ -298,7 +298,18 @@
         console.log("show color select");
       }}
     >
-      <span i-carbon-tag-edit></span>
+      <span i-carbon-circle-filled style="background-color: var(--color);"
+      ></span>
     </button>
   </section>
 {/if}
+
+<style>
+  /* article {
+    text-decoration-line: underline;
+    text-underline-offset: 4px;
+    text-decoration-thickness: 2px;
+    text-decoration-style: wavy;
+    text-decoration-color: var(--color);
+  } */
+</style>
