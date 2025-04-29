@@ -4,11 +4,10 @@
   import { DATAS } from "$lib/data.svelte";
   import { info } from "$lib/global/Toast";
   import Chapter from "$lib/sda/Chapter.svelte";
-  import Setting from "$lib/sda/Setting.svelte";
   import { onMount } from "svelte";
-  import { slide } from "svelte/transition";
-  import { afterNavigate, goto } from "$app/navigation";
+  import { afterNavigate } from "$app/navigation";
   import LongpressCtrl from "$lib/sda/LongpressCtrl.svelte";
+  import ArticleCtrl from "$lib/sda/ArticleCtrl.svelte";
 
   const { data, children } = $props();
 
@@ -19,7 +18,6 @@
 
   let isShowCtrl = $state(false);
   let isShowLongpressCtrl = $state(false);
-  let isShowEdit = $state(false);
   let scrollPercentage = $state(0);
 
   onMount(() => {
@@ -55,87 +53,74 @@
   // onclick show the top info and bottom ctrl
   // handel long press fun
   function articleSection(node) {
-    let isLongPress = false;
     let pressTimer = 0;
 
-    function handleClick(event) {
-      console.log(event.target.tagName);
-      if (isShowLongpressCtrl) {
-        return;
-      }
-
-      if (["BUTTON", "SPAN"].includes(event.target.tagName)) {
-        return isShowCtrl = false;
-      }
-      isShowCtrl = !isShowCtrl;
-    }
-
     function handleMousedown(event) {
-      // console.log(
-      //   event.target,
-      //   event.target.nodeType,
-      //   event.target.tagName,
-      //   Node.TEXT_NODE,
-      // );
-
-      if (event.target.nodeType === Node.TEXT_NODE) {
-        return;
-      }
-
-      const lang = event.target.getAttribute("data-lang");
-      const pIndex = event.target.getAttribute("data-i");
-
-      // console.log({ pIndex, lang });
-
-      if (!lang || !pIndex) {
-        return;
-      }
-
       pressTimer = setTimeout(() => {
-        isLongPress = true;
-        console.log("长按触发！", { lang, pIndex });
         if (isShowCtrl) {
           isShowCtrl = false;
         }
-        isShowLongpressCtrl = true;
+
+        const lang = event.target.getAttribute("data-lang");
+        const pIndex = event.target.getAttribute("data-i");
+
+        console.log({ pIndex, lang });
+
+        if (!lang || !pIndex) {
+          return;
+        }
         // info(`长按了第 ${pIndex} 段`);
         DATAS.touchInfo = { pIndex, lang };
+        isShowLongpressCtrl = true;
       }, 500);
     }
 
-    function handleMouseup() {
+    function handleMouseup(event) {
       clearTimeout(pressTimer);
+
       const selection = window.getSelection();
       const selectedText = selection.toString();
+      console.log("mouseup", { selectedText });
+      console.log(event.target, event.target.nodeType, event.target.tagName);
 
-      if (!selectedText) {
-        isShowLongpressCtrl = false;
-        isShowEdit = false;
+
+      if (selectedText) {
         return;
       }
+
+      isShowCtrl = !isShowCtrl;
     }
 
     $effect(() => {
-      node.addEventListener("click", handleClick);
+      if (isMobile) {
+        node.addEventListener("touchstart", handleMousedown, { passive: true });
+        node.addEventListener("touchend", handleMouseup, { passive: true });
+        node.addEventListener("touchmove", handleMouseup, { passive: true });
+        return () => {
+          node.removeEventListener("touchstart", handleMousedown);
+          node.removeEventListener("touchend", handleMouseup);
+          node.removeEventListener("touchmove", handleMouseup);
+        };
+      }
+
       node.addEventListener("mousedown", handleMousedown);
       node.addEventListener("mouseup", handleMouseup);
-      node.addEventListener("touchstart", handleMousedown);
-      node.addEventListener("touchend", handleMouseup);
-      node.addEventListener("touchmove", handleMouseup);
-
       return () => {
-        node.removeEventListener("click", handleClick);
         node.removeEventListener("mousedown", handleMousedown);
         node.removeEventListener("mouseup", handleMouseup);
-        node.removeEventListener("touchstart", handleMousedown);
-        node.removeEventListener("touchend", handleMouseup);
-        node.removeEventListener("touchmove", handleMouseup);
       };
     });
   }
 </script>
 
 <svelte:window bind:innerWidth />
+
+<!-- <svelte:document
+  onselectionchange={() => {
+    const selection = document.getSelection().toString();
+    console.log({ selection });
+  }}
+/> -->
 
 <article data-layout="bookId" w-full h-full flex-bc>
   {#if !isMobile}
@@ -166,184 +151,9 @@
       {@render children()}
       <div h-1px id="article-bottom"></div>
     </article>
-    {@render RArticleMobile()}
-    <LongpressCtrl bind:isShowLongpressCtrl bind:isShowEdit />
+
+    <ArticleCtrl bind:isShowCtrl {scrollPercentage} />
+    <!-- {@render RArticleMobile()} -->
+    <!-- <LongpressCtrl bind:isShowLongpressCtrl bind:isShowEdit /> -->
   </section>
 </article>
-
-{#snippet RArticleMobile()}
-  {#if isShowCtrl}
-    <section
-      transition:slide
-      absolute
-      z-9
-      top-0
-      w-full
-      h-12
-      px-2
-      flex-bc
-      text-7
-      transition300
-      overflow-hidden
-      bg="gray-100 dark:gray-900"
-    >
-      <div flex-cc>
-        <a href="/sda" data-sveltekit-replacestate flex-cc gap-px>
-          <span i-carbon-chevron-left text-green></span>
-          <!-- <span underline underline-offset-4 flex-shrink-0 font-500
-            >{data.book.name}</span
-          >
-          <span truncate mx-1>{page.data.titleZh}</span> -->
-        </a>
-      </div>
-
-      <div
-        text-5
-        grid="~ cols-4"
-        text="gray"
-        flex="shrink-0"
-        bg="gray-200"
-        divide="x-1 gray-100"
-        rounded-4
-      >
-        <button
-          aria-label="scroll-to-top"
-          flex-cc
-          px-4
-          py-2
-          class:text-green={scrollPercentage !== 0}
-          onclick={(event) => {
-            // event.stopPropagation();
-            // event.preventDefault();
-            showId("article-top", "end");
-          }}
-        >
-          <span i-carbon-up-to-top></span>
-        </button>
-
-        <div overflow-visible flex-cc size="auto" text="4">
-          <span> {scrollPercentage}% </span>
-        </div>
-
-        <button
-          aria-label="scroll-to-bottom"
-          flex-cc
-          px-4
-          py-2
-          class:text-green={scrollPercentage !== 100}
-          onclick={() => {
-            showId("article-bottom");
-          }}
-        >
-          <span i-carbon-down-to-bottom></span>
-        </button>
-
-        <button
-          aria-label="setting"
-          flex-cc
-          px-4
-          py-2
-          text="green"
-          onclick={() => {
-            DATAS.dialog = { c: Setting, show: true, p: "b" };
-            isShowCtrl = false;
-          }}
-        >
-          <span i-carbon-settings></span>
-        </button>
-      </div>
-    </section>
-
-    <section
-      transition:slide
-      absolute
-      z-9
-      bottom-0
-      w-full
-      px-8
-      flex-bc
-      transition300
-      overflow-hidden
-      h-12
-      bg="gray-100 dark:gray-900"
-      text="green 7"
-    >
-      <button
-        bg-transparent
-        aria-label="lang"
-        class:text-gray={DATAS.showSdaEnglish}
-        onclick={() => {
-          DATAS.showSdaEnglish = !DATAS.showSdaEnglish;
-          isShowCtrl = false;
-        }}
-      >
-        <span i-carbon-language></span>
-      </button>
-
-      <button
-        bg-transparent
-        aria-label="media"
-        text-gray
-        onclick={() => {
-          info("暂无相关媒体资源");
-        }}
-      >
-        <span i-carbon-media-library></span>
-      </button>
-
-      <button
-        bg-transparent
-        aria-label="search"
-        text-gray
-        onclick={() => {
-          console.log("to search");
-          // goto(`?s=${page.params.chapterId}`, {replaceState: true})
-          // DATAS.dialog = { c: Setting, show: true, p: "b" };
-          info("网页中暂不支持搜索");
-        }}
-      >
-        <span i-carbon-search></span>
-      </button>
-
-      <div flex-cc gap-4>
-        <button
-          bg-transparent
-          sm="hidden"
-          aria-label="menu"
-          onclick={(e) => {
-            DATAS.dialog = { c: Chapter, show: true, p: "l" };
-            isShowCtrl = false;
-          }}
-        >
-          <span i-carbon-menu></span>
-        </button>
-
-        <button
-          bg-transparent
-          aria-label="pre"
-          disabled={page.params.chapterId == 1}
-          class:text-gray={page.params.chapterId == 1}
-          onclick={(e) => {
-            goto(page.params.chapterId - 1, { replaceState: true });
-            isShowCtrl = false;
-          }}
-        >
-          <span i-carbon-arrow-left></span>
-        </button>
-
-        <button
-          bg-transparent
-          aria-label="next"
-          disabled={page.params.chapterId == page.data.dirZh?.length}
-          class:text-gray={page.params.chapterId == page.data.dirZh?.length}
-          onclick={(e) => {
-            goto(page.params.chapterId - 1 + 2, { replaceState: true });
-            isShowCtrl = false;
-          }}
-        >
-          <span i-carbon-arrow-right></span>
-        </button>
-      </div>
-    </section>
-  {/if}
-{/snippet}
