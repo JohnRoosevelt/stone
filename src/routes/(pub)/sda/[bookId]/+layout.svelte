@@ -55,7 +55,6 @@
   function action(node) {
     function handleMouseup(event) {
       if (isShowLongpressCtrl) {
-        isShowCtrl = false;
         return;
       }
       isShowCtrl = !isShowCtrl;
@@ -75,8 +74,10 @@
 <svelte:document
   onselectionchange={() => {
     const selection = document.getSelection().toString();
-    console.log({ selection });
-    isShowLongpressCtrl = selection;
+    isShowLongpressCtrl = Boolean(selection);
+    if (isShowLongpressCtrl) {
+      isShowCtrl = false;
+    }
   }}
 />
 
