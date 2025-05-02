@@ -11,7 +11,7 @@
       const selection = window.getSelection();
       const range = selection.getRangeAt(0);
       const parent = range.commonAncestorContainer;
-      // console.log(parent.nodeName, parent.nodeType, Node.TEXT_NODE);
+      // console.log(parent.nodeName, parent.nodeType, parent.parentNode);
       if (parent.nodeType === Node.TEXT_NODE) {
         type = "";
         return;
@@ -55,6 +55,12 @@
     const range = selection.getRangeAt(0);
     const parent = range.commonAncestorContainer;
     console.log(parent.nodeName, parent.nodeType, Node.TEXT_NODE);
+
+    if (parent.nodeName === "ARTICLE") {
+      info("只能在一段内处理标记");
+      selection.removeAllRanges();
+      return;
+    }
 
     if (parent.nodeType !== Node.TEXT_NODE) {
       const dataType = parent.getAttribute("data-type");
