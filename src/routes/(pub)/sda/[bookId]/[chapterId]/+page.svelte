@@ -25,6 +25,7 @@
 <section
   flex-1
   h-full
+  flex-cc
   relative
   bind:clientHeight
   onclick={(event) => {
@@ -42,6 +43,7 @@
     w-full
     relative
     scroll-y
+    class="pb-50vh"
     onscroll={(event) => {
       isShowCtrl = false;
 

@@ -3,8 +3,37 @@
   import { info } from "$lib/global/Toast";
   import { slide } from "svelte/transition";
 
-  let { isShowLongpressCtrl = $bindable(false), color = "red" } = $props();
+  let { isShowLongpressCtrl = $bindable(false) } = $props();
+  let colors2 = $state({
+    OrangeRed: false, // 	橙红色
+    Tomato: false, // 	番茄
+    Magenta: false, // 洋红
+
+    Lime: false, // 	酸橙色
+    LawnGreen: false, // 		草坪绿
+    MediumSpringGreen: false, // 	春绿
+
+    MediumBlue: false, // 适中的蓝色
+    RoyalBlue: false, // 皇家蓝
+    MediumSlateBlue: false, // 暗蓝灰色
+  });
+
+  let colors = $state([
+    { name: "OrangeRed", desc: "橙红色" },
+    { name: "Tomato", desc: "番茄红" },
+    { name: "Magenta", desc: "洋红色" },
+
+    { name: "Lime", desc: "" },
+    { name: "LawnGreen", desc: "" },
+    { name: "MediumSpringGreen", desc: "" },
+
+    { name: "MediumBlue", desc: "" },
+    { name: "RoyalBlue", desc: "" },
+    { name: "MediumSlateBlue", desc: "" },
+  ]);
+  let color = $state(colors[0].name);
   let type = $state("");
+  let isShowColor = $state(false);
 
   $effect(() => {
     if (isShowLongpressCtrl) {
@@ -16,7 +45,9 @@
         type = "";
         return;
       }
+      return;
     }
+    // isShowColor = false;
   });
 
   function selectionEdit(event) {
@@ -150,6 +181,34 @@
 </script>
 
 {#if isShowLongpressCtrl}
+  {#if isShowColor}
+    <section
+      transition:slide
+      absolute
+      z-9
+      grid="~ cols-3"
+      gap-px
+      bg="gray-200"
+      divide="1 gray-100"
+      rounded-4
+      overflow-hidden
+    >
+      {#each colors as { name }}
+        <input
+          cursor-pointer
+          w-24
+          h-24
+          relative
+          style:background={name}
+          type="radio"
+          name="colors"
+          value={name}
+          bind:group={color}
+        />
+      {/each}
+    </section>
+  {/if}
+
   <section
     transition:slide
     absolute
@@ -300,7 +359,7 @@
       flex-1
       h-full
       onclick={() => {
-        // isShowLongpressCtrl = false;
+        isShowColor = !isShowColor;
         console.log("show color select");
       }}
     >
@@ -311,11 +370,21 @@
 {/if}
 
 <style>
-  /* article {
-    text-decoration-line: underline;
-    text-underline-offset: 4px;
-    text-decoration-thickness: 2px;
-    text-decoration-style: wavy;
-    text-decoration-color: var(--color);
-  } */
+  input[type="radio"] {
+    -webkit-appearance: none; /* 覆盖浏览器默认样式 */
+    -moz-appearance: none;
+    appearance: none;
+  }
+
+  input[type="radio"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+  }
 </style>
