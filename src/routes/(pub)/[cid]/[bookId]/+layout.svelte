@@ -27,7 +27,7 @@
 
   $effect(() => {
     page.params.chapterId;
-    showId(`chapter-${page.data.chapterId}`);
+    showId(`chapter-${page.params.chapterId}`);
     showId("article-top", "end");
   });
 

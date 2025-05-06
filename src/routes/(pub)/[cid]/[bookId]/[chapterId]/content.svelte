@@ -76,7 +76,7 @@
   style:background={!DATAS.isDarkMode ? DATAS.bg : ""}
 >
   {#each page.data.chapterZh as { t, p, c }, i}
-    {#if DATAS.showSdaEnglish}
+    {#if DATAS.showSdaEnglish && page.data.chapterEn}
       <p
         id="en-{i}"
         px-5

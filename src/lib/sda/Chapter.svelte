@@ -3,7 +3,6 @@
   import { page } from "$app/state";
   import { showId } from "$lib";
   import { DATAS } from "$lib/data.svelte";
-  import { onMount } from "svelte";
 
   // const { data } = $props();
   // console.log(data);
@@ -14,13 +13,9 @@
 
   let scrollPercentage = $state(0);
 
-  // onMount(() => {
-  //   showId(`chapter-${page.data.chapterId}`);
-  // });
-
   $effect(() => {
     if (clientHeight > 0) {
-      showId(`chapter-${page.data.chapterId}`);
+      showId(`chapter-${page.params.chapterId}`);
     }
   });
 </script>
@@ -56,7 +51,7 @@
         }}
         id="chapter-{i + 1}"
         data-sveltekit-replacestate
-        href="/sda/{page.data.bookId}/{i + 1}"
+        href="/sda/{page.params.bookId}/{i + 1}"
         flex
         p-2
         items-center
