@@ -57,9 +57,8 @@
         id="chapter-{i + 1}"
         data-sveltekit-replacestate
         href="/sda/{page.data.bookId}/{i + 1}"
-        h-10
         flex
-        pl-3
+        p-2
         items-center
         bg-gray-100
         dark="bg-gray-700"

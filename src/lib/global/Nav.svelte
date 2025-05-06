@@ -20,7 +20,7 @@
   data-sveltekit-replacestate
   flex-cc
   flex-col
-  class:text-green={page.route.id.startsWith('/(pub)/sda')}
+  class:text-green={page.route.id.startsWith('/(pub)/[cid]') && page.params.cid === 'sda'}
 >
   <span i-icons-sda text-9> </span>
   <span text-xs uppercase class="hidden" sm="block"> 怀著 </span>
@@ -31,7 +31,7 @@
   data-sveltekit-replacestate
   flex-cc
   flex-col
-  class:text-green={page.url.pathname === "/bible"}
+  class:text-green={page.route.id.startsWith('/(pub)/[cid]') && page.params.cid === 'bible'}
 >
   <span i-icons-bible text-9> </span>
   <span text-xs uppercase class="hidden" sm="block"> 圣经 </span>

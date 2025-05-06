@@ -1,6 +1,6 @@
 <script>
   import { page } from "$app/state";
-  import BookDir from "$lib/sda/BookDir.svelte";
+  import Cid from "$lib/Cid.svelte";
 
   const { data, children } = $props();
   let innerWidth = $state(0);
@@ -23,9 +23,10 @@
   sm="flex-row"
 >
   <section w-full h-full flex-shrink-0 overflow-hidden class:hidden sm="w-60">
-    <BookDir />
+    <Cid />
   </section>
-  <section w-full h-full overflow-hidden sm="flex-1">
+  
+  <section w-full h-full overflow-hidden flex-cc flex-col sm="flex-1">
     {@render children()}
   </section>
 </article>
