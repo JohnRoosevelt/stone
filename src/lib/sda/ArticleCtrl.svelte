@@ -5,7 +5,7 @@
   import { DATAS } from "$lib/data.svelte";
   import { showId } from "$lib";
   import Setting from "$lib/sda/Setting.svelte";
-  import Chapter from "$lib/sda/Chapter.svelte";
+  import Chapter from "$lib/cid/Chapter.svelte";
   import { info } from "$lib/global/Toast";
 
   let { isShowCtrl = $bindable(false), scrollPercentage } = $props();
@@ -26,7 +26,7 @@
     text-gray
   >
     <a
-      href="/sda"
+      href="/{page.params.cid}"
       data-sveltekit-replacestate
       aria-label="scroll-to-back"
       flex-cc

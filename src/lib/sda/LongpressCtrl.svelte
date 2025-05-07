@@ -338,9 +338,27 @@
             parent = parent.parentNode;
           }
 
-          const pp = parent.getAttribute("data-pp");
+          const pp = parent.parentNode.getAttribute("data-pp");
+          console.log(pp, page.data);
+          
 
-          const content = `${selectedText}   ${pp}˼ \n\n —— ${page.data.book.name} ${page.data.titleZh} `;
+          let bookName, chapterName, content;
+          switch (page.params.cid) {
+            case "bible":
+              bookName = page.data.book.name.ZH;
+              chapterName = page.data.titleZh;
+              content = `${bookName} ${chapterName}:${pp}˼ ${selectedText}`;
+              break;
+
+            case "sda":
+              bookName = page.data.book.name;
+              chapterName = page.data.titleZh;
+              content = `${selectedText}   ${pp}˼ \n\n —— ${bookName} ${chapterName} `;
+              break;
+
+            default:
+              break;
+          }
           console.log({ content });
           await navigator.clipboard.writeText(content);
           info("已复制到剪贴板!");

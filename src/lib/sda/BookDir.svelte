@@ -1,7 +1,7 @@
 <script>
   import { page } from "$app/state";
   import { onMount } from "svelte";
-  import books from "$lib/sda.json";
+  import books from "$lib/sda/sda.json";
   import { DATAS } from "$lib/data.svelte";
   import { showId } from "$lib";
 

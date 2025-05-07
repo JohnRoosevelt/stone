@@ -2,7 +2,7 @@
   import { page } from "$app/state";
   import { showId } from "$lib";
   import { DATAS } from "$lib/data.svelte";
-  import Chapter from "$lib/sda/Chapter.svelte";
+  import Chapter from "$lib/cid/Chapter.svelte";
   import { onMount } from "svelte";
   import { afterNavigate } from "$app/navigation";
 

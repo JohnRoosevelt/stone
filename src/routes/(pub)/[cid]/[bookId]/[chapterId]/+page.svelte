@@ -1,13 +1,33 @@
 <script>
   import LongpressCtrl from "$lib/sda/LongpressCtrl.svelte";
   import ArticleCtrl from "$lib/sda/ArticleCtrl.svelte";
-  import Content from "./content.svelte";
+  import Sda from "./sda.svelte";
+  import Bible from "./bible.svelte";
   import { page } from "$app/state";
 
   let clientHeight = $state(0);
   let isShowCtrl = $state(false);
   let isShowLongpressCtrl = $state(false);
   let scrollPercentage = $state(0);
+
+  const Content = $derived.by(() => {
+    let rz;
+    console.log(page.params.cid);
+
+    switch (page.params.cid) {
+      case "bible":
+        rz = Bible;
+        break;
+
+      case "sda":
+        rz = Sda;
+        break;
+
+      default:
+        break;
+    }
+    return rz;
+  });
 </script>
 
 <svelte:document
