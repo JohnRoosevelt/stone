@@ -79,10 +79,15 @@
   >
     <button font-500>
       {page.data.book?.name.zh} 目录
-      <span text-3 ml-2>
+      <!-- https://symbl.cc/cn/unicode-table/#spacing-modifier-letters -->
+      <!-- u+20FB -->
+      <span text-green ml-2>˻</span>
+      <span text-3>
         {page.data.book?.name.en}
         {page.data.book?.name.ZH}
       </span>
+      <span text-green>˼</span>
+      <!-- u+20FC -->
     </button>
 
     <!-- <a data-sveltekit-replacestate text-green href="/sda">
