@@ -8,7 +8,6 @@
 
   // $inspect(DATAS).with(console.trace);
   const { children } = $props();
-  let innerHeight = $state(0)
 
   function handleVisibilityChange() {
     if (document.visibilityState === "visible") {
@@ -29,12 +28,12 @@
 <RouteLoading />
 <Dialog />
 
-<svelte:window bind:innerHeight bind:online={DATAS.online} />
-<!-- <svelte:window bind:online={DATAS.online} /> -->
+<svelte:window bind:online={DATAS.online} />
 <svelte:document onvisibilitychange={handleVisibilityChange} />
 
 <main
   w-screen
+  h-view-100
   overflow-hidden
   flex-col
   flex-bc
@@ -42,7 +41,6 @@
   bg="#EDF1F0"
   text="black/85"
   dark="bg-[#111615] text-white"
-  style:height="{innerHeight}px"
 >
   {@render children()}
 </main>

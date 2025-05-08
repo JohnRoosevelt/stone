@@ -62,6 +62,9 @@ export default defineConfig({
     }
   ],
   rules: [
+    [/^h-view-(\d+)$/, ([, num]) => ({
+      height: `calc(${num}vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))`,
+    })],
     [/^custom-(.+)$/, ([, name], { rawSelector }) => {
       const selector = toEscapedSelector(rawSelector)
       if (name.includes('noscrollbar')) {
