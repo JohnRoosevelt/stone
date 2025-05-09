@@ -61,7 +61,7 @@
 		inset-0
 		bg="white"
 		w="80vw"
-		h-view-100
+		h-dvh
 		class:rounded-r-4={DATAS.dialog.p === "l"}
 		class:rounded-l-4={DATAS.dialog.p === "r"}
 		class:ml-20vw={DATAS.dialog.p === "r"}

@@ -33,7 +33,7 @@
 
 <main
   w-screen
-  h-view-100
+  h-dvh
   overflow-hidden
   flex-col
   flex-bc
