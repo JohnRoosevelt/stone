@@ -3,6 +3,7 @@
   import ArticleCtrl from "$lib/sda/ArticleCtrl.svelte";
   import Sda from "./sda.svelte";
   import Bible from "./bible.svelte";
+  import Book from "./book.svelte";
   import { page } from "$app/state";
 
   let clientHeight = $state(0);
@@ -12,7 +13,6 @@
 
   const Content = $derived.by(() => {
     let rz;
-    console.log(page.params.cid);
 
     switch (page.params.cid) {
       case "bible":
@@ -21,6 +21,10 @@
 
       case "sda":
         rz = Sda;
+        break;
+
+      case "book":
+        rz = Book;
         break;
 
       default:

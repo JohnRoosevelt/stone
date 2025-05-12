@@ -12,6 +12,7 @@
         break;
 
       case "sda":
+      case "book":
         rz = SdaChapter;
         break;
 

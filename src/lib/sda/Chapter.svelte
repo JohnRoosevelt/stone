@@ -51,7 +51,7 @@
         }}
         id="chapter-{i + 1}"
         data-sveltekit-replacestate
-        href="/sda/{page.params.bookId}/{i + 1}"
+        href="/{page.params.cid}/{page.params.bookId}/{i + 1}"
         flex
         p-2
         items-center

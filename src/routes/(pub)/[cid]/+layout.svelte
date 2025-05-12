@@ -1,6 +1,6 @@
 <script>
   import { page } from "$app/state";
-  import Cid from "$lib/Cid.svelte";
+  import Dir from "$lib/cid/Dir.svelte";
 
   const { data, children } = $props();
   let innerWidth = $state(0);
@@ -23,7 +23,7 @@
   sm="flex-row"
 >
   <section w-full h-full flex-shrink-0 overflow-hidden class:hidden sm="w-60">
-    <Cid />
+    <Dir />
   </section>
   
   <section w-full h-full overflow-hidden flex-cc flex-col sm="flex-1">

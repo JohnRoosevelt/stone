@@ -10,7 +10,7 @@ export async function load({ fetch, parent, params: { cid, chapterId } }) {
     chapterZh = dirZh[chapterId - 1].verses
   }
 
-  if (cid === 'sda') {
+  if (cid === 'sda' || cid === 'book') {
     titleZh = dirZh[chapterId - 1].n
     chapterZh = dirZh[chapterId - 1].ps
   }

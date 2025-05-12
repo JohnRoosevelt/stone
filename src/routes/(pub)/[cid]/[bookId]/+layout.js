@@ -1,6 +1,7 @@
 import { PUBLIC_R2 } from '$env/static/public';
 import sda from "$lib/sda/sda.json";
 import bible from "$lib/bible/bible.json";
+import books from "$lib/book/book.json";
 
 
 async function getBookDir(fetch, cid, bookId, lang) {
@@ -19,14 +20,18 @@ export async function load({ fetch, params: { cid, bookId } }) {
       book = sda.find(i => i.id == bookId)
       break;
 
+    case 'book':
+      book = books.find(i => i.id == bookId)
+      break;
+
     default:
       break;
   }
-  
+
 
   const dirZh = await getBookDir(fetch, cid, bookId, 'zh');
-  console.log({book, dirZh});
-  
+  console.log({ book, dirZh });
+
 
   return { book, dirZh }
 }
