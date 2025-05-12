@@ -338,9 +338,14 @@
             parent = parent.parentNode;
           }
 
-          const pp = parent.parentNode.getAttribute("data-pp");
-          console.log(pp, page.data);
-          
+          let pp = parent.getAttribute("data-pp");
+          console.log(pp, parent.nodeType, parent.nodeName);
+
+          if (parent.nodeName === "SPAN") {
+            pp = parent.parentNode.getAttribute("data-pp");
+          }
+          console.log(pp, parent);
+
 
           let bookName, chapterName, content;
           switch (page.params.cid) {
