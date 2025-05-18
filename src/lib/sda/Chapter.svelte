@@ -99,7 +99,7 @@
     text-gray
   >
     <a
-      href="/sda"
+      href="/{page.params.cid}"
       data-sveltekit-replacestate
       aria-label="scroll-to-back"
       flex-cc
