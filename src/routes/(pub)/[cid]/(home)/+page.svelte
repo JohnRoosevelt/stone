@@ -12,6 +12,10 @@
         title = "怀著";
         break;
 
+      case "book":
+        title = "书籍";
+        break;
+
       default:
         break;
     }
