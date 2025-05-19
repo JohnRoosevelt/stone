@@ -21,8 +21,8 @@
     <a data-sveltekit-replacestate href="/my" w-full h-24 rounded-2 flex-cc border-px hover="border-green text-green">
       用户中心
     </a>
-    <a data-sveltekit-replacestate href="/book/1/1" w-full h-24 rounded-2 flex-cc border-px hover="border-green text-green">
-      真教育指南
+    <a data-sveltekit-replacestate href="/book" w-full h-24 rounded-2 flex-cc border-px hover="border-green text-green">
+      教育资料
     </a>
   </section>
   
