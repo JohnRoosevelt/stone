@@ -30,15 +30,15 @@
 	$effect(() => {
 		activeLine = lyricsData.findIndex((line, i) => {
 			if (time >= line.t) {
-				if (i === lyricsData.length -1) {
-					return true
+				if (i === lyricsData.length - 1) {
+					return true;
 				}
 
-				if (time < lyricsData[i+1].t) {
-					return true
+				if (time < lyricsData[i + 1].t) {
+					return true;
 				}
 			}
-		})
+		});
 	});
 
 	$effect(() => {
@@ -64,7 +64,7 @@
 						time = t;
 					}}
 					transition300
-					class:scale-120={activeLine == i}
+					class:scale-110={activeLine == i}
 					class:font-700={activeLine == i}
 					class:text-green={activeLine == i}>{c}</button
 				>
@@ -125,14 +125,16 @@
 		</div>
 
 		<div flex-1>
-			<div class="description">
-				<p font-900>{title}</p>
-			</div>
+			<p>
+				<span font-900>
+					{title}
+				</span>
 
-			<div class="time">
-				<span>{format(time)}</span>
-				<span>{duration ? format(duration) : "--:--"}</span>
-			</div>
+				<span>
+					<span>{format(time)}</span>
+					<span>{duration ? format(duration) : "--:--"}</span>
+				</span>
+			</p>
 		</div>
 
 		<button
