@@ -26,20 +26,23 @@
 		lyricsData = await res.json();
 	});
 
+	let activeLine = $state();
 	$effect(() => {
-		lyricsData.forEach((line, i) => {
-			const nextLine = lyricsData[i + 1];
-			if (nextLine) {
-				if (time >= line.start && time < nextLine.start) {
-					showId(`line${i}`);
+		activeLine = lyricsData.findIndex((line, i) => {
+			if (time >= line.t) {
+				if (i === lyricsData.length -1) {
+					return true
 				}
-				return;
-			}
 
-			if (time >= line.start) {
-				showId(`line${i}`);
+				if (time < lyricsData[i+1].t) {
+					return true
+				}
 			}
-		});
+		})
+	});
+
+	$effect(() => {
+		showId(`line${activeLine}`);
 	});
 </script>
 
@@ -54,15 +57,16 @@
 
 <article w-full h-full bind:clientHeight>
 	<section pt-8 pb-24 style:height="{clientHeight}px" scroll-y space-y-4>
-		{#each lyricsData as { start, c }, i}
+		{#each lyricsData as { t, c }, i}
 			<p flex-cc id="line{i}">
 				<button
 					onclick={() => {
-						time = start;
+						time = t;
 					}}
-					class:text-green={lyricsData[i + 1]
-						? time >= start && time < lyricsData[i + 1].start
-						: time > start}>{c}</button
+					transition300
+					class:scale-120={activeLine == i}
+					class:font-700={activeLine == i}
+					class:text-green={activeLine == i}>{c}</button
 				>
 			</p>
 		{/each}
@@ -82,9 +86,36 @@
 			top-0
 			left-0
 			w-full
-			h-2px
+			h-1
 			overflow-hidden
 			style="background: var(--bg-2, gray)"
+			onpointerdown={(e) => {
+				const div = e.currentTarget;
+
+				function seek(e) {
+					const { left, width } = div.getBoundingClientRect();
+
+					let p = (e.clientX - left) / width;
+					if (p < 0) p = 0;
+					if (p > 1) p = 1;
+
+					time = p * duration;
+				}
+
+				seek(e);
+
+				window.addEventListener("pointermove", seek);
+
+				window.addEventListener(
+					"pointerup",
+					() => {
+						window.removeEventListener("pointermove", seek);
+					},
+					{
+						once: true,
+					},
+				);
+			}}
 		>
 			<div
 				h-full
@@ -98,40 +129,8 @@
 				<p font-900>{title}</p>
 			</div>
 
-			<div hidden class="time">
+			<div class="time">
 				<span>{format(time)}</span>
-				<div
-					class="slider"
-					onpointerdown={(e) => {
-						const div = e.currentTarget;
-
-						function seek(e) {
-							const { left, width } = div.getBoundingClientRect();
-
-							let p = (e.clientX - left) / width;
-							if (p < 0) p = 0;
-							if (p > 1) p = 1;
-
-							time = p * duration;
-						}
-
-						seek(e);
-
-						window.addEventListener("pointermove", seek);
-
-						window.addEventListener(
-							"pointerup",
-							() => {
-								window.removeEventListener("pointermove", seek);
-							},
-							{
-								once: true,
-							},
-						);
-					}}
-				>
-					<div class="progress" style="--progress: {time / duration}%"></div>
-				</div>
 				<span>{duration ? format(duration) : "--:--"}</span>
 			</div>
 		</div>
