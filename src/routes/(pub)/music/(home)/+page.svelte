@@ -1,5 +1,7 @@
 <script>
   import AudioPlayer from "$lib/media/AudioPlayer.svelte";
+  import media from "$lib/media/media.json";
+
   let curPlayIndex = $state(0);
 
   const data = {
@@ -45,17 +47,39 @@
   <title>音乐</title>
 </svelte:head>
 
-<div w-full flex-1 flex-col flex-cc>
-  <div flex-1 flex-cc>暂无字幕</div>
-  <div w-full>
-    <AudioPlayer
-      {src}
-      title={data.cItem?.name}
-      {artist}
-      onended={() =>
-        curPlayIndex == data.cItem.articles.length - 1
-          ? (curPlayIndex = 0)
-          : curPlayIndex++}
-    />
-  </div>
-</div>
+<article w-full h-full flex-cc>
+  <section
+    w-full
+    grid="~ cols-2"
+    px-4
+    gap-4
+    justify-items-center
+    sm="grid-cols-4 px-8 gap-8"
+  >
+    {#each media as { name }, i}
+      <a
+        href="/music/{i}"
+        w-full
+        h-24
+        rounded-2
+        flex-cc
+        border-px
+        hover="border-green text-green"
+      >
+        {name}
+      </a>
+    {/each}
+  </section>
+</article>
+
+<!-- <article w-full h-full relative grid="~ cols-3">
+  <AudioPlayer
+    {src}
+    title={data.cItem?.name}
+    {artist}
+    onended={() =>
+      curPlayIndex == data.cItem.articles.length - 1
+        ? (curPlayIndex = 0)
+        : curPlayIndex++}
+  />
+</article> -->

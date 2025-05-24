@@ -1,5 +1,10 @@
 <script>
-	let { src, title, artist, onended } = $props();
+	import { showId } from "$lib";
+	import { linear } from "svelte/easing";
+
+	let { src, title, lyricsDataSrc, onended } = $props();
+
+	let clientHeight = $state(0);
 
 	let time = $state(0);
 	let duration = $state(0);
@@ -14,139 +19,146 @@
 
 		return `${hours > 0 ? `${hours}:` : ``}${minutes}:${seconds < 10 ? `0${seconds}` : seconds}`;
 	}
+
+	let lyricsData = $state([]);
+	$effect(async () => {
+		const res = await fetch(lyricsDataSrc);
+		lyricsData = await res.json();
+	});
+
+	$effect(() => {
+		lyricsData.forEach((line, i) => {
+			const nextLine = lyricsData[i + 1];
+			if (nextLine) {
+				if (time >= line.start && time < nextLine.start) {
+					showId(`line${i}`);
+				}
+				return;
+			}
+
+			if (time >= line.start) {
+				showId(`line${i}`);
+			}
+		});
+	});
 </script>
 
-<div class="player" class:paused>
-	<audio
-		autoplay
-		{src}
-		bind:currentTime={time}
-		bind:duration
-		bind:paused
-		{onended}
-	></audio>
+<audio
+	autoplay="false"
+	{src}
+	bind:currentTime={time}
+	bind:duration
+	bind:paused
+	{onended}
+></audio>
 
-	<button
-		class="play"
-		text-7
-		aria-label={paused ? "play" : "pause"}
-		onclick={() => (paused = !paused)}
+<article w-full h-full bind:clientHeight>
+	<section pt-8 pb-24 style:height="{clientHeight}px" scroll-y space-y-4>
+		{#each lyricsData as { start, c }, i}
+			<p flex-cc id="line{i}">
+				<button
+					onclick={() => {
+						time = start;
+					}}
+					class:text-green={lyricsData[i + 1]
+						? time >= start && time < lyricsData[i + 1].start
+						: time > start}>{c}</button
+				>
+			</p>
+		{/each}
+	</section>
+</article>
+
+<section w-full h-16 absolute bottom-0>
+	<div
+		w-full
+		h-full
+		relative
+		class="player select-none flex-bc gap-4 px-4 py-2"
+		class:paused
 	>
-		<span i-carbon={paused ? "play" : "pause"}></span>
-	</button>
-
-	<div class="info">
-		<div class="description">
-			<strong>{title}</strong> /
-			<span text-green>{artist}</span>
-		</div>
-
-		<div class="time">
-			<span>{format(time)}</span>
+		<div
+			absolute
+			top-0
+			left-0
+			w-full
+			h-2px
+			overflow-hidden
+			style="background: var(--bg-2, gray)"
+		>
 			<div
-				class="slider"
-				onpointerdown={(e) => {
-					const div = e.currentTarget;
-
-					function seek(e) {
-						const { left, width } = div.getBoundingClientRect();
-
-						let p = (e.clientX - left) / width;
-						if (p < 0) p = 0;
-						if (p > 1) p = 1;
-
-						time = p * duration;
-					}
-
-					seek(e);
-
-					window.addEventListener("pointermove", seek);
-
-					window.addEventListener(
-						"pointerup",
-						() => {
-							window.removeEventListener("pointermove", seek);
-						},
-						{
-							once: true,
-						},
-					);
-				}}
-			>
-				<div class="progress" style="--progress: {time / duration}%"></div>
-			</div>
-			<span>{duration ? format(duration) : "--:--"}</span>
+				h-full
+				style="--progress: {time /
+					duration}%; width: calc(100 * var(--progress)); background: var(--bg-3, green);"
+			></div>
 		</div>
+
+		<div flex-1>
+			<div class="description">
+				<p font-900>{title}</p>
+			</div>
+
+			<div hidden class="time">
+				<span>{format(time)}</span>
+				<div
+					class="slider"
+					onpointerdown={(e) => {
+						const div = e.currentTarget;
+
+						function seek(e) {
+							const { left, width } = div.getBoundingClientRect();
+
+							let p = (e.clientX - left) / width;
+							if (p < 0) p = 0;
+							if (p > 1) p = 1;
+
+							time = p * duration;
+						}
+
+						seek(e);
+
+						window.addEventListener("pointermove", seek);
+
+						window.addEventListener(
+							"pointerup",
+							() => {
+								window.removeEventListener("pointermove", seek);
+							},
+							{
+								once: true,
+							},
+						);
+					}}
+				>
+					<div class="progress" style="--progress: {time / duration}%"></div>
+				</div>
+				<span>{duration ? format(duration) : "--:--"}</span>
+			</div>
+		</div>
+
+		<button
+			class="play"
+			text-7
+			aria-label={paused ? "play" : "pause"}
+			onclick={() => (paused = !paused)}
+		>
+			<span i-carbon={paused ? "play" : "pause"}></span>
+		</button>
+
+		<button text-7 aria-label="next" onclick={() => (paused = !paused)}>
+			<span i-carbon-arrow-right></span>
+		</button>
 	</div>
-
-	<button text-7 aria-label="setting" onclick={() => console.log("setting")}>
-		<span i-carbon-menu></span>
-	</button>
-
-	<button text-7 aria-label="setting" onclick={() => console.log("setting")}>
-		<span i-carbon-time></span>
-	</button>
-</div>
+</section>
 
 <style>
 	.player {
-		display: grid;
-		grid-template-columns: 2.5em 1fr 2.5em 2.5em;
-		align-items: center;
-		gap: 1em;
-		padding: 0.5em 1em 0.5em 0.5em;
-		/* border-radius: 2em; */
 		background: var(--bg-1, black);
-		transition: filter 0.2s;
-		color: var(--fg-3, red);
-		user-select: none;
+		color: var(--fg-3, gray);
 	}
 
 	.player:not(.paused) {
 		color: var(--fg-1, white);
-		filter: drop-shadow(0.5em 0.5em 1em rgba(0, 0, 0, 0.1));
-	}
-
-	button {
-		width: 100%;
-		aspect-ratio: 1;
-		background-repeat: no-repeat;
-		background-position: 50% 50%;
-		border-radius: 50%;
-	}
-
-	.info {
-		overflow: hidden;
-	}
-
-	.description {
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		line-height: 1.2;
-	}
-
-	.time {
-		display: flex;
-		align-items: center;
-		gap: 0.5em;
-	}
-
-	.time span {
-		font-size: 0.7em;
-	}
-
-	.slider {
-		flex: 1;
-		height: 0.5em;
-		background: var(--bg-2, gray);
-		border-radius: 0.5em;
-		overflow: hidden;
-	}
-
-	.progress {
-		width: calc(100 * var(--progress));
-		height: 100%;
-		background: var(--bg-3, green);
+		filter: drop-shadow(0.5em 0.5em 1em rgba(0, 0, 0, 1));
 	}
 </style>
