@@ -21,9 +21,14 @@
 	}
 
 	let lyricsData = $state([]);
+	let hasLyrics = $state(true);
 	$effect(async () => {
-		const res = await fetch(lyricsDataSrc);
-		lyricsData = await res.json();
+		try {
+			const res = await fetch(lyricsDataSrc);
+			lyricsData = await res.json();
+		} catch (error) {
+			hasLyrics = false;
+		}
 	});
 
 	let activeLine = $state();
@@ -69,6 +74,12 @@
 					class:text-green={activeLine == i}>{c}</button
 				>
 			</p>
+		{:else}
+			{#if hasLyrics}
+				<p w-full flex-cc>加载中。。。</p>
+			{:else}
+				<p w-full flex-cc>暂无内容</p>
+			{/if}
 		{/each}
 	</section>
 </article>

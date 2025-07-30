@@ -4,7 +4,7 @@
 
 </script>
 
-<ul>
+<ul px-5 space-y-2>
     <li font-700>
         <p>{data.user.name}</p>
     </li>
