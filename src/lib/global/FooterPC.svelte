@@ -1,24 +1,12 @@
 <script>
   import { DATAS } from "$lib/data.svelte";
-
-  
-  let connType = $state('unknow')
-  function checkNetworkType() {
-    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection || { type: 'unknown' };
-    connType = connection.effectiveType || connection.type
-    connection.addEventListener('change', checkNetworkType);
-  }
-
-  $effect(() => {
-    checkNetworkType();
-  })
 </script>
 
 <footer class="w-full h-6 bg-white text-3 px-3 hidden flex-bc hidden" dark="bg-gray-900" sm="flex">
   <div flex-cc gap-4>
     <div flex-cc gap-1>
       <span i-carbon-circle-filled class:text-green={DATAS.online}></span>
-      <span>{DATAS.online ? connType : "offline"}</span>
+      <span>{DATAS.online ? DATAS.networkType : "offline"}</span>
     </div>
 
     <button

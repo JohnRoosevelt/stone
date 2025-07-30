@@ -4,7 +4,7 @@
 </script>
 
 <svelte:head>
-  <title>首页</title>
+  <title>脚前的灯</title>
 </svelte:head>
 
 <article w-full h-full flex-cc>
