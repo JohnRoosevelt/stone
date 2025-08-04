@@ -1,41 +1,60 @@
 /// <reference types="@sveltejs/kit" />
-import { build, files, version } from '$service-worker';
+import { build, files, version, prerendered } from '$service-worker';
 
 // Create a unique cache name for this deployment
 const CACHE = `cache-${version}`;
 
 const ASSETS = [
 	...build, // the app itself
-	...files  // everything in `static`
+	...files,  // everything in `static`
+	...prerendered,
 ];
 
+// console.log('SW: Script evaluating...')
 self.addEventListener('install', (event) => {
+	// console.log('SW: Installing...');
 	// Create a new cache and add all files to it
 	async function addFilesToCache() {
 		const cache = await caches.open(CACHE);
 		await cache.addAll(ASSETS);
+		console.log('SW: Assets pre-cached successfully.');
 	}
 
 	event.waitUntil(addFilesToCache());
+	self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
+	// console.log('SW: Activating...');
 	// Remove previous cached data from disk
 	async function deleteOldCaches() {
 		for (const key of await caches.keys()) {
-			if (key !== CACHE) await caches.delete(key);
+			if (key !== CACHE) {
+				console.log(`SW: Deleting old cache: ${key}`);
+				await caches.delete(key);
+			}
 		}
+		console.log('SW: Old caches cleaned up.');
 	}
 
 	event.waitUntil(deleteOldCaches());
+	clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
+	const url = new URL(event.request.url);
+
+	if (url.protocol === 'chrome-extension:') {
+		console.log(`SW: Skipping chrome-extension request: ${url.href}`);
+		return;
+	}
+
+
 	// ignore POST requests etc
 	if (event.request.method !== 'GET') return;
 
+
 	async function respond() {
-		const url = new URL(event.request.url);
 		const cache = await caches.open(CACHE);
 
 		// `build`/`files` can always be served from the cache
