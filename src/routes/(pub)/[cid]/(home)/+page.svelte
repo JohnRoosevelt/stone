@@ -27,6 +27,12 @@
   <title>{title}</title>
 </svelte:head>
 
-<section bg-gray>
-  area only show in pc {page.params.cid}
+<section text-24 text-green>
+  {#if page.params.cid === "bible"}
+    <span i-icons-bible></span>
+  {:else if page.params.cid === "sda"}
+    <span i-icons-sda></span>
+  {:else}
+    <span i-icons-logo></span>
+  {/if}
 </section>

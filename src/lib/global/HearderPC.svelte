@@ -7,8 +7,9 @@
   dark="bg-gray-900"
   sm="flex"
 >
-  <div>
+  <div flex-cc flex-row gap-2 text-6>
     <span i-icons-logo text-6></span>
+    <span>脚前的灯</span>
   </div>
 
   <div b-px rounded-1 px-2 focus="bg-red">
