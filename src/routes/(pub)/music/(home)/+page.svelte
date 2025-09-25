@@ -1,4 +1,5 @@
 <script>
+  import { PUBLIC_R2 } from "$env/static/public";
   import AudioPlayer from "$lib/media/AudioPlayer.svelte";
   import media from "$lib/media/media.json";
 
@@ -38,7 +39,7 @@
   };
 
   const src = $derived(
-    `https://pub-42fa17a0d06841f295980294e061513c.r2.dev/home/${data.cItem.name}/${data.cItem.articles[curPlayIndex].name}.mp3`,
+    `${PUBLIC_R2}/home/${data.cItem.name}/${data.cItem.articles[curPlayIndex].name}.mp3`,
   );
   const artist = $derived(data.cItem.articles[curPlayIndex].name);
 </script>
