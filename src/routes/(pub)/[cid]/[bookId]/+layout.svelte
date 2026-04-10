@@ -45,11 +45,14 @@
 <svelte:window bind:innerWidth />
 
 <article data-layout="bookId" w-full h-full flex-bc>
-  {#if !isMobile}
-    <section w-60 h-full flex-shrink-0>
-      <Chapter />
-    </section>
-  {/if}
+  <section
+    w={DATAS.isFullScreen || isMobile ? 0 : 60}
+    transition300
+    h-full
+    flex-shrink-0
+  >
+    <Chapter />
+  </section>
 
   {@render children()}
 </article>

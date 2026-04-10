@@ -33,6 +33,8 @@
       desc: "冷静、舒适，减少蓝光刺激",
     },
   ];
+  const min = 14;
+  const max = 42;
 </script>
 
 <section w-full flex-cc flex-col gap-7 py-7>
@@ -44,8 +46,8 @@
     <input
       flex-1
       type="range"
-      min="14"
-      max="24"
+      {min}
+      {max}
       step="1"
       bind:value={DATAS.fontSize}
     />

@@ -1,15 +1,19 @@
 export const DATAS = $state({
   online: false,
-  networkType: 'unknown',
+  networkType: "unknown",
   isDarkMode: false,
   uaInfo: {},
   fontSize: 16,
-  bg: '#F8F9FA',
+  isFullScreen: false,
+  bg: "#F8F9FA",
   showSdaEnglish: false,
   dialog: {
-    show: false, animate: {}, p: 'c', c: null
+    show: false,
+    animate: {},
+    p: "c",
+    c: null,
   },
-  touchInfo: {}
-})
+  touchInfo: {},
+});
 
-export const TOUCHP = $state({})
+export const TOUCHP = $state({});

@@ -74,6 +74,29 @@
       py-4
       text-green
       onclick={() => {
+        DATAS.isFullScreen = !DATAS.isFullScreen;
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch((err) => {
+            console.error(`fullscreen error: ${err.message}`);
+          });
+        } else {
+          document.exitFullscreen();
+        }
+      }}
+    >
+      <!-- <span i-carbon-fit-to-screen></span>
+      {DATAS.isFullScreen}
+      <span i-carbon-screen></span> -->
+      <span i-carbon={DATAS.isFullScreen ? "screen" : "fit-to-screen"}></span>
+    </button>
+
+    <button
+      aria-label="scroll-to-bottom"
+      flex-cc
+      px-2
+      py-4
+      text-green
+      onclick={() => {
         DATAS.dialog = { c: Setting, show: true, p: "b" };
       }}
     >

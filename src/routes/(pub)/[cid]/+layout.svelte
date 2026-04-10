@@ -1,10 +1,13 @@
 <script>
   import { page } from "$app/state";
   import Dir from "$lib/cid/Dir.svelte";
+  import { DATAS } from "$lib/data.svelte";
 
   const { data, children } = $props();
   let innerWidth = $state(0);
-  const hidden = $derived(innerWidth < 640 && page.params.bookId);
+  const hidden = $derived(
+    (innerWidth < 640 && page.params.bookId) || DATAS.isFullScreen,
+  );
 </script>
 
 <svelte:window bind:innerWidth />
@@ -25,7 +28,7 @@
   <section w-full h-full flex-shrink-0 overflow-hidden class:hidden sm="w-60">
     <Dir />
   </section>
-  
+
   <section w-full h-full overflow-hidden flex-cc flex-col sm="flex-1">
     {@render children()}
   </section>
