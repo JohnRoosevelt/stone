@@ -102,6 +102,12 @@
     {/if}
 
     <p
+      style:text-indent="calc(var(--spacing) * {t === 7
+        ? parseInt(DATAS.fontSize / 2)
+        : 0})"
+      style:--before-left={t === 7
+        ? `calc(var(--spacing) * -${parseInt(DATAS.fontSize / 2 - 5)})`
+        : ""}
       id="zh-{i}"
       px-5
       data-lang="zh"
@@ -116,11 +122,9 @@
       class:sticky={t == 4}
       class:top-0={t == 4}
       bg={t == 4 ? "white dark:black" : ""}
+      class:relative={t == 7}
       class:z-2={t == 4}
-      class:indent-8={t == 7}
-      before={t == 7
-        ? `content-[attr(data-p)] absolute -indent-8 text-green`
-        : ""}
+      before={t == 7 ? `content-[attr(data-p)] absolute text-green` : ""}
       after={t == 7 && false
         ? `content-[attr(data-lang-origin)] ml-3 text-green`
         : ""}
@@ -129,3 +133,11 @@
     </p>
   {/each}
 </article>
+
+<style>
+  p {
+    &::before {
+      left: var(--before-left, auto);
+    }
+  }
+</style>
