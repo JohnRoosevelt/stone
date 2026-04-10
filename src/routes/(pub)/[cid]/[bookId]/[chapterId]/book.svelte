@@ -77,18 +77,25 @@
 >
   {#each page.data.chapterZh as { o, c }, i}
     <p
+      style:text-indent="calc(var(--spacing) * {parseInt(DATAS.fontSize / 2)})"
+      style:--before-left={`calc(var(--spacing) * -${parseInt(DATAS.fontSize / 2)})`}
       id="zh-{i}"
       px-5
       data-lang="zh"
       data-pp={i}
       data-p={i + "˼"}
       data-i={i}
-      indent-8
-      before={i > 0
-        ? `content-[attr(data-p)] absolute -indent-8 text-green`
-        : ""}
+      before={i > 0 ? `content-[attr(data-p)] absolute  text-green` : ""}
     >
       {@html o}
     </p>
   {/each}
 </article>
+
+<style>
+  p {
+    &::before {
+      text-indent: var(--before-left);
+    }
+  }
+</style>

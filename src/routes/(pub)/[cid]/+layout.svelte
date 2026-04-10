@@ -5,8 +5,10 @@
 
   const { data, children } = $props();
   let innerWidth = $state(0);
+
   const hidden = $derived(
-    (innerWidth < 640 && page.params.bookId) || DATAS.isFullScreen,
+    (innerWidth < 640 && page.params.bookId) ||
+      (page.params.bookId && DATAS.isFullScreen),
   );
 </script>
 
