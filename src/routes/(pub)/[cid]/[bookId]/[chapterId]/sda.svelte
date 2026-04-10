@@ -106,7 +106,7 @@
         ? parseInt(DATAS.fontSize / 2)
         : 0})"
       style:--before-left={t === 7
-        ? `calc(var(--spacing) * -${parseInt(DATAS.fontSize / 2 - 5)})`
+        ? `calc(var(--spacing) * -${parseInt(DATAS.fontSize / 2)})`
         : ""}
       id="zh-{i}"
       px-5
@@ -137,7 +137,7 @@
 <style>
   p {
     &::before {
-      left: var(--before-left, auto);
+      text-indent: var(--before-left);
     }
   }
 </style>
