@@ -1,7 +1,2 @@
-
-const isLocalhost = window.location.hostname === 'localhost';
-
-console.log({ isLocalhost })
-// if (!isLocalhost) {
-//   navigator.serviceWorker.register('/service-worker.js');
-// }
+// Hooks client - kept minimal
+// PWA install logic is in $lib/pwa.js
