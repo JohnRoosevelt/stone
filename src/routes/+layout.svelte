@@ -5,6 +5,8 @@
   import { setTheme } from "$lib/setTheme.svelte";
   import { wakeLock } from "$lib/wakeLock";
   import { SvelteToast } from "@zerodevx/svelte-toast";
+  import { UAParser } from "ua-parser-js";
+  import { onMount } from "svelte";
 
   // $inspect(DATAS).with(console.trace);
   const { children } = $props();
@@ -17,6 +19,27 @@
       console.log(new Date(), document.visibilityState);
     }
   }
+
+  // Client-side initialization (runs only in browser, not during SSR)
+  onMount(() => {
+    wakeLock();
+
+    // Network type detection
+    const connection = navigator.connection ||
+      navigator.mozConnection ||
+      navigator.webkitConnection || { type: "unknown" };
+    DATAS.networkType = connection.effectiveType || connection.type;
+    connection.addEventListener("change", () => {
+      DATAS.networkType = connection.effectiveType || connection.type;
+    });
+
+    // Theme from localStorage
+    DATAS.isDarkMode = localStorage.getItem("theme") == "dark";
+
+    // UA parsing
+    const parser = new UAParser();
+    DATAS.uaInfo = parser.getResult();
+  });
 
   $effect(() => {
     DATAS.isDarkMode;

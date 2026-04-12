@@ -1,7 +1,8 @@
 <script>
   import { DATAS } from "$lib/data.svelte";
   console.log(DATAS.uaInfo);
-  
+
+  const ua = $derived(DATAS.uaInfo || {});
 </script>
 
 <svelte:head>
@@ -17,34 +18,34 @@
 
     <div>
       <span>device:</span>
-      <span>{DATAS.uaInfo.device.type}</span>
-      <span>{DATAS.uaInfo.device.vendor}</span>
-      <span>{DATAS.uaInfo.device.model}</span>
+      <span>{ua.device?.type}</span>
+      <span>{ua.device?.vendor}</span>
+      <span>{ua.device?.model}</span>
     </div>
 
     <div>
       <span>os:</span>
-      <span>{DATAS.uaInfo.os.name}</span>
-      <span>{DATAS.uaInfo.os.version}</span>
+      <span>{ua.os?.name}</span>
+      <span>{ua.os?.version}</span>
     </div>
 
     <div>
       <span>cpu:</span>
-      <span>{DATAS.uaInfo.cpu.architecture}</span>
+      <span>{ua.cpu?.architecture}</span>
     </div>
 
     <div>
       <span>browser:</span>
-      <span>{DATAS.uaInfo.browser.name}</span>
-      <span>{DATAS.uaInfo.browser.version}</span>
-      <span>{DATAS.uaInfo.browser.major}</span>
-      <span>{DATAS.uaInfo.browser.type}</span>
+      <span>{ua.browser?.name}</span>
+      <span>{ua.browser?.version}</span>
+      <span>{ua.browser?.major}</span>
+      <span>{ua.browser?.type}</span>
     </div>
 
     <div>
       <span>engine:</span>
-      <span>{DATAS.uaInfo.engine.name}</span>
-      <span>{DATAS.uaInfo.engine.version}</span>
+      <span>{ua.engine?.name}</span>
+      <span>{ua.engine?.version}</span>
     </div>
   </section>
 </article>

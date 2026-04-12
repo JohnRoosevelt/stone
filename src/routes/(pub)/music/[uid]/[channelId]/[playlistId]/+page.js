@@ -1,12 +1,13 @@
+// Music playlistId page - prerender with known entries
+import media from "$lib/media/media.json";
 
-
-export async function load({ parent, params }) {
-  const { user, channel } = await parent()
-
-  const media = channel.playlist[params.playlistId]
-  console.log({ media });
-
-  return {
-    media
-  }
-}
+export const entries = () =>
+  media.flatMap((user, uid) =>
+    user.channel.flatMap((ch, cid) =>
+      ch.playlist.map((_, pid) => ({
+        uid: uid.toString(),
+        channelId: cid.toString(),
+        playlistId: pid.toString(),
+      })),
+    ),
+  );
