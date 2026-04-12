@@ -78,6 +78,12 @@
   {#each page.data.chapterZh as { t, p, c }, i}
     {#if DATAS.showSdaEnglish && page.data.chapterEn}
       <p
+        style:text-indent="calc(var(--spacing) * {t === 7
+          ? parseInt(DATAS.fontSize / 2)
+          : 0})"
+        style:--before-left={t === 7
+          ? `calc(var(--spacing) * -${parseInt(DATAS.fontSize / 2)})`
+          : ""}
         id="en-{i}"
         px-5
         data-lang="en"
@@ -92,10 +98,10 @@
         class:top-0={t == 4}
         bg={t == 4 ? "white dark:black" : ""}
         class:z-2={t == 4}
-        before={t == 7 && true
-          ? `content-[attr(data-p)] absolute text-green`
+        before={t == 7 ? `content-[attr(data-p)] absolute text-green` : ""}
+        after={t == 7 && false
+          ? `content-[attr(data-lang-origin)] ml-3 text-green`
           : ""}
-        after={t == 7 && false ? `content-[attr(data-p)] ml-3 text-green` : ""}
       >
         {page.data.chapterEn[i].c}
       </p>

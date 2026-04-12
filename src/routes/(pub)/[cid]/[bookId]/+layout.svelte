@@ -33,12 +33,11 @@
 
   // in mobile, open the chapter dir at left
   afterNavigate(({ from, to }) => {
+    if (!from) return;
     const isSameRoute = from.route.id === to.route.id;
-    if (!isSameRoute) {
-      if (!from.route.id) return;
-      if (!isMobile) return;
-      DATAS.dialog = { c: Chapter, show: true, p: "l" };
-    }
+    if (isSameRoute) return;
+    if (!isMobile) return;
+    DATAS.dialog = { c: Chapter, show: true, p: "l" };
   });
 </script>
 
