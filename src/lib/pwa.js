@@ -1,4 +1,21 @@
 // PWA Install helper
+//
+// Usage example:
+//
+// <script>
+//   import { isInstallable, triggerInstall } from "$lib/pwa.js";
+//
+//   let showInstall = $state(isInstallable());
+//
+//   window.addEventListener("pwa-install-ready", () => {
+//     showInstall = isInstallable();
+//   });
+// </script>
+//
+// {#if showInstall}
+//   <button onclick={triggerInstall}>安装到桌面</button>
+// {/if}
+
 let deferredPrompt;
 
 window.addEventListener("beforeinstallprompt", (event) => {
@@ -17,7 +34,7 @@ export function triggerInstall() {
   deferredPrompt.prompt();
   deferredPrompt.userChoice.then((choice) => {
     console.log(
-      `PWA: User ${choice.outcome === "accepted" ? "accepted" : "dismissed"}`
+      `PWA: User ${choice.outcome === "accepted" ? "accepted" : "dismissed"}`,
     );
     deferredPrompt = null;
   });
