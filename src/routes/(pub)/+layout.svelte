@@ -3,16 +3,12 @@
   import FooterPc from "$lib/global/FooterPC.svelte";
   import HearderPc from "$lib/global/HearderPC.svelte";
   import NavPc from "$lib/global/NavPC.svelte";
+  import { DATAS } from "$lib/data.svelte";
 
   const { children } = $props();
-
-  let innerWidth = $state(0);
-  const isMobile = $derived(innerWidth < 640);
 </script>
 
-<svelte:window bind:innerWidth />
-
-{#if !isMobile}
+{#if !DATAS.isMobile}
   <HearderPc />
 {/if}
 
@@ -25,13 +21,13 @@
   overflow-hidden
   sm="flex-row"
 >
-  {#if !isMobile}
+  {#if !DATAS.isMobile}
     <NavPc />
   {/if}
   {@render children()}
 </article>
 
-{#if isMobile}
+{#if DATAS.isMobile}
   <Footer />
 {:else}
   <FooterPc />

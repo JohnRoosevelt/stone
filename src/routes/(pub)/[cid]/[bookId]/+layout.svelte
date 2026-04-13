@@ -8,19 +8,16 @@
 
   const { children } = $props();
 
-  let innerWidth = $state(0);
-  const isMobile = $derived(innerWidth < 640);
-
   onMount(() => {
     return () => {
-      if (isMobile) {
+      if (DATAS.isMobile) {
         DATAS.dialog = { c: null, show: false };
       }
     };
   });
 
   $effect(() => {
-    if (!isMobile) {
+    if (!DATAS.isMobile) {
       DATAS.dialog = { c: null, show: false };
     }
   });
@@ -36,16 +33,14 @@
     if (!from) return;
     const isSameRoute = from.route.id === to.route.id;
     if (isSameRoute) return;
-    if (!isMobile) return;
+    if (!DATAS.isMobile) return;
     DATAS.dialog = { c: Chapter, show: true, p: "l" };
   });
 </script>
 
-<svelte:window bind:innerWidth />
-
 <article data-layout="bookId" w-full h-full flex-bc>
   <section
-    w={DATAS.isFullScreen || isMobile ? 0 : 60}
+    w={DATAS.isFullScreen || DATAS.isMobile ? 0 : 60}
     transition300
     h-full
     flex-shrink-0

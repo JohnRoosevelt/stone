@@ -14,10 +14,6 @@
 
 <svelte:window bind:innerWidth />
 
-<svelte:head>
-  <title>怀著</title>
-</svelte:head>
-
 <article
   data-layout="sda"
   w-full

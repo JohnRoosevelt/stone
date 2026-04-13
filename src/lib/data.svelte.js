@@ -4,6 +4,7 @@ export const DATAS = $state({
   isDarkMode: false,
   uaInfo: {},
   fontSize: 16,
+  isMobile: false,
   isFullScreen: false,
   bg: "#F8F9FA",
   showSdaEnglish: false,

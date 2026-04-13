@@ -8,9 +8,6 @@
   // console.log(data);
 
   let clientHeight = $state(0);
-  let innerWidth = $state(0);
-  const isMobile = $derived(innerWidth < 640);
-
   let scrollPercentage = $state(0);
 
   $effect(() => {
@@ -19,8 +16,6 @@
     }
   });
 </script>
-
-<svelte:window bind:innerWidth />
 
 <article w-full h-full overflow-hidden relative bind:clientHeight>
   <section
@@ -45,7 +40,7 @@
     {#each page.data?.dirZh as { id }}
       <a
         onclick={async (e) => {
-          if (isMobile) {
+          if (DATAS.isMobile) {
             DATAS.dialog.show = false;
           }
         }}

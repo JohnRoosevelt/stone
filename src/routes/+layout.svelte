@@ -10,6 +10,7 @@
 
   // $inspect(DATAS).with(console.trace);
   const { children } = $props();
+  let innerWidth = $state(0);
 
   function handleVisibilityChange() {
     if (document.visibilityState === "visible") {
@@ -45,13 +46,17 @@
     DATAS.isDarkMode;
     setTheme(DATAS.isDarkMode ? "dark" : "light");
   });
+
+  $effect(() => {
+    DATAS.isMobile = innerWidth < 640;
+  });
 </script>
 
 <SvelteToast options={{}} />
 <RouteLoading />
 <Dialog />
 
-<svelte:window bind:online={DATAS.online} />
+<svelte:window bind:online={DATAS.online} bind:innerWidth />
 <svelte:document onvisibilitychange={handleVisibilityChange} />
 
 <main
