@@ -65,7 +65,7 @@
 </script>
 
 <svelte:head>
-  <title>{page.data.book.name.zh} {page.data.titleZh}</title>
+  <title>{page.data.book?.name?.zh} {page.data.titleZh}</title>
 </svelte:head>
 
 <article

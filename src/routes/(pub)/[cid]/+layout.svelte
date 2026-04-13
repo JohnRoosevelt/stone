@@ -4,15 +4,12 @@
   import { DATAS } from "$lib/data.svelte";
 
   const { data, children } = $props();
-  let innerWidth = $state(0);
 
   const hidden = $derived(
-    (innerWidth < 640 && page.params.bookId) ||
+    (DATAS.isMobile && page.params.bookId) ||
       (page.params.bookId && DATAS.isFullScreen),
   );
 </script>
-
-<svelte:window bind:innerWidth />
 
 <article
   data-layout="sda"
