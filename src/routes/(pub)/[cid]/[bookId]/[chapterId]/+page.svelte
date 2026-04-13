@@ -81,7 +81,9 @@
   >
     <div h-1px id="article-top"></div>
     {#key page.params.chapterId}
-      <Content />
+      {#if Content}
+        <Content />
+      {/if}
     {/key}
     <div h-1px id="article-bottom"></div>
   </article>

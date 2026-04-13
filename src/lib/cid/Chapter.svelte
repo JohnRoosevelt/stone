@@ -23,4 +23,6 @@
   });
 </script>
 
-<Chapter />
+{#if Chapter}
+  <Chapter />
+{/if}
