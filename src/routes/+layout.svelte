@@ -17,7 +17,7 @@
     // Theme from localStorage
     DATAS.isDarkMode = localStorage.getItem("theme") == "dark";
 
-    // wakeLock();
+    wakeLock();
     // UA parsing
     const parser = new UAParser();
     DATAS.uaInfo = parser.getResult();

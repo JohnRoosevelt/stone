@@ -12,12 +12,18 @@ const ASSETS = [
 
 // console.log('SW: Script evaluating...')
 self.addEventListener("install", (event) => {
-  // console.log('SW: Installing...');
   // Create a new cache and add all files to it
   async function addFilesToCache() {
     const cache = await caches.open(CACHE);
-    await cache.addAll(ASSETS);
-    console.log("SW: Assets pre-cached successfully.");
+    // Cache each file individually - if one fails, the rest still get cached
+    for (const url of ASSETS) {
+      try {
+        await cache.add(url);
+      } catch (err) {
+        console.warn(`SW: Failed to cache ${url}:`, err.message);
+      }
+    }
+    console.log("SW: Assets pre-cached.");
   }
 
   event.waitUntil(addFilesToCache());
