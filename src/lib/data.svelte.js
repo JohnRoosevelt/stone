@@ -3,6 +3,7 @@ export const DATAS = $state({
   networkType: "unknown",
   isDarkMode: false,
   uaInfo: {},
+  dbInfo: {},
   fontSize: 16,
   isMobile: false,
   isFullScreen: false,

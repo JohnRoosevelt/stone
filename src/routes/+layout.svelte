@@ -3,27 +3,24 @@
   import Dialog from "$lib/global/Dialog.svelte";
   import RouteLoading from "$lib/global/RouteLoading.svelte";
   import { setTheme } from "$lib/setTheme.svelte";
-  import { wakeLock } from "$lib/wakeLock";
+  import { handleVisibilityChange, wakeLock } from "$lib/wakeLock";
   import { SvelteToast } from "@zerodevx/svelte-toast";
-  import { UAParser } from "ua-parser-js";
   import { onMount } from "svelte";
+  import { UAParser } from "ua-parser-js";
 
   // $inspect(DATAS).with(console.trace);
   const { children } = $props();
   let innerWidth = $state(0);
 
-  function handleVisibilityChange() {
-    if (document.visibilityState === "visible") {
-      console.log(new Date(), document.visibilityState);
-      wakeLock();
-    } else {
-      console.log(new Date(), document.visibilityState);
-    }
-  }
-
   // Client-side initialization (runs only in browser, not during SSR)
-  onMount(() => {
-    wakeLock();
+  onMount(async () => {
+    // Theme from localStorage
+    DATAS.isDarkMode = localStorage.getItem("theme") == "dark";
+
+    // wakeLock();
+    // UA parsing
+    const parser = new UAParser();
+    DATAS.uaInfo = parser.getResult();
 
     // Network type detection
     const connection = navigator.connection ||
@@ -34,12 +31,10 @@
       DATAS.networkType = connection.effectiveType || connection.type;
     });
 
-    // Theme from localStorage
-    DATAS.isDarkMode = localStorage.getItem("theme") == "dark";
-
-    // UA parsing
-    const parser = new UAParser();
-    DATAS.uaInfo = parser.getResult();
+    const { initSQLite } = await import("$lib/db/dbManager");
+    // const { initSQLite } = await import("$lib/db/sqlite");
+    const rz = await initSQLite();
+    DATAS.dbInfo = rz;
   });
 
   $effect(() => {
@@ -57,7 +52,7 @@
 <Dialog />
 
 <svelte:window bind:online={DATAS.online} bind:innerWidth />
-<svelte:document onvisibilitychange={handleVisibilityChange} />
+<!-- <svelte:document onvisibilitychange={handleVisibilityChange} /> -->
 
 <main
   w-screen
