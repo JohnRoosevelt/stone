@@ -1,7 +1,7 @@
 {
   "id": "stone-bible",
   "name": "Stone Bible",
-  "short_name": "Stone",
+  "short_name": "脚前的灯",
   "description": "A Bible reading app",
   "start_url": "/",
   "display": "standalone",
