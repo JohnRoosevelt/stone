@@ -52,11 +52,11 @@
 <Dialog />
 
 <svelte:window bind:online={DATAS.online} bind:innerWidth />
-<!-- <svelte:document onvisibilitychange={handleVisibilityChange} /> -->
+<svelte:document onvisibilitychange={handleVisibilityChange} />
 
 <main
   w-screen
-  h-dvh
+  h-svh
   overflow-hidden
   flex-col
   flex-bc
