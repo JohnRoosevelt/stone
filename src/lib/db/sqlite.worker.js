@@ -80,10 +80,11 @@ async function initDB() {
     const version = sqlite3.version.libVersion;
     console.log("Running SQLite3 version", version);
 
-    const hasOPFS =
-      "opfs" in sqlite3 &&
-      typeof SharedArrayBuffer !== "undefined" &&
-      typeof Atomics !== "undefined";
+    const hasOPFS = "opfs" in sqlite3;
+    // &&
+    // typeof SharedArrayBuffer !== "undefined"
+    // &&
+    // typeof Atomics !== "undefined";
     console.log("SQLite:", { hasOPFS });
 
     if (hasOPFS) {
