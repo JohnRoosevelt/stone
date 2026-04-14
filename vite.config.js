@@ -6,10 +6,11 @@ export default defineConfig({
   plugins: [UnoCSS(), sveltekit()],
   server: {
     port: 5175,
-    // headers: {
-    //   "Cross-Origin-Opener-Policy": "same-origin",
-    //   "Cross-Origin-Embedder-Policy": "credentialless",
-    // },
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "credentialless",
+      // "Cross-Origin-Embedder-Policy": "require-corp",
+    },
   },
   optimizeDeps: {
     // Exclude sqlite-wasm from pre-bundling since it's a large WASM module
