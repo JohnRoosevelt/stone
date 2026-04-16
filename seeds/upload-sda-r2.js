@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, ListObjectsV2Command, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import pkg from "parquetjs";
 const { ParquetWriter, ParquetSchema } = pkg;
 import fs from "fs";
@@ -13,119 +13,108 @@ const bucket = process.env.R2_BUCKET;
 
 if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
   console.error("Missing R2 env vars");
-  console.log("Required: R2, R2_BUCKET");
   process.exit(1);
 }
 
-const SDA_IDS = ["1", "2", "3", "4", "5"];
+const client = new S3Client({
+  region: "auto",
+  endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+  credentials: { accessKeyId, secretAccessKey },
+});
 
-async function convertSdaToParquet(jsonPath, parquetPath) {
-  const jsonData = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+async function getUploadedIds(prefix) {
+  const ids = new Set();
+  let continuationToken;
+  do {
+    const resp = await client.send(new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: prefix,
+      ContinuationToken: continuationToken
+    }));
+    for (const obj of resp.Contents || []) {
+      const match = obj.Key.match(/sda\/[^/]+\/(\d+)\.parquet\.zst/);
+      if (match) ids.add(match[1]);
+    }
+    continuationToken = resp.NextContinuationToken;
+  } while (continuationToken);
+  return ids;
+}
 
+async function downloadFromR2(key) {
+  const resp = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  const chunks = [];
+  for await (const chunk of resp.Body) chunks.push(chunk);
+  return Buffer.concat(chunks);
+}
+
+async function convertSdaToParquet(jsonData) {
   const schema = new ParquetSchema({
     n: { type: "UTF8" },
     o: { type: "UTF8" },
     t: { type: "INT32" },
     p: { type: "INT32" },
   });
-
+  const parquetPath = `/tmp/sda_${Date.now()}.parquet`;
   const writer = await ParquetWriter.openFile(schema, parquetPath);
-
   for (const key of Object.keys(jsonData)) {
     const chapter = jsonData[key];
-    const title = chapter.n || "";
-
     for (const para of chapter.ps || []) {
-      await writer.appendRow({
-        n: title,
-        o: para.c || "",
-        t: para.t || 0,
-        p: para.p || 0,
-      });
+      await writer.appendRow({ n: chapter.n || "", o: para.c || "", t: para.t || 0, p: para.p || 0 });
     }
   }
-
   await writer.close();
+  return parquetPath;
 }
 
-function compressParquet(parquetPath, zstPath) {
-  if (fs.existsSync(zstPath)) fs.unlinkSync(zstPath);
+function compressParquet(parquetPath) {
+  const zstPath = parquetPath + ".zst";
   execSync(`zstd -19 -f "${parquetPath}" -o "${zstPath}"`);
-  const ratio = (
-    (1 - fs.statSync(zstPath).size / fs.statSync(parquetPath).size) *
-    100
-  ).toFixed(1);
-  console.log(
-    `  Compressed: ${(fs.statSync(zstPath).size / 1024).toFixed(1)} KB (${ratio}% smaller)`,
-  );
+  return zstPath;
 }
 
-async function uploadToR2(client, key, filePath) {
-  const fileBuffer = fs.readFileSync(filePath);
-  await client.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: fileBuffer,
-      ContentType: "application/octet-stream",
-    }),
-  );
-  console.log(`  Uploaded: ${key}`);
+async function uploadToR2(key, filePath) {
+  await client.send(new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: fs.readFileSync(filePath),
+    ContentType: "application/octet-stream",
+  }));
 }
 
-async function uploadSda(client, lang) {
-  const inputDir = path.join(process.cwd(), "seeds/sda", lang);
-  let totalOriginal = 0;
-  let totalCompressed = 0;
-
-  console.log(`\n=== Processing SDA (${lang}) ===`);
-
-  for (const sdaId of SDA_IDS) {
-    const jsonPath = path.join(inputDir, `${sdaId}.json`);
-    const parquetPath = path.join(inputDir, `${sdaId}.parquet`);
-    const zstPath = path.join(inputDir, `${sdaId}.parquet.zst`);
-
-    if (!fs.existsSync(jsonPath)) {
-      console.log(`  SDA ${sdaId}: skipped (not found)`);
-      continue;
+async function processLang(lang) {
+  const prefix = `sda/${lang}/`;
+  const uploadedIds = await getUploadedIds(prefix);
+  
+  const allIds = [];
+  for (let i = 1; i <= 175; i++) allIds.push(String(i));
+  const pendingIds = allIds.filter(id => !uploadedIds.has(id));
+  
+  console.log(`\n=== ${lang.toUpperCase()}: ${pendingIds.length} files to process ===`);
+  
+  let processed = 0;
+  for (const id of pendingIds) {
+    process.stdout.write(`[${processed + 1}/${pendingIds.length}] ${lang}/${id}... `);
+    try {
+      const jsonData = JSON.parse(await downloadFromR2(`sda/${lang}/${id}.json`));
+      const parquetPath = await convertSdaToParquet(jsonData);
+      const zstPath = compressParquet(parquetPath);
+      await uploadToR2(`sda/${lang}/${id}.parquet.zst`, zstPath);
+      fs.unlinkSync(parquetPath);
+      fs.unlinkSync(zstPath);
+      console.log("OK");
+      processed++;
+    } catch (e) {
+      console.log(`ERROR: ${e.message}`);
     }
-
-    process.stdout.write(`  SDA ${sdaId}...`);
-
-    const originalSize = fs.statSync(jsonPath).size;
-    totalOriginal += originalSize;
-
-    await convertSdaToParquet(jsonPath, parquetPath);
-    compressParquet(parquetPath, zstPath);
-    await uploadToR2(client, `sda/${lang}/${sdaId}.parquet.zst`, zstPath);
-
-    totalCompressed += fs.statSync(zstPath).size;
-
-    fs.unlinkSync(parquetPath);
-    fs.unlinkSync(zstPath);
-
-    console.log(" done");
   }
-
-  const overallRatio = ((1 - totalCompressed / totalOriginal) * 100).toFixed(1);
-  console.log(
-    `\n  Total: ${(totalOriginal / 1024 / 1024).toFixed(1)} MB -> ${(totalCompressed / 1024 / 1024).toFixed(1)} MB (${overallRatio}% smaller)`,
-  );
+  console.log(`\n${lang.toUpperCase()} done: ${processed} files`);
 }
 
 async function main() {
-  console.log("SDA R2 Upload Script\n");
-
-  const client = new S3Client({
-    region: "auto",
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    credentials: { accessKeyId, secretAccessKey },
-  });
-
-  await uploadSda(client, "zh");
-  await uploadSda(client, "en");
-
-  console.log("\nDone!");
+  console.log("SDA Upload - Progress Mode\n");
+  await processLang("zh");
+  await processLang("en");
+  console.log("\nAll done!");
 }
 
 main().catch(console.error);
