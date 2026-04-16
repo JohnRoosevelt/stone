@@ -20,7 +20,7 @@ export async function load({ fetch, params: { cid, bookId } }) {
   const currentBook = catalog?.find((i) => i.id == bookId);
 
   let dirZh;
-  if (cid === "book" || cid === "bible") {
+  if (cid === "book" || cid === "bible" || cid === "sda") {
     const { loadParquetContent } = await import("$lib/parquet");
     dirZh = await loadParquetContent(cid, bookId);
   } else {

@@ -79,6 +79,21 @@ function groupIntoBibleChapters(rows) {
   return chapters;
 }
 
+function groupIntoSdaChapters(rows) {
+  const chapters = [];
+  let currentChapter = null;
+
+  for (const row of rows) {
+    if (!currentChapter || currentChapter.n !== row.n) {
+      currentChapter = { n: row.n, ps: [] };
+      chapters.push(currentChapter);
+    }
+    currentChapter.ps.push({ t: row.t, p: row.p, c: row.o });
+  }
+
+  return chapters;
+}
+
 export async function loadParquetContent(cid, bookId) {
   console.log("[Parquet] Loading from R2:", cid, bookId);
   await ensureWasm();
@@ -101,6 +116,8 @@ function decodeParquet(parquetBuffer, cid) {
   let result;
   if (cid === "bible") {
     result = groupIntoBibleChapters(decompressed);
+  } else if (cid === "sda") {
+    result = groupIntoSdaChapters(decompressed);
   } else {
     result = groupIntoChapters(decompressed);
   }
