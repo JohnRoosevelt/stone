@@ -13,10 +13,14 @@ export async function load({ parent, params: { cid, bookId, chapterId } }) {
   if (cid === "bible") {
     titleZh = chapterData.id;
     chapterZh = chapterData.verses;
+  } else if (cid === "book") {
+    titleZh = chapterData.n;
+    chapterZh = chapterData.ps;
   } else {
     titleZh = chapterData.n;
     chapterZh = chapterData.ps;
   }
+  console.log(chapterData);
 
   return { titleZh, chapterZh };
 }

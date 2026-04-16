@@ -2,10 +2,6 @@
   import { page } from "$app/state";
   import { DATAS } from "$lib/data.svelte.js";
 
-  $effect(() => {
-    console.log("::TODO::", "restore highlights");
-  });
-
   // 恢复高亮
   function restoreHighlights() {
     const highlights = JSON.parse(localStorage.getItem("highlights") || "[]");

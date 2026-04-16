@@ -17,9 +17,6 @@
     return pre;
   }, {});
 
-  console.log(groupByTag);
-  
-
   function observeHeaders() {
     const observer = new IntersectionObserver(
       (entries) => {

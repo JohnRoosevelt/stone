@@ -2,37 +2,30 @@ import { browser } from "$app/environment";
 import { PUBLIC_R2 } from "$env/static/public";
 import sda from "$lib/sda/sda.json";
 import bible from "$lib/bible/bible.json";
-import books from "$lib/book/book.json";
+import bookMeta from "$lib/book/book.json";
 
-async function getBookDir(fetch, cid, bookId, lang) {
-  const res = await fetch(`${PUBLIC_R2}/${cid}/${lang}/${bookId}.json`);
+const BOOK_CATALOG = { bible, sda, book: bookMeta };
+
+async function fetchJson(cid, bookId) {
+  const res = await fetch(`${PUBLIC_R2}/${cid}/zh/${bookId}.json`);
   return res.json();
 }
 
 export async function load({ fetch, params: { cid, bookId } }) {
-  let book, dirZh;
   if (!browser) {
-    return { book, dirZh };
+    return { book: null, dirZh: null };
   }
 
-  switch (cid) {
-    case "bible":
-      book = bible.find((i) => i.id == bookId);
-      break;
-    case "sda":
-      book = sda.find((i) => i.id == bookId);
-      break;
+  const catalog = BOOK_CATALOG[cid];
+  const currentBook = catalog?.find((i) => i.id == bookId);
 
-    case "book":
-      book = books.find((i) => i.id == bookId);
-      break;
-
-    default:
-      break;
+  let dirZh;
+  if (cid === "book") {
+    const { loadParquetContent } = await import("$lib/parquet");
+    dirZh = await loadParquetContent(cid, bookId);
+  } else {
+    dirZh = await fetchJson(cid, bookId);
   }
 
-  dirZh = await getBookDir(fetch, cid, bookId, "zh");
-  console.log({ book, dirZh });
-
-  return { book, dirZh };
+  return { book: currentBook, dirZh };
 }

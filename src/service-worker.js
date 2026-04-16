@@ -81,9 +81,9 @@ self.addEventListener("fetch", (event) => {
         throw new Error("invalid response from fetch");
       }
 
-      if (response.status === 200) {
-        cache.put(event.request, response.clone());
-      }
+    if (response.status === 200) {
+      cache.put(event.request, response.clone());
+    }
 
       return response;
     } catch (err) {

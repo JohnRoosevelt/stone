@@ -1,44 +1,36 @@
-// Seed utility - fetches book data from R2 and stores in local SQLite
+// Seed utility - fetches book data from R2 (.parquet for book, .json for others) and stores in local SQLite
 import { PUBLIC_R2 } from "$env/static/public";
 import sda from "$lib/sda/sda.json";
 import bible from "$lib/bible/bible.json";
-import books from "$lib/book/book.json";
+import bookMeta from "$lib/book/book.json";
+import { loadParquetContent } from "$lib/parquet";
 
-/**
- * Get book metadata by cid and bookId
- */
+const BOOK_META = { bible, sda, book: bookMeta };
+
 function getBookMeta(cid, bookId) {
-  const allBooks = { bible, sda, book };
-  return (allBooks[cid] || []).find((b) => b.id == bookId);
+  return (BOOK_META[cid] || []).find((b) => b.id == bookId);
 }
 
-/**
- * Fetch book directory from R2
- */
-async function fetchBookDir(fetch, cid, bookId, lang = "zh") {
-  const res = await fetch(`${PUBLIC_R2}/${cid}/${lang}/${bookId}.json`);
-  if (!res.ok) throw new Error(`Failed to fetch ${cid}/${bookId}`);
+async function fetchBookContent(cid, bookId) {
+  if (cid === "book") {
+    return loadParquetContent(cid, bookId);
+  }
+  const res = await fetch(`${PUBLIC_R2}/${cid}/zh/${bookId}.json`);
   return res.json();
 }
 
-/**
- * Seed a single book into local DB
- */
-export async function seedBookToDB(fetch, cid, bookId, onProgress = null) {
-  const { default: db } = await import("$lib/db/dbManager.js");
+export async function seedBookToDB(cid, bookId, onProgress = null) {
+  const db = await import("$lib/db/dbManager.js");
 
-  // Check if already cached
   const cached = await db.isBookCached(cid, bookId);
   if (cached) {
     console.log(`[Seed] ${cid}/${bookId} already cached`);
     return;
   }
 
-  // Fetch book data
   const bookMeta = getBookMeta(cid, bookId);
-  const dirZh = await fetchBookDir(fetch, cid, bookId);
+  const dirZh = await fetchBookContent(cid, bookId);
 
-  // Transform chapters into flat array
   const chapters = dirZh.map((ch, idx) => {
     let title, content;
 
@@ -50,14 +42,9 @@ export async function seedBookToDB(fetch, cid, bookId, onProgress = null) {
       content = JSON.stringify({ ps: ch.ps || [] });
     }
 
-    return {
-      chapterId: idx + 1,
-      title,
-      content,
-    };
+    return { chapterId: idx + 1, title, content };
   });
 
-  // Send to worker for seeding
   await db.seedBook(cid, bookId, bookMeta?.name || "", bookMeta?.tag || "", chapters);
   console.log(`[Seed] ${cid}/${bookId} seeded with ${chapters.length} chapters`);
 
@@ -67,12 +54,11 @@ export async function seedBookToDB(fetch, cid, bookId, onProgress = null) {
 /**
  * Seed all books of a cid
  */
-export async function seedAllBooksOfCid(fetch, cid, onProgress = null) {
-  const { default: db } = await import("$lib/db/dbManager.js");
-  const allBooks = { bible, sda, book };
-  const booksList = allBooks[cid] || [];
+export async function seedAllBooksOfCid(cid, onProgress = null) {
+  const db = await import("$lib/db/dbManager.js");
+  const booksList = BOOK_META[cid] || [];
 
   for (const book of booksList) {
-    await seedBookToDB(fetch, cid, book.id, onProgress);
+    await seedBookToDB(cid, book.id, onProgress);
   }
 }
