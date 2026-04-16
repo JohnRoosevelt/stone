@@ -325,9 +325,9 @@
     <details class="text-sm text-gray-500">
       <summary class="cursor-pointer hover:text-gray-700">数据结构说明</summary>
       <div class="mt-2 space-y-1 text-xs">
-        <div><strong>Book:</strong> <code>[{"n":"章节","ps":[{"o":"内容"}]}]</code></div>
-        <div><strong>Bible:</strong> <code>[{"id":1,"verses":[{"c":"经文"}]}]</code></div>
-        <div><strong>SDA:</strong> <code>{"0":{"n":"章节","ps":[{"t":7,"p":0,"c":"内容"}]}}</code></div>
+        <div><strong>Book:</strong> <code>{'[{"n":"章节","ps":[{"o":"内容"}]}'}</code></div>
+        <div><strong>Bible:</strong> <code>{'[{"id":1,"verses":[{"c":"经文"}]}'}</code></div>
+        <div><strong>SDA:</strong> <code>{'{"0":{"n":"章节","ps":[{"t":7,"p":0,"c":"内容"}]}'}</code></div>
       </div>
     </details>
   </div>
