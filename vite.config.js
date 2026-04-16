@@ -18,6 +18,10 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ["@sqlite.org/sqlite-wasm", "parquet-wasm"],
+    exclude: [
+      "@sqlite.org/sqlite-wasm",
+      "parquet-wasm",
+      "@dweb-browser/zstd-wasm",
+    ],
   },
 });

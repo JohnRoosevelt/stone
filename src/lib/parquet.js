@@ -13,17 +13,19 @@
 import { PUBLIC_R2 } from "$env/static/public";
 import initWasm, { readParquet } from "parquet-wasm/esm";
 import { tableFromIPC } from "apache-arrow";
-import { ZSTDDecoder } from "zstddec";
+import initZstd, { decompress } from "@dweb-browser/zstd-wasm";
 
 let wasmInitialized = false;
-let decoder = null;
+let zstdInitialized = false;
 
 async function ensureWasm() {
   if (!wasmInitialized) {
     await initWasm();
-    decoder = new ZSTDDecoder();
-    await decoder.init();
     wasmInitialized = true;
+  }
+  if (!zstdInitialized) {
+    await initZstd();
+    zstdInitialized = true;
   }
 }
 
@@ -32,7 +34,7 @@ function decompressRow(row) {
   if (o && typeof o === "string" && o.startsWith("0")) {
     try {
       const compressed = Uint8Array.from(atob(o), (c) => c.charCodeAt(0));
-      const decompressed = decoder.decode(compressed);
+      const decompressed = decompress(compressed);
       return { n: row.n, o: new TextDecoder().decode(decompressed) };
     } catch (e) {
       console.warn("[Parquet] Decompress failed:", e);
@@ -101,7 +103,7 @@ export async function loadParquetContent(cid, bookId) {
   const url = `${PUBLIC_R2}/${cid}/zh/${bookId}.parquet.zst`;
   const resp = await fetch(url);
   const compressedBuffer = new Uint8Array(await resp.arrayBuffer());
-  const parquetBuffer = decoder.decode(compressedBuffer);
+  const parquetBuffer = decompress(compressedBuffer);
 
   return decodeParquet(parquetBuffer, cid);
 }
@@ -112,7 +114,7 @@ function decodeParquet(parquetBuffer, cid) {
   const rows = arrowTable.toArray();
 
   const decompressed = rows.map(decompressRow);
-  
+
   let result;
   if (cid === "bible") {
     result = groupIntoBibleChapters(decompressed);
@@ -121,7 +123,7 @@ function decodeParquet(parquetBuffer, cid) {
   } else {
     result = groupIntoChapters(decompressed);
   }
-  
+
   console.log("[Parquet] Loaded:", cid, result.length, "chapters");
 
   return result;
