@@ -57,6 +57,19 @@
     }
   }
 
+  function getUrlExtension(urlStr) {
+    try {
+      const pathname = new URL(urlStr).pathname;
+      const filename = pathname.split("/").pop() || "";
+      if (filename.endsWith(".json")) return "json";
+      if (filename.endsWith(".parquet.zst") || filename.endsWith(".zst")) return "zst";
+      if (filename.endsWith(".parquet")) return "parquet";
+      return "unknown";
+    } catch {
+      return "unknown";
+    }
+  }
+
   async function handleUrlLoad() {
     if (!url) return;
 
@@ -68,14 +81,39 @@
     fileName = "";
 
     try {
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const text = await resp.text();
-      fileContent = text;
+      const ext = getUrlExtension(url);
+      fileName = url.split("/").pop() || "file";
 
-      const parsed = JSON.parse(text);
-      resultData = parsed;
-      result = `✅ URL 加载成功\n🔗 ${url}\n📊 记录数: ${countRecords(parsed)}`;
+      if (ext === "json") {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const text = await resp.text();
+        fileContent = text;
+
+        const parsed = JSON.parse(text);
+        resultData = parsed;
+        result = `✅ JSON 加载成功\n🔗 ${url}\n📊 记录数: ${countRecords(parsed)}`;
+      } else if (ext === "zst" || ext === "parquet") {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const arrayBuffer = await resp.arrayBuffer();
+
+        resultFile = new Blob([new Uint8Array(arrayBuffer)], { type: "application/octet-stream" });
+        result = `✅ Parquet 文件下载成功\n🔗 ${url}\n📦 大小: ${(arrayBuffer.byteLength / 1024).toFixed(1)} KB\n\n💡 这是压缩后的 Parquet 文件，转换需要 Node.js`;
+      } else {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const text = await resp.text();
+        fileContent = text;
+
+        try {
+          const parsed = JSON.parse(text);
+          resultData = parsed;
+          result = `✅ 内容加载成功\n🔗 ${url}\n📊 记录数: ${countRecords(parsed)}`;
+        } catch {
+          result = `✅ 文件加载成功\n📄 大小: ${(text.length / 1024).toFixed(1)} KB\n\n⚠️ 无法识别的文件格式`;
+        }
+      }
     } catch (e) {
       error = `加载失败: ${e.message}`;
     } finally {
@@ -220,7 +258,7 @@
         <input
           type="text"
           bind:value={url}
-          placeholder="https://r2.example.com/book/zh/1.json"
+          placeholder="https://.../book/zh/1.json 或 .../1.parquet.zst"
           class="flex-1 px-3 py-2 border rounded"
         />
         <button
