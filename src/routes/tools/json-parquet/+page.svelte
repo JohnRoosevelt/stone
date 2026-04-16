@@ -1,14 +1,19 @@
 <script>
   import { PUBLIC_R2 } from "$env/static/public";
+  import initWasm, { readParquet } from "parquet-wasm/esm";
+  import { tableFromIPC } from "apache-arrow";
+  import { ZSTDDecoder } from "zstddec";
 
-  let mode = $state("extract");
+  let wasmReady = $state(false);
+  let decoder = null;
+
   let cid = $state("book");
   let lang = $state("zh");
   let fileInput = $state(null);
   let fileName = $state("");
-  let fileContent = $state("");
   let url = $state("");
   let loading = $state(false);
+  let loadingText = $state("");
   let result = $state("");
   let resultData = $state(null);
   let resultFile = $state(null);
@@ -25,35 +30,16 @@
     { value: "en", label: "English" }
   ];
 
-  async function handleFileSelect(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    loading = true;
-    error = "";
-    result = "";
-    resultData = null;
-    resultFile = null;
-
+  async function initDecoder() {
+    if (wasmReady) return;
+    loadingText = "初始化 WASM...";
     try {
-      const text = await file.text();
-      fileName = file.name;
-      fileContent = text;
-      url = "";
-
-      if (file.name.endsWith(".json")) {
-        const parsed = JSON.parse(text);
-        resultData = parsed;
-        result = `✅ JSON 解析成功\n📄 文件: ${file.name}\n📊 记录数: ${countRecords(parsed)}`;
-      } else if (file.name.endsWith(".zst")) {
-        result = `📦 ZSTD 压缩文件\n📄 需要服务器端解压\n🔗 可以从 R2 下载并自动转换`;
-      } else {
-        result = `📄 文件大小: ${(text.length / 1024).toFixed(1)} KB`;
-      }
+      await initWasm();
+      decoder = new ZSTDDecoder();
+      await decoder.init();
+      wasmReady = true;
     } catch (e) {
-      error = `解析失败: ${e.message}`;
-    } finally {
-      loading = false;
+      throw new Error(`WASM 初始化失败: ${e.message}`);
     }
   }
 
@@ -70,6 +56,97 @@
     }
   }
 
+  function groupRowsToChapters(rows, type) {
+    if (type === "bible") {
+      const chapters = [];
+      let currentChapter = null;
+      let verseId = 1;
+      for (const row of rows) {
+        if (!currentChapter || currentChapter.id !== row.n) {
+          if (currentChapter) chapters.push(currentChapter);
+          currentChapter = { id: row.n, verses: [] };
+          verseId = 1;
+        }
+        currentChapter.verses.push({ id: verseId++, c: row.o });
+      }
+      if (currentChapter) chapters.push(currentChapter);
+      return chapters;
+    }
+
+    if (type === "sda") {
+      const chapters = [];
+      let currentChapter = null;
+      for (const row of rows) {
+        if (!currentChapter || currentChapter.n !== row.n) {
+          currentChapter = { n: row.n, ps: [] };
+          chapters.push(currentChapter);
+        }
+        currentChapter.ps.push({ t: row.t, p: row.p, c: row.o });
+      }
+      return chapters;
+    }
+
+    const chapters = [];
+    let currentChapter = null;
+    for (const row of rows) {
+      if (!currentChapter || currentChapter.n !== row.n) {
+        currentChapter = { n: row.n, ps: [] };
+        chapters.push(currentChapter);
+      }
+      currentChapter.ps.push({ o: row.o });
+    }
+    return chapters;
+  }
+
+  async function parquetToJson(parquetBuffer, type) {
+    await initDecoder();
+    loadingText = "解压 ZSTD...";
+    const decompressed = decoder.decode(new Uint8Array(parquetBuffer));
+
+    loadingText = "解析 Parquet...";
+    const wasmTable = readParquet(decompressed);
+    const arrowTable = tableFromIPC(wasmTable.intoIPCStream());
+    const rows = arrowTable.toArray();
+
+    loadingText = "转换为 JSON...";
+    return groupRowsToChapters(rows, type);
+  }
+
+  async function handleFileSelect(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    loading = true;
+    error = "";
+    result = "";
+    resultData = null;
+    resultFile = null;
+
+    try {
+      fileName = file.name;
+      const ext = file.name.split(".").pop()?.toLowerCase();
+
+      if (ext === "json") {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        resultData = parsed;
+        result = `✅ JSON 解析成功\n📄 文件: ${file.name}\n📊 记录数: ${countRecords(parsed)}`;
+      } else if (ext === "zst" || ext === "parquet") {
+        loadingText = "读取文件...";
+        const buffer = await file.arrayBuffer();
+        resultData = await parquetToJson(buffer, cid);
+        result = `✅ Parquet 转换成功\n📄 文件: ${file.name}\n📊 章节数: ${resultData.length}`;
+      } else {
+        result = `📄 文件大小: ${(file.size / 1024).toFixed(1)} KB\n⚠️ 无法识别的格式`;
+      }
+    } catch (e) {
+      error = `解析失败: ${e.message}`;
+    } finally {
+      loading = false;
+      loadingText = "";
+    }
+  }
+
   async function handleUrlLoad() {
     if (!url) return;
 
@@ -78,55 +155,52 @@
     result = "";
     resultData = null;
     resultFile = null;
-    fileName = "";
+    fileName = url.split("/").pop() || "file";
 
     try {
       const ext = getUrlExtension(url);
-      fileName = url.split("/").pop() || "file";
 
       if (ext === "json") {
         const resp = await fetch(url);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const text = await resp.text();
-        fileContent = text;
-
         const parsed = JSON.parse(text);
         resultData = parsed;
         result = `✅ JSON 加载成功\n🔗 ${url}\n📊 记录数: ${countRecords(parsed)}`;
       } else if (ext === "zst" || ext === "parquet") {
+        loadingText = "下载文件...";
         const resp = await fetch(url);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const arrayBuffer = await resp.arrayBuffer();
 
-        resultFile = new Blob([new Uint8Array(arrayBuffer)], { type: "application/octet-stream" });
-        result = `✅ Parquet 文件下载成功\n🔗 ${url}\n📦 大小: ${(arrayBuffer.byteLength / 1024).toFixed(1)} KB\n\n💡 这是压缩后的 Parquet 文件，转换需要 Node.js`;
+        resultData = await parquetToJson(arrayBuffer, cid);
+        result = `✅ Parquet 转换成功\n🔗 ${url}\n📊 章节数: ${resultData.length}`;
       } else {
         const resp = await fetch(url);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const text = await resp.text();
-        fileContent = text;
-
         try {
           const parsed = JSON.parse(text);
           resultData = parsed;
-          result = `✅ 内容加载成功\n🔗 ${url}\n📊 记录数: ${countRecords(parsed)}`;
+          result = `✅ JSON 加载成功\n🔗 ${url}\n📊 记录数: ${countRecords(parsed)}`;
         } catch {
-          result = `✅ 文件加载成功\n📄 大小: ${(text.length / 1024).toFixed(1)} KB\n\n⚠️ 无法识别的文件格式`;
+          result = `✅ 文件加载成功\n📄 大小: ${(text.length / 1024).toFixed(1)} KB\n⚠️ 无法识别的文件格式`;
         }
       }
     } catch (e) {
       error = `加载失败: ${e.message}`;
     } finally {
       loading = false;
+      loadingText = "";
     }
   }
 
   function countRecords(data) {
     if (Array.isArray(data)) {
-      if (data.length > 0 && data[0].ps) {
+      if (data.length > 0 && data[0]?.ps) {
         return data.reduce((sum, ch) => sum + (ch.ps?.length || 0), 0);
       }
-      if (data.length > 0 && data[0].verses) {
+      if (data.length > 0 && data[0]?.verses) {
         return data.reduce((sum, ch) => sum + (ch.verses?.length || 0), 0);
       }
       return data.length;
@@ -192,40 +266,28 @@
 
     try {
       const parquetUrl = `${PUBLIC_R2}/${cid}/${lang}/1.parquet.zst`;
-      console.log(`[Tools] Downloading: ${parquetUrl}`);
+      loadingText = `下载 ${parquetUrl}...`;
 
       const resp = await fetch(parquetUrl);
       if (!resp.ok) throw new Error(`HTTP ${resp.status} - 文件可能不存在`);
 
       const arrayBuffer = await resp.arrayBuffer();
-      console.log(`[Tools] Downloaded ${arrayBuffer.byteLength} bytes`);
+      loadingText = "转换中...";
 
-      result = `✅ R2 下载成功!\n📦 ${parquetUrl}\n📊 大小: ${(arrayBuffer.byteLength / 1024).toFixed(1)} KB\n\n💡 实际转换需要在 Node.js 中使用 parquetjs 库\n📥 可以下载压缩文件备用`;
-
-      resultFile = new Blob([new Uint8Array(arrayBuffer)], { type: "application/octet-stream" });
-      fileName = `1.parquet.zst`;
+      resultData = await parquetToJson(arrayBuffer, cid);
+      result = `✅ R2 转换成功\n🔗 ${parquetUrl}\n📊 章节数: ${resultData.length}`;
     } catch (e) {
-      error = `R2 下载失败: ${e.message}`;
+      error = `转换失败: ${e.message}`;
     } finally {
       loading = false;
+      loadingText = "";
     }
-  }
-
-  function downloadParquet() {
-    if (!resultFile) return;
-
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(resultFile);
-    link.download = `${cid}_${lang}.parquet.zst`;
-    link.click();
-    URL.revokeObjectURL(link.href);
   }
 
   function formatData(data) {
     if (!data) return "";
-
     try {
-      return JSON.stringify(data, null, 2).substring(0, 2000);
+      return JSON.stringify(data, null, 2).substring(0, 3000);
     } catch {
       return String(data);
     }
@@ -290,20 +352,20 @@
       disabled={loading}
       class="px-4 py-2 bg-green-500 text-white rounded disabled:opacity-50"
     >
-      从 R2 下载 Parquet
+      从 R2 转换
     </button>
 
     <button
       onclick={downloadSampleJson}
       class="px-4 py-2 bg-gray-200 rounded"
     >
-      下载样本 JSON
+      下载样本
     </button>
   </div>
 
   {#if loading}
     <div class="text-center py-8">
-      <span class="text-gray-500">加载中...</span>
+      <span class="text-gray-500">{loadingText || "处理中..."}</span>
     </div>
   {/if}
 
@@ -322,7 +384,7 @@
   {#if resultData}
     <div class="bg-gray-100 border rounded-lg p-4 mb-4">
       <h3 class="font-semibold mb-2">数据预览</h3>
-      <pre class="text-sm overflow-auto max-h-64">{formatData(resultData)}</pre>
+      <pre class="text-sm overflow-auto max-h-80 whitespace-pre-wrap">{formatData(resultData)}</pre>
     </div>
 
     <button
@@ -333,24 +395,12 @@
     </button>
   {/if}
 
-  {#if resultFile && !resultData}
-    <div class="mt-4">
-      <button
-        onclick={downloadParquet}
-        class="px-6 py-3 bg-purple-600 text-white rounded-lg"
-      >
-        📥 下载 Parquet 文件
-      </button>
-    </div>
-  {/if}
-
   <div class="mt-8 p-4 bg-blue-50 rounded-lg">
     <h3 class="font-semibold mb-2">💡 说明</h3>
     <ul class="text-sm space-y-1 text-gray-700">
-      <li>• <strong>JSON 格式转换</strong> 需要使用 <code>seeds/json-parquet.js</code> 脚本</li>
-      <li>• 此工具可以查看 JSON 结构、下载 R2 文件</li>
-      <li>• Parquet 实际转换必须在 Node.js 中完成（需要 parquetjs 库）</li>
-      <li>• 使用方式: <code>node seeds/json-parquet.js convert book 1 zh</code></li>
+      <li>• 支持直接在浏览器中转换 .zst 压缩的 Parquet 文件为 JSON</li>
+      <li>• 从 URL 加载时自动识别文件类型</li>
+      <li>• 从 R2 下载并转换示例文件进行测试</li>
     </ul>
   </div>
 
