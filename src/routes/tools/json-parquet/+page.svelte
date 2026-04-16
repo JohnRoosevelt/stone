@@ -6,17 +6,16 @@
 
   let wasmReady = $state(false);
   let decoder = null;
+  let decoderInitError = $state("");
 
+  let mode = $state("parquet-to-json");
   let cid = $state("book");
   let lang = $state("zh");
-  let fileInput = $state(null);
-  let fileName = $state("");
   let url = $state("");
   let loading = $state(false);
   let loadingText = $state("");
-  let result = $state("");
   let resultData = $state(null);
-  let resultFile = $state(null);
+  let resultInfo = $state("");
   let error = $state("");
 
   const CID_OPTIONS = [
@@ -32,27 +31,16 @@
 
   async function initDecoder() {
     if (wasmReady) return;
-    loadingText = "初始化 WASM...";
+    if (decoderInitError) throw new Error(decoderInitError);
+
     try {
       await initWasm();
       decoder = new ZSTDDecoder();
       await decoder.init();
       wasmReady = true;
     } catch (e) {
-      throw new Error(`WASM 初始化失败: ${e.message}`);
-    }
-  }
-
-  function getUrlExtension(urlStr) {
-    try {
-      const pathname = new URL(urlStr).pathname;
-      const filename = pathname.split("/").pop() || "";
-      if (filename.endsWith(".json")) return "json";
-      if (filename.endsWith(".parquet.zst") || filename.endsWith(".zst")) return "zst";
-      if (filename.endsWith(".parquet")) return "parquet";
-      return "unknown";
-    } catch {
-      return "unknown";
+      decoderInitError = e.message;
+      throw e;
     }
   }
 
@@ -98,97 +86,79 @@
     return chapters;
   }
 
-  async function parquetToJson(parquetBuffer, type) {
+  async function decodeParquet(buffer) {
     await initDecoder();
-    loadingText = "解压 ZSTD...";
-    const decompressed = decoder.decode(new Uint8Array(parquetBuffer));
-
-    loadingText = "解析 Parquet...";
+    loadingText = "解压...";
+    const decompressed = decoder.decode(new Uint8Array(buffer));
+    loadingText = "解析...";
     const wasmTable = readParquet(decompressed);
     const arrowTable = tableFromIPC(wasmTable.intoIPCStream());
     const rows = arrowTable.toArray();
-
-    loadingText = "转换为 JSON...";
-    return groupRowsToChapters(rows, type);
+    return groupRowsToChapters(rows, cid);
   }
 
-  async function handleFileSelect(event) {
+  async function handleFile(event) {
     const file = event.target.files?.[0];
     if (!file) return;
 
     loading = true;
     error = "";
-    result = "";
     resultData = null;
-    resultFile = null;
+    resultInfo = "";
+    url = "";
 
     try {
-      fileName = file.name;
       const ext = file.name.split(".").pop()?.toLowerCase();
 
       if (ext === "json") {
+        loadingText = "解析 JSON...";
         const text = await file.text();
-        const parsed = JSON.parse(text);
-        resultData = parsed;
-        result = `✅ JSON 解析成功\n📄 文件: ${file.name}\n📊 记录数: ${countRecords(parsed)}`;
+        resultData = JSON.parse(text);
+        resultInfo = `✅ ${file.name}\n📊 ${countRecords(resultData)} 条记录`;
       } else if (ext === "zst" || ext === "parquet") {
         loadingText = "读取文件...";
         const buffer = await file.arrayBuffer();
-        resultData = await parquetToJson(buffer, cid);
-        result = `✅ Parquet 转换成功\n📄 文件: ${file.name}\n📊 章节数: ${resultData.length}`;
-      } else {
-        result = `📄 文件大小: ${(file.size / 1024).toFixed(1)} KB\n⚠️ 无法识别的格式`;
+        resultData = await decodeParquet(buffer);
+        resultInfo = `✅ ${file.name}\n📊 ${resultData.length} 章节`;
       }
     } catch (e) {
-      error = `解析失败: ${e.message}`;
+      error = e.message;
     } finally {
       loading = false;
       loadingText = "";
     }
   }
 
-  async function handleUrlLoad() {
+  async function handleUrl() {
     if (!url) return;
 
     loading = true;
     error = "";
-    result = "";
     resultData = null;
-    resultFile = null;
-    fileName = url.split("/").pop() || "file";
+    resultInfo = "";
 
     try {
-      const ext = getUrlExtension(url);
+      loadingText = "获取文件...";
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+      const ext = url.split(".").pop()?.toLowerCase();
+      const filename = url.split("/").pop() || "file";
 
       if (ext === "json") {
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        loadingText = "解析...";
         const text = await resp.text();
-        const parsed = JSON.parse(text);
-        resultData = parsed;
-        result = `✅ JSON 加载成功\n🔗 ${url}\n📊 记录数: ${countRecords(parsed)}`;
+        resultData = JSON.parse(text);
+        resultInfo = `✅ ${filename}\n📊 ${countRecords(resultData)} 条记录`;
       } else if (ext === "zst" || ext === "parquet") {
-        loadingText = "下载文件...";
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const arrayBuffer = await resp.arrayBuffer();
-
-        resultData = await parquetToJson(arrayBuffer, cid);
-        result = `✅ Parquet 转换成功\n🔗 ${url}\n📊 章节数: ${resultData.length}`;
+        const buffer = await resp.arrayBuffer();
+        resultData = await decodeParquet(buffer);
+        resultInfo = `✅ ${filename}\n📊 ${resultData.length} 章节`;
       } else {
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const text = await resp.text();
-        try {
-          const parsed = JSON.parse(text);
-          resultData = parsed;
-          result = `✅ JSON 加载成功\n🔗 ${url}\n📊 记录数: ${countRecords(parsed)}`;
-        } catch {
-          result = `✅ 文件加载成功\n📄 大小: ${(text.length / 1024).toFixed(1)} KB\n⚠️ 无法识别的文件格式`;
-        }
+        throw new Error("不支持的文件格式");
       }
     } catch (e) {
-      error = `加载失败: ${e.message}`;
+      error = e.message;
     } finally {
       loading = false;
       loadingText = "";
@@ -213,78 +183,38 @@
 
   function downloadJson() {
     if (!resultData) return;
-
-    const jsonStr = JSON.stringify(resultData, null, 2);
-    const blob = new Blob([jsonStr], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(resultData, null, 2)], { type: "application/json" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `${cid}_${lang}_extracted.json`;
+    link.download = `${cid}_${lang}.json`;
     link.click();
     URL.revokeObjectURL(link.href);
   }
 
-  function downloadSampleJson() {
-    const sample = getSampleJson(cid);
-    const blob = new Blob([JSON.stringify(sample, null, 2)], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${cid}_${lang}_sample.json`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  }
-
-  function getSampleJson(type) {
+  function getSample(type) {
     switch (type) {
       case "book":
-        return [
-          { n: "第一章", ps: [{ o: "内容1" }, { o: "内容2" }] },
-          { n: "第二章", ps: [{ o: "内容3" }] }
-        ];
+        return [{ n: "第一章", ps: [{ o: "内容1" }, { o: "内容2" }] }];
       case "bible":
-        return [
-          { id: 1, verses: [{ id: 1, c: "经文1" }, { id: 2, c: "经文2" }] },
-          { id: 2, verses: [{ id: 1, c: "经文3" }] }
-        ];
+        return [{ id: 1, verses: [{ id: 1, c: "经文1" }] }];
       case "sda":
-        return {
-          "0": { n: "第一章", ps: [{ t: 7, p: 0, c: "内容" }] },
-          "1": { n: "第二章", ps: [{ t: 7, p: 0, c: "内容" }] }
-        };
+        return { "0": { n: "第一章", ps: [{ t: 7, p: 0, c: "内容" }] } };
       default:
         return [];
     }
   }
 
-  async function handleR2Download() {
-    if (!cid || !lang) return;
-
-    loading = true;
-    error = "";
-    result = "";
-    resultData = null;
-    resultFile = null;
-
-    try {
-      const parquetUrl = `${PUBLIC_R2}/${cid}/${lang}/1.parquet.zst`;
-      loadingText = `下载 ${parquetUrl}...`;
-
-      const resp = await fetch(parquetUrl);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status} - 文件可能不存在`);
-
-      const arrayBuffer = await resp.arrayBuffer();
-      loadingText = "转换中...";
-
-      resultData = await parquetToJson(arrayBuffer, cid);
-      result = `✅ R2 转换成功\n🔗 ${parquetUrl}\n📊 章节数: ${resultData.length}`;
-    } catch (e) {
-      error = `转换失败: ${e.message}`;
-    } finally {
-      loading = false;
-      loadingText = "";
-    }
+  function downloadSample() {
+    const sample = getSample(cid);
+    const blob = new Blob([JSON.stringify(sample, null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${cid}_sample.json`;
+    link.click();
+    URL.revokeObjectURL(link.href);
   }
 
-  function formatData(data) {
+  function formatPreview(data) {
     if (!data) return "";
     try {
       return JSON.stringify(data, null, 2).substring(0, 3000);
@@ -298,127 +228,107 @@
   <title>JSON/Parquet 工具</title>
 </svelte:head>
 
-<div class="max-w-4xl mx-auto p-6">
-  <h1 class="text-2xl font-bold mb-6">JSON/Parquet 工具</h1>
+<div class="h-full flex flex-col">
+  <div class="flex-1 overflow-auto p-4 space-y-4">
+    <h1 class="text-xl font-bold sticky top-0 bg-white dark:bg-gray-900 pb-2">JSON/Parquet 工具</h1>
 
-  <div class="grid md:grid-cols-2 gap-6 mb-6">
-    <div class="border rounded-lg p-4">
-      <h2 class="font-semibold mb-4">选择本地文件</h2>
+    <div class="flex gap-2 flex-wrap">
+      <label class="flex items-center gap-1 px-3 py-1.5 border rounded cursor-pointer hover:bg-gray-50">
+        <input type="radio" bind:group={mode} value="parquet-to-json" class="accent-blue-500" />
+        <span>Parquet → JSON</span>
+      </label>
+      <label class="flex items-center gap-1 px-3 py-1.5 border rounded cursor-pointer hover:bg-gray-50">
+        <input type="radio" bind:group={mode} value="json-to-parquet" class="accent-blue-500" />
+        <span>JSON → Parquet (开发中)</span>
+      </label>
+    </div>
+
+    <div class="flex gap-2 flex-wrap">
+      <select bind:value={cid} class="px-2 py-1.5 border rounded text-sm">
+        {#each CID_OPTIONS as opt}
+          <option value={opt.value}>{opt.label}</option>
+        {/each}
+      </select>
+      <select bind:value={lang} class="px-2 py-1.5 border rounded text-sm">
+        {#each LANG_OPTIONS as opt}
+          <option value={opt.value}>{opt.label}</option>
+        {/each}
+      </select>
+      <button onclick={downloadSample} class="px-3 py-1.5 bg-gray-100 rounded text-sm hover:bg-gray-200">
+        样本
+      </button>
+    </div>
+
+    <div class="border rounded-lg p-3">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-sm font-medium">上传文件</span>
+      </div>
       <input
         type="file"
         accept=".json,.parquet,.zst,.parquet.zst"
-        bind:this={fileInput}
-        onchange={handleFileSelect}
-        class="w-full"
+        onchange={handleFile}
+        class="w-full text-sm file:mr-3 file:py-1 file:px-3 file:border file:rounded file:text-sm file:bg-gray-50 hover:file:bg-gray-100"
       />
-      <p class="text-sm text-gray-500 mt-2">支持 .json, .parquet, .zst 文件</p>
     </div>
 
-    <div class="border rounded-lg p-4">
-      <h2 class="font-semibold mb-4">从 URL 加载</h2>
+    <div class="border rounded-lg p-3">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-sm font-medium">从 URL 加载</span>
+      </div>
       <div class="flex gap-2">
         <input
           type="text"
           bind:value={url}
-          placeholder="https://.../book/zh/1.json 或 .../1.parquet.zst"
-          class="flex-1 px-3 py-2 border rounded"
+          placeholder="https://.../1.json 或 .../1.parquet.zst"
+          class="flex-1 px-2 py-1.5 border rounded text-sm"
         />
         <button
-          onclick={handleUrlLoad}
-          disabled={loading}
-          class="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+          onclick={handleUrl}
+          disabled={loading || !url}
+          class="px-3 py-1.5 bg-blue-500 text-white rounded text-sm disabled:opacity-50"
         >
           加载
         </button>
       </div>
     </div>
-  </div>
 
-  <div class="flex flex-wrap gap-4 mb-6">
-    <select bind:value={cid} class="px-3 py-2 border rounded">
-      {#each CID_OPTIONS as opt}
-        <option value={opt.value}>{opt.label}</option>
-      {/each}
-    </select>
-
-    <select bind:value={lang} class="px-3 py-2 border rounded">
-      {#each LANG_OPTIONS as opt}
-        <option value={opt.value}>{opt.label}</option>
-      {/each}
-    </select>
-
-    <button
-      onclick={handleR2Download}
-      disabled={loading}
-      class="px-4 py-2 bg-green-500 text-white rounded disabled:opacity-50"
-    >
-      从 R2 转换
-    </button>
-
-    <button
-      onclick={downloadSampleJson}
-      class="px-4 py-2 bg-gray-200 rounded"
-    >
-      下载样本
-    </button>
-  </div>
-
-  {#if loading}
-    <div class="text-center py-8">
-      <span class="text-gray-500">{loadingText || "处理中..."}</span>
-    </div>
-  {/if}
-
-  {#if error}
-    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-      {error}
-    </div>
-  {/if}
-
-  {#if result}
-    <div class="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded mb-4 whitespace-pre-wrap">
-      {result}
-    </div>
-  {/if}
-
-  {#if resultData}
-    <div class="bg-gray-100 border rounded-lg p-4 mb-4">
-      <h3 class="font-semibold mb-2">数据预览</h3>
-      <pre class="text-sm overflow-auto max-h-80 whitespace-pre-wrap">{formatData(resultData)}</pre>
-    </div>
-
-    <button
-      onclick={downloadJson}
-      class="px-6 py-3 bg-indigo-600 text-white rounded-lg"
-    >
-      📥 导出为 JSON
-    </button>
-  {/if}
-
-  <div class="mt-8 p-4 bg-blue-50 rounded-lg">
-    <h3 class="font-semibold mb-2">💡 说明</h3>
-    <ul class="text-sm space-y-1 text-gray-700">
-      <li>• 支持直接在浏览器中转换 .zst 压缩的 Parquet 文件为 JSON</li>
-      <li>• 从 URL 加载时自动识别文件类型</li>
-      <li>• 从 R2 下载并转换示例文件进行测试</li>
-    </ul>
-  </div>
-
-  <div class="mt-6 border-t pt-4">
-    <h3 class="font-semibold mb-2">数据结构说明</h3>
-    <div class="grid md:grid-cols-3 gap-4 text-sm">
-      <div class="border rounded p-3">
-        <strong>Book</strong>
-        <pre class="text-xs mt-1 text-gray-600">{`[{ n: "章节", ps: [{o:"内容"}] }]`}</pre>
+    {#if loading}
+      <div class="text-center py-4 text-gray-500 text-sm">
+        {loadingText || "处理中..."}
       </div>
-      <div class="border rounded p-3">
-        <strong>Bible</strong>
-        <pre class="text-xs mt-1 text-gray-600">{`[{ id: 1, verses: [{c:"经文"}] }]`}</pre>
+    {/if}
+
+    {#if error}
+      <div class="bg-red-50 border border-red-300 text-red-700 px-3 py-2 rounded text-sm">
+        ❌ {error}
       </div>
-      <div class="border rounded p-3">
-        <strong>SDA</strong>
-        <pre class="text-xs mt-1 text-gray-600">{`{ "0": { n:"章", ps:[{t,p,c}] } }`}</pre>
+    {/if}
+
+    {#if resultInfo}
+      <div class="bg-green-50 border border-green-300 text-green-800 px-3 py-2 rounded text-sm whitespace-pre-line">
+        {resultInfo}
       </div>
-    </div>
+    {/if}
+
+    {#if resultData}
+      <div class="border rounded-lg overflow-hidden">
+        <div class="flex items-center justify-between px-3 py-2 bg-gray-50 border-b">
+          <span class="text-sm font-medium">预览</span>
+          <button onclick={downloadJson} class="px-2 py-1 bg-indigo-500 text-white rounded text-xs">
+            下载 JSON
+          </button>
+        </div>
+        <pre class="p-3 text-xs overflow-auto max-h-96 whitespace-pre-wrap">{formatPreview(resultData)}</pre>
+      </div>
+    {/if}
+
+    <details class="text-sm text-gray-500">
+      <summary class="cursor-pointer hover:text-gray-700">数据结构说明</summary>
+      <div class="mt-2 space-y-1 text-xs">
+        <div><strong>Book:</strong> <code>[{"n":"章节","ps":[{"o":"内容"}]}]</code></div>
+        <div><strong>Bible:</strong> <code>[{"id":1,"verses":[{"c":"经文"}]}]</code></div>
+        <div><strong>SDA:</strong> <code>{"0":{"n":"章节","ps":[{"t":7,"p":0,"c":"内容"}]}}</code></div>
+      </div>
+    </details>
   </div>
 </div>
