@@ -1,12 +1,17 @@
 /**
  * JSON <-> Parquet 互转工具
- * 
+ *
  * 使用方式:
  *   node seeds/json-parquet.js convert book 1 zh    # 转换 book/zh/1.json -> 1.parquet.zst
  *   node seeds/json-parquet.js extract book 1 zh    # 从 parquet 提取 JSON
  */
 
-import { S3Client, GetObjectCommand, PutObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+  ListObjectsV2Command,
+} from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema, ParquetReader } from "parquetjs";
 import fs from "fs";
 import { execSync } from "child_process";
@@ -15,8 +20,8 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
-const [accountId, accessKeyId, secretAccessKey] = process.env.R2.split(",");
-const bucket = process.env.R2_BUCKET;
+const [accountId, accessKeyId, secretAccessKey, bucket] =
+  process.env.R2.split(",");
 
 if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
   console.error("Missing R2 env vars");
@@ -28,7 +33,7 @@ const SCHEMAS = {
   book: {
     columns: [
       { name: "n", type: "UTF8" },
-      { name: "o", type: "UTF8" }
+      { name: "o", type: "UTF8" },
     ],
     flatten: (data) => {
       const rows = [];
@@ -39,12 +44,12 @@ const SCHEMAS = {
         }
       }
       return rows;
-    }
+    },
   },
   bible: {
     columns: [
       { name: "n", type: "UTF8" },
-      { name: "o", type: "UTF8" }
+      { name: "o", type: "UTF8" },
     ],
     flatten: (data) => {
       const rows = [];
@@ -70,14 +75,14 @@ const SCHEMAS = {
       }
       if (currentChapter) chapters.push(currentChapter);
       return chapters;
-    }
+    },
   },
   sda: {
     columns: [
       { name: "n", type: "UTF8" },
       { name: "o", type: "UTF8" },
       { name: "t", type: "INT32" },
-      { name: "p", type: "INT32" }
+      { name: "p", type: "INT32" },
     ],
     flatten: (data) => {
       const rows = [];
@@ -85,7 +90,12 @@ const SCHEMAS = {
         const chapter = data[key];
         const title = chapter.n || "";
         for (const para of chapter.ps || []) {
-          rows.push({ n: title, o: para.c || "", t: para.t || 0, p: para.p || 0 });
+          rows.push({
+            n: title,
+            o: para.c || "",
+            t: para.t || 0,
+            p: para.p || 0,
+          });
         }
       }
       return rows;
@@ -101,32 +111,36 @@ const SCHEMAS = {
         currentChapter.ps.push({ t: row.t, p: row.p, c: row.o });
       }
       return chapters;
-    }
-  }
+    },
+  },
 };
 
 async function getR2Client() {
   return new S3Client({
     region: "auto",
     endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    credentials: { accessKeyId, secretAccessKey }
+    credentials: { accessKeyId, secretAccessKey },
   });
 }
 
 async function downloadFromR2(client, key) {
-  const resp = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  const resp = await client.send(
+    new GetObjectCommand({ Bucket: bucket, Key: key }),
+  );
   const chunks = [];
   for await (const chunk of resp.Body) chunks.push(chunk);
   return Buffer.concat(chunks);
 }
 
 async function uploadToR2(client, key, data) {
-  await client.send(new PutObjectCommand({
-    Bucket: bucket,
-    Key: key,
-    Body: data,
-    ContentType: "application/octet-stream"
-  }));
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: data,
+      ContentType: "application/octet-stream",
+    }),
+  );
 }
 
 async function jsonToParquet(jsonData, schema) {
@@ -137,7 +151,7 @@ async function jsonToParquet(jsonData, schema) {
 
   const writer = await ParquetWriter.openFile(
     new ParquetSchema(schemaDef),
-    "/tmp/temp.parquet"
+    "/tmp/temp.parquet",
   );
 
   const rows = schema.flatten(jsonData);
@@ -148,10 +162,10 @@ async function jsonToParquet(jsonData, schema) {
 
   execSync(`zstd -19 -f /tmp/temp.parquet -o /tmp/temp.parquet.zst`);
   const result = fs.readFileSync("/tmp/temp.parquet.zst");
-  
+
   fs.unlinkSync("/tmp/temp.parquet");
   fs.unlinkSync("/tmp/temp.parquet.zst");
-  
+
   return result;
 }
 
@@ -202,7 +216,9 @@ async function convert(cid, id, lang) {
     console.log(`  Downloaded JSON`);
 
     const parquetBuffer = await jsonToParquet(jsonData, schema);
-    console.log(`  Created Parquet: ${(parquetBuffer.length / 1024).toFixed(1)} KB`);
+    console.log(
+      `  Created Parquet: ${(parquetBuffer.length / 1024).toFixed(1)} KB`,
+    );
 
     await uploadToR2(client, parquetKey, parquetBuffer);
     console.log(`  Uploaded to R2: ${parquetKey}`);
@@ -229,7 +245,7 @@ async function extract(cid, id, lang) {
     const zstPath = "/tmp/temp_extract.parquet.zst";
     fs.writeFileSync(zstPath, parquetBuffer);
     execSync(`zstd -d -f ${zstPath} -o /tmp/temp_extract.parquet`);
-    
+
     const jsonData = await parquetToJson("/tmp/temp_extract.parquet", schema);
     console.log(`  Extracted: ${jsonData.length} chapters`);
 
@@ -254,11 +270,13 @@ async function batchConvert(cid, lang) {
   const toConvert = [];
 
   do {
-    const resp = await client.send(new ListObjectsV2Command({
-      Bucket: bucket,
-      Prefix: `${cid}/${lang}/`,
-      ContinuationToken: continuationToken
-    }));
+    const resp = await client.send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: `${cid}/${lang}/`,
+        ContinuationToken: continuationToken,
+      }),
+    );
 
     for (const obj of resp.Contents || []) {
       if (obj.Key.endsWith(".json")) {

@@ -8,8 +8,8 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
-const [accountId, accessKeyId, secretAccessKey] = process.env.R2.split(",");
-const bucket = process.env.R2_BUCKET;
+const [accountId, accessKeyId, secretAccessKey, bucket] =
+  process.env.R2.split(",");
 
 if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
   console.error("Missing R2 env vars");

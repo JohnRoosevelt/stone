@@ -12,8 +12,7 @@ export async function GET({ url }) {
     throw error(400, "fileName is required");
   }
 
-  const [accessKeyId, secretAccessKey, accountId] = env.R2.split(",");
-  const Bucket = env.R2_BUCKET;
+  const [accessKeyId, secretAccessKey, accountId, Bucket] = env.R2.split(",");
 
   const client = new S3Client({
     region: "auto",
