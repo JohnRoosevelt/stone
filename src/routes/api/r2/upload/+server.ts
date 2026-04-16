@@ -32,17 +32,17 @@ export async function GET({ url }) {
     expiresIn: 300,
   });
 
-  const urlObj = new URL(signedUrl);
-  const paramsToRemove = [
-    "x-amz-checksum-crc32",
-    "x-amz-checksum-crc32c",
-    "x-amz-checksum-sha1",
-    "x-amz-checksum-sha256",
-    "x-amz-sdk-checksum-algorithm",
-  ];
+  // const urlObj = new URL(signedUrl);
+  // const paramsToRemove = [
+  //   "x-amz-checksum-crc32",
+  //   "x-amz-checksum-crc32c",
+  //   "x-amz-checksum-sha1",
+  //   "x-amz-checksum-sha256",
+  //   "x-amz-sdk-checksum-algorithm",
+  // ];
 
-  paramsToRemove.forEach((param) => urlObj.searchParams.delete(param));
-  url = urlObj.toString();
+  // paramsToRemove.forEach((param) => urlObj.searchParams.delete(param));
+  // url = urlObj.toString();
 
-  return json({ Key, url });
+  return json({ Key, url: signedUrl });
 }
