@@ -12,7 +12,7 @@ export async function GET({ url }) {
     throw error(400, "fileName is required");
   }
 
-  const [accessKeyId, secretAccessKey, accountId, Bucket] = env.R2.split(",");
+  const [accountId, accessKeyId, secretAccessKey, Bucket] = env.R2.split(",");
 
   const client = new S3Client({
     region: "auto",
@@ -28,20 +28,8 @@ export async function GET({ url }) {
   });
 
   const signedUrl = await getSignedUrl(client, command, {
-    expiresIn: 300,
+    expiresIn: 300000,
   });
-
-  // const urlObj = new URL(signedUrl);
-  // const paramsToRemove = [
-  //   "x-amz-checksum-crc32",
-  //   "x-amz-checksum-crc32c",
-  //   "x-amz-checksum-sha1",
-  //   "x-amz-checksum-sha256",
-  //   "x-amz-sdk-checksum-algorithm",
-  // ];
-
-  // paramsToRemove.forEach((param) => urlObj.searchParams.delete(param));
-  // url = urlObj.toString();
 
   return json({ Key, url: signedUrl });
 }

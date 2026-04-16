@@ -317,8 +317,8 @@
       });
 
       loadingText = "上传中...";
-      // const { Key } = await uploadToR2(file, fileName);
-      const { Key } = await uploadToR2(file, "upload/1.parquet.zst");
+      const { Key } = await uploadToR2(file, fileName);
+      // const { Key } = await uploadToR2(file, "upload/1.parquet.zst");
       console.log({ Key });
       url = `https://r2.lelexue.cn/${Key}`;
       error = "";

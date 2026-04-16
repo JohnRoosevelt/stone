@@ -19,17 +19,11 @@ export async function uploadToR2(
 
   const { Key, url } = await res.json();
 
-  // const cmd = `curl -v -X PUT \
-  //   --noproxy "*" \
-  //   -H "Content-Type: ${contentType}" \
-  //   --data-binary @1.parquet.zst \
-  //   ${url}`;
-  // console.log({ Key, url, contentType });
-  // console.log(cmd);
-
   await fetch(url, {
     method: "PUT",
-    headers: { "Content-Type": contentType },
+    headers: {
+      "Content-Type": contentType,
+    },
     body: file,
   });
 
