@@ -1,5 +1,4 @@
-// Seed utility - fetches book data from R2 (.parquet for book, .json for others) and stores in local SQLite
-import { PUBLIC_R2 } from "$env/static/public";
+// Seed utility - fetches book data from R2 (.parquet) and stores in local SQLite
 import sda from "$lib/sda/sda.json";
 import bible from "$lib/bible/bible.json";
 import bookMeta from "$lib/book/book.json";
@@ -12,11 +11,7 @@ function getBookMeta(cid, bookId) {
 }
 
 async function fetchBookContent(cid, bookId) {
-  if (cid === "book") {
-    return loadParquetContent(cid, bookId);
-  }
-  const res = await fetch(`${PUBLIC_R2}/${cid}/zh/${bookId}.json`);
-  return res.json();
+  return loadParquetContent(cid, bookId);
 }
 
 export async function seedBookToDB(cid, bookId, onProgress = null) {
