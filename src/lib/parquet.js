@@ -56,27 +56,56 @@ function groupIntoChapters(rows) {
   return chapters;
 }
 
+function groupIntoBibleChapters(rows) {
+  const chapters = [];
+  let currentChapter = null;
+  let verseId = 1;
+
+  for (const row of rows) {
+    if (!currentChapter || currentChapter.id !== row.n) {
+      if (currentChapter) {
+        chapters.push(currentChapter);
+      }
+      currentChapter = { id: row.n, verses: [] };
+      verseId = 1;
+    }
+    currentChapter.verses.push({ id: verseId++, c: row.o });
+  }
+
+  if (currentChapter) {
+    chapters.push(currentChapter);
+  }
+
+  return chapters;
+}
+
 export async function loadParquetContent(cid, bookId) {
   console.log("[Parquet] Loading from R2:", cid, bookId);
   await ensureWasm();
 
-  const url = `${PUBLIC_R2}/${cid}/zh/${bookId}.parquet.zst?t=${Date.now()}`;
+  const url = `${PUBLIC_R2}/${cid}/zh/${bookId}.parquet.zst`;
   const resp = await fetch(url);
   const compressedBuffer = new Uint8Array(await resp.arrayBuffer());
   const parquetBuffer = decoder.decode(compressedBuffer);
 
-  return decodeParquet(parquetBuffer);
+  return decodeParquet(parquetBuffer, cid);
 }
 
-function decodeParquet(parquetBuffer) {
+function decodeParquet(parquetBuffer, cid) {
   const wasmTable = readParquet(parquetBuffer);
   const arrowTable = tableFromIPC(wasmTable.intoIPCStream());
   const rows = arrowTable.toArray();
-  // console.log("[Parquet] Rows count:", rows.length);
 
   const decompressed = rows.map(decompressRow);
-  const result = groupIntoChapters(decompressed);
-  console.log("[Parquet] Chapters:", result.length, "Sample:", result);
+  
+  let result;
+  if (cid === "bible") {
+    result = groupIntoBibleChapters(decompressed);
+  } else {
+    result = groupIntoChapters(decompressed);
+  }
+  
+  console.log("[Parquet] Loaded:", cid, result.length, "chapters");
 
   return result;
 }

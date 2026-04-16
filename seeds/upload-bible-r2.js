@@ -17,11 +17,9 @@ if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
   process.exit(1);
 }
 
-const BOOK_IDS = ["1", "2", "3", "4"];
-const INPUT_DIR = path.join(process.cwd(), "seeds/book");
+const BIBLE_IDS = Array.from({ length: 66 }, (_, i) => String(i + 1));
 
-async function convertToParquet(jsonPath, parquetPath) {
-  const { ParquetWriter, ParquetSchema } = pkg;
+async function convertBookToParquet(jsonPath, parquetPath) {
   const jsonData = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
 
   const schema = new ParquetSchema({
@@ -45,9 +43,28 @@ async function convertToParquet(jsonPath, parquetPath) {
   }
 
   await writer.close();
-  console.log(
-    `  Created: ${(fs.statSync(parquetPath).size / 1024).toFixed(1)} KB`,
-  );
+}
+
+async function convertBibleToParquet(jsonPath, parquetPath) {
+  const jsonData = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+
+  const schema = new ParquetSchema({
+    n: { type: "UTF8" },
+    o: { type: "UTF8" },
+  });
+
+  const writer = await ParquetWriter.openFile(schema, parquetPath);
+
+  if (Array.isArray(jsonData)) {
+    for (const chapter of jsonData) {
+      const chapterId = String(chapter.id);
+      for (const verse of chapter.verses || []) {
+        await writer.appendRow({ n: chapterId, o: verse.c || "" });
+      }
+    }
+  }
+
+  await writer.close();
 }
 
 function compressParquet(parquetPath, zstPath) {
@@ -75,8 +92,48 @@ async function uploadToR2(client, key, filePath) {
   console.log(`  Uploaded: ${key}`);
 }
 
+async function uploadBible(client, lang) {
+  const inputDir = path.join(process.cwd(), "seeds/bible", lang);
+  let totalOriginal = 0;
+  let totalCompressed = 0;
+
+  console.log(`\n=== Processing Bible (${lang}) ===`);
+
+  for (const bookId of BIBLE_IDS) {
+    const jsonPath = path.join(inputDir, `${bookId}.json`);
+    const parquetPath = path.join(inputDir, `${bookId}.parquet`);
+    const zstPath = path.join(inputDir, `${bookId}.parquet.zst`);
+
+    if (!fs.existsSync(jsonPath)) {
+      console.log(`  Book ${bookId}: skipped (not found)`);
+      continue;
+    }
+
+    process.stdout.write(`  Book ${bookId}...`);
+
+    const originalSize = fs.statSync(jsonPath).size;
+    totalOriginal += originalSize;
+
+    await convertBibleToParquet(jsonPath, parquetPath);
+    compressParquet(parquetPath, zstPath);
+    await uploadToR2(client, `bible/${lang}/${bookId}.parquet.zst`, zstPath);
+
+    totalCompressed += fs.statSync(zstPath).size;
+
+    fs.unlinkSync(parquetPath);
+    fs.unlinkSync(zstPath);
+
+    console.log(" done");
+  }
+
+  const overallRatio = ((1 - totalCompressed / totalOriginal) * 100).toFixed(1);
+  console.log(
+    `\n  Total: ${(totalOriginal / 1024 / 1024).toFixed(1)} MB -> ${(totalCompressed / 1024 / 1024).toFixed(1)} MB (${overallRatio}% smaller)`,
+  );
+}
+
 async function main() {
-  console.log("R2 Upload Script\n");
+  console.log("Bible R2 Upload Script\n");
 
   const client = new S3Client({
     region: "auto",
@@ -84,25 +141,8 @@ async function main() {
     credentials: { accessKeyId, secretAccessKey },
   });
 
-  for (const bookId of BOOK_IDS) {
-    const jsonPath = path.join(INPUT_DIR, `${bookId}.json`);
-    const parquetPath = path.join(INPUT_DIR, `${bookId}.parquet`);
-    const zstPath = path.join(INPUT_DIR, `${bookId}.parquet.zst`);
-
-    console.log(`\nProcessing book ${bookId}...`);
-
-    if (!fs.existsSync(jsonPath)) {
-      console.log(`  Skipped: not found`);
-      continue;
-    }
-
-    await convertToParquet(jsonPath, parquetPath);
-    compressParquet(parquetPath, zstPath);
-    // await uploadToR2(client, `book/zh/${bookId}.json`, jsonPath);
-    await uploadToR2(client, `book/zh/${bookId}.parquet.zst`, zstPath);
-    fs.unlinkSync(parquetPath);
-    fs.unlinkSync(zstPath);
-  }
+  await uploadBible(client, "zh");
+  await uploadBible(client, "en");
 
   console.log("\nDone!");
 }
