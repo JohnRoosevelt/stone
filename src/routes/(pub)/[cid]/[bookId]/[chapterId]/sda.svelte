@@ -3,7 +3,7 @@
   import { DATAS } from "$lib/data.svelte.js";
 
   $effect(() => {
-    console.log("::TODO::", "restore highlights");
+    // console.log("::TODO::", "restore highlights", page.data.chapterZh);
   });
 
   // 恢复高亮

@@ -3,6 +3,7 @@
   import Test from "./test.svelte";
 </script>
 
+<a href="/data">data</a>
 <p class="bg-red-500 hover:(bg-blue-500 font-700 text-8)">tpl</p>
 <p text="red-500 hover:(green-500 8)" hover="bg-blue-500 font-700">tpl</p>
 <p bg-red-500>tpl</p>

@@ -20,7 +20,6 @@ export async function load({ parent, params: { cid, bookId, chapterId } }) {
     titleZh = chapterData.n;
     chapterZh = chapterData.ps;
   }
-  console.log(chapterData);
 
   return { titleZh, chapterZh };
 }
