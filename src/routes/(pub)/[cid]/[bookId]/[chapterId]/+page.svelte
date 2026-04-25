@@ -3,7 +3,6 @@
   import ArticleCtrl from "$lib/sda/ArticleCtrl.svelte";
   import Sda from "./sda.svelte";
   import Bible from "./bible.svelte";
-  import Book from "./book.svelte";
   import { page } from "$app/state";
 
   let clientHeight = $state(0);
@@ -19,15 +18,9 @@
         rz = Bible;
         break;
 
-      case "sda":
-        rz = Sda;
-        break;
-
-      case "book":
-        rz = Book;
-        break;
-
       default:
+        rz = Sda;
+
         break;
     }
     return rz;

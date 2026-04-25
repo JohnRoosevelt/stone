@@ -1,15 +1,3 @@
-/**
- * Parquet content loader - fetches and decodes .parquet files from R2
- * Data is zstd compressed in parquet, decompressed on read
- *
- * Usage:
- *   import { loadParquetContent } from "$lib/parquet";
- *   const chapters = await loadParquetContent("bible", 1);
- *
- * Returns chapter array:
- *   Book: [{ o: "<decompressed html>" }, ...]
- */
-
 import { PUBLIC_R2 } from "$env/static/public";
 import initWasm, { readParquet } from "parquet-wasm/esm";
 import { tableFromIPC } from "apache-arrow";
@@ -20,79 +8,41 @@ let zstdInitialized = false;
 
 async function ensureWasm() {
   if (!wasmInitialized) {
-    await initWasm();
+    await initWasm({});
     wasmInitialized = true;
   }
   if (!zstdInitialized) {
-    await initZstd();
+    await initZstd({});
     zstdInitialized = true;
   }
 }
 
-function decompressRow(row) {
-  const o = row?.o;
-  if (o && typeof o === "string" && o.startsWith("0")) {
-    try {
-      const compressed = Uint8Array.from(atob(o), (c) => c.charCodeAt(0));
-      const decompressed = decompress(compressed);
-      return { n: row.n, o: new TextDecoder().decode(decompressed) };
-    } catch (e) {
-      console.warn("[Parquet] Decompress failed:", e);
-    }
-  }
-  return { n: row.n, o };
-}
-
-function groupIntoChapters(rows) {
-  const chapters = [];
-  let currentChapter = null;
-
-  for (const row of rows) {
-    if (!currentChapter || currentChapter.n !== row.n) {
-      currentChapter = { n: row.n, ps: [] };
-      chapters.push(currentChapter);
-    }
-    currentChapter.ps.push({ o: row.o });
-  }
-
-  return chapters;
-}
-
-function groupIntoBibleChapters(rows) {
-  const chapters = [];
-  let currentChapter = null;
-  let verseId = 1;
-
-  for (const row of rows) {
-    if (!currentChapter || currentChapter.id !== row.n) {
-      if (currentChapter) {
-        chapters.push(currentChapter);
-      }
-      currentChapter = { id: row.n, verses: [] };
+function groupRows(rows, type) {
+  if (type === "bible") {
+    const chapters = [];
+    let cur = null,
       verseId = 1;
+    for (const row of rows) {
+      if (!cur || cur.id !== row.n) {
+        if (cur) chapters.push(cur);
+        cur = { id: row.n, verses: [] };
+        verseId = 1;
+      }
+      cur.verses.push({ id: verseId++, c: row.o });
     }
-    currentChapter.verses.push({ id: verseId++, c: row.o });
+    if (cur) chapters.push(cur);
+    return chapters;
   }
 
-  if (currentChapter) {
-    chapters.push(currentChapter);
-  }
-
-  return chapters;
-}
-
-function groupIntoSdaChapters(rows) {
   const chapters = [];
-  let currentChapter = null;
-
+  let cur = null;
   for (const row of rows) {
-    if (!currentChapter || currentChapter.n !== row.n) {
-      currentChapter = { n: row.n, ps: [] };
-      chapters.push(currentChapter);
+    if (!cur || cur.n !== row.n) {
+      cur = { n: row.n, ps: [] };
+      chapters.push(cur);
     }
-    currentChapter.ps.push({ t: row.t, p: row.p, c: row.o });
+    cur.ps.push({ t: row.t ?? 7, p: row.p, c: row.o });
   }
-
   return chapters;
 }
 
@@ -102,29 +52,32 @@ export async function loadParquetContent(cid, bookId) {
 
   const url = `${PUBLIC_R2}/${cid}/zh/${bookId}.parquet.zst`;
   const resp = await fetch(url);
-  const compressedBuffer = new Uint8Array(await resp.arrayBuffer());
-  const parquetBuffer = decompress(compressedBuffer);
 
-  return decodeParquet(parquetBuffer, cid);
-}
+  const buffer = await resp.arrayBuffer();
+  const uint8 = new Uint8Array(buffer);
+  const parquetBuffer = decompress(uint8);
 
-function decodeParquet(parquetBuffer, cid) {
   const wasmTable = readParquet(parquetBuffer);
   const arrowTable = tableFromIPC(wasmTable.intoIPCStream());
   const rows = arrowTable.toArray();
 
-  const decompressed = rows.map(decompressRow);
+  const decompressedRows = rows.map((row) => {
+    const o = row?.o;
+    if (o && typeof o === "string" && o.startsWith("0")) {
+      try {
+        const compressed = Uint8Array.from(atob(o), (c) => c.charCodeAt(0));
+        const decResult = decompress(compressed);
+        return { ...row, o: new TextDecoder().decode(decResult) };
+      } catch {
+        return row;
+      }
+    }
+    return row;
+  });
 
-  let result;
-  if (cid === "bible") {
-    result = groupIntoBibleChapters(decompressed);
-  } else if (cid === "sda") {
-    result = groupIntoSdaChapters(decompressed);
-  } else {
-    result = groupIntoChapters(decompressed);
-  }
+  const resultData = groupRows(decompressedRows, cid);
 
-  console.log("[Parquet] Loaded:", cid, result.length, "chapters");
+  console.log({ resultData });
 
-  return result;
+  return resultData;
 }

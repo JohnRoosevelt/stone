@@ -3,7 +3,7 @@
   import { DATAS } from "$lib/data.svelte.js";
 
   $effect(() => {
-    console.log("::TODO::", "restore highlights");
+    // console.log("::TODO::", "restore highlights", page.data.chapterZh);
   });
 
   // 恢复高亮
@@ -77,7 +77,7 @@
 >
   {#each page.data.chapterZh as { t, p, c }, i}
     <p
-      style:text-indent="calc(var(--spacing) * {t === 7
+      style:text-indent="calc(var(--spacing) * {t === 7 && i > 0
         ? parseInt(DATAS.fontSize / 2)
         : 0})"
       style:--before-left={t === 7
@@ -88,23 +88,25 @@
       data-lang="zh"
       data-lang-origin="en"
       data-t={t}
-      data-pp={p}
-      data-p={p + "˼"}
+      data-pp={p || i}
+      data-p={p || i + "˼"}
       data-i={i}
-      class:flex-cc={t == 2}
-      class:font-700={t == 2}
+      class:flex-cc={t == 2 || i === 0}
+      class:font-700={t == 2 || i === 0}
       class:font-500={t == 4}
       class:sticky={t == 4}
       class:top-0={t == 4}
       bg={t == 4 ? "white dark:black" : ""}
       class:relative={t == 7}
       class:z-2={t == 4}
-      before={t == 7 ? `content-[attr(data-p)] absolute text-green` : ""}
+      before={t == 7 && i > 0
+        ? `content-[attr(data-p)] absolute text-green`
+        : ""}
       after={t == 7 && false
         ? `content-[attr(data-lang-origin)] ml-3 text-green`
         : ""}
     >
-      {c}
+      {@html c}
     </p>
   {/each}
 </article>
