@@ -1,7 +1,5 @@
-import { dev } from "$app/environment";
-
 export async function load({ params: { cid }, platform: { env } }) {
-  const db = dev ? env?.DB_LOCAL : env?.DB;
+  const db = env?.DB;
   console.log({ cid, env, db });
   if (db) {
     try {

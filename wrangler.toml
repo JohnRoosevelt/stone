@@ -1,6 +1,7 @@
 name = "stone"
 compatibility_date = "2024-04-01"
 pages_build_output_dir = ".svelte-kit/cloudflare"
+compatibility_flags = [ "nodejs_compat" ]
 
 [vars]
 PUBLIC_R2 = "https://r2.lelexue.cn"
@@ -8,10 +9,10 @@ R2 = "76f91d4a19eb310b8a1eee846a8d807b,85ac4a675838688f09e61e8e52ca24bc,dd28cc17
 
 [[d1_databases]]
 binding = "DB"
-database_name = "stone-db"
-database_id = "8aa5dbac-b20e-47dd-96af-79a493e5638f"
-
-[[d1_databases]]
-binding = "DB_LOCAL"
 database_name = "stone-db-local"
 database_id = "13893e4a-1d7d-43ca-9919-8b14ba7edeab"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "stone-db"
+database_id = "8aa5dbac-b20e-47dd-96af-79a493e5638f"
