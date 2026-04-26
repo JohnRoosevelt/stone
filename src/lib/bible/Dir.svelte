@@ -8,7 +8,12 @@
   let activeId = $state("");
   let selectId = $state("");
 
-  const groupByTag = bible.reduce((pre, cur) => {
+  const bibleMap = bible.reduce((pre, cur) => {
+    pre[cur.id] = cur;
+    return pre;
+  }, {});
+
+  const groupByTag = page.data.books.reduce((pre, cur) => {
     if (!pre[cur.title]) {
       pre[cur.title] = [];
     }
@@ -97,14 +102,17 @@
 
 {#snippet Rbook(book)}
   <div flex-bc h-12 px-3 bg-gray-100 dark="bg-gray-700">
-    <a flex-1 href="/bible/{book.id}/1">
-      <p flex-bc class:text-green={page.params.bookId == book.id}>
-        <span>{book.name.zh}</span>
+    <a flex-1 href="/bible/{book.book_id}/1">
+      <p flex-bc class:text-green={page.params.bookId == book.book_id}>
+        <span>{book.name}</span>
         <span flex>
           <!-- https://symbl.cc/cn/unicode-table/#spacing-modifier-letters -->
           <!-- u+20FB -->
           <span text-green>˻</span>
-          <span> {book.name.en} {book.name.ZH} </span>
+          <span>
+            {bibleMap[book.book_id].name.en}
+            {bibleMap[book.book_id].name.ZH}
+          </span>
           <span text-green>˼</span>
           <!-- u+20FC -->
         </span>

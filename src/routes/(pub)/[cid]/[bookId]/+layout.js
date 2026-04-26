@@ -5,16 +5,19 @@ import bookMeta from "$lib/book/book.json";
 
 const BOOK_CATALOG = { bible, sda, book: bookMeta };
 
-export async function load({ params: { cid, bookId } }) {
+export async function load({ params: { cid, bookId }, data }) {
+  console.log({ cid, bookId, data });
+
+  // todo:: in tauri, data is not available, .server.js is not called
+  const { books, book } = data;
+
   if (!browser) {
-    return { book: null, dirZh: null };
+    return { books, book, dirZh: null };
   }
 
-  const catalog = BOOK_CATALOG[cid];
-  const currentBook = catalog?.find((i) => i.id == bookId);
-
+  // load parquet content only in browser
   const { loadParquetContent } = await import("$lib/parquet");
   const dirZh = await loadParquetContent(cid, bookId);
 
-  return { book: currentBook, dirZh };
+  return { book, dirZh };
 }

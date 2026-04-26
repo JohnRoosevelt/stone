@@ -9,7 +9,7 @@
   let activeId = $state("");
   let selectId = $state("");
 
-  const groupByTag = books.reduce((pre, cur) => {
+  const groupByTag = page.data.books.reduce((pre, cur) => {
     if (!pre[cur.tag]) {
       pre[cur.tag] = [];
     }
@@ -95,8 +95,8 @@
 
 {#snippet Rbook(book)}
   <div flex-bc h-12 px-3 pr-12 bg-gray-100 dark="bg-gray-700">
-    <a flex-1 href="/book/{book.id}/1">
-      <p class:text-green={page.params.bookId == book.id}>
+    <a flex-1 href="/book/{book.book_id}/1">
+      <p class:text-green={page.params.bookId == book.book_id}>
         {book.name}
       </p>
     </a>

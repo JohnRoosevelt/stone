@@ -1,13 +1,13 @@
 <script>
   import Footer from "$lib/global/Footer.svelte";
-  import FooterPc from "$lib/global/FooterPC.svelte";
-  import HearderPc from "$lib/global/HearderPC.svelte";
-  import NavPc from "$lib/global/NavPC.svelte";
+  import Hearder from "$lib/global/Hearder.svelte";
+  import Nav from "$lib/global/Nav.svelte";
+  import { DATAS } from "$lib/data.svelte";
 
   const { children } = $props();
 </script>
 
-<HearderPc />
+<Hearder />
 
 <article
   data-layout="pub"
@@ -18,10 +18,10 @@
   overflow-hidden
   sm="flex-row"
 >
-  <NavPc />
-
+  {#if !DATAS.isMobile}
+    <Nav />
+  {/if}
   {@render children()}
 </article>
 
 <Footer />
-<FooterPc />

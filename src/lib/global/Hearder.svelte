@@ -2,6 +2,7 @@
   let value = $state("");
 </script>
 
+<!-- only show on desktop -->
 <header
   class="w-full h-12 px-3 hidden flex-bc hidden bg-white"
   dark="bg-gray-900"

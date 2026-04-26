@@ -1,0 +1,15 @@
+name = "stone"
+compatibility_date = "2024-04-01"
+
+[assets]
+directory = ".svelte-kit/cloudflare"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "stone-db"
+database_id = "8aa5dbac-b20e-47dd-96af-79a493e5638f"
+
+[[d1_databases]]
+binding = "DB_LOCAL"
+database_name = "stone-db-local"
+database_id = "13893e4a-1d7d-43ca-9919-8b14ba7edeab"

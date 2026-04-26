@@ -1,7 +1,6 @@
 <script>
   import { page } from "$app/state";
   import { onMount } from "svelte";
-  import books from "$lib/sda/sda.json";
   import { DATAS } from "$lib/data.svelte";
   import { showId } from "$lib";
 
@@ -10,20 +9,20 @@
   let selectId = $state("");
 
   const fav = [
-    { name: "先祖与先知", id: 1 },
-    { name: "先知与君王", id: 2 },
-    { name: "历代愿望", id: 3 },
-    { name: "使徒行述", id: 4 },
-    { name: "善恶之争", id: 5 },
-    { name: "基督比喻实训", id: 11 },
-    { name: "福山宝训", id: 12 },
-    { name: "喜乐的泉源", id: 13 },
-    { name: "乡村生活", id: 77 },
-    { name: "末世大事记", id: 81 },
-    { name: "救赎的故事", id: 107 },
+    { name: "先祖与先知", book_id: 1 },
+    { name: "先知与君王", book_id: 2 },
+    { name: "历代愿望", book_id: 3 },
+    { name: "使徒行述", book_id: 4 },
+    { name: "善恶之争", book_id: 5 },
+    { name: "基督比喻实训", book_id: 11 },
+    { name: "福山宝训", book_id: 12 },
+    { name: "喜乐的泉源", book_id: 13 },
+    { name: "乡村生活", book_id: 77 },
+    { name: "末世大事记", book_id: 81 },
+    { name: "救赎的故事", book_id: 107 },
   ];
 
-  const groupByTag = books.reduce((pre, cur) => {
+  const groupByTag = page.data.books.reduce((pre, cur) => {
     if (!pre[cur.tag]) {
       pre[cur.tag] = [];
     }
@@ -53,7 +52,9 @@
     const ids = ["fav", ...Object.keys(groupByTag)];
     ids.forEach((id) => observer.observe(document.getElementById(id)));
   }
-  onMount(() => {
+
+  $effect(() => {
+    if (page.data.books.length === 0) return;
     observeHeaders();
   });
 </script>
@@ -144,8 +145,8 @@
 
 {#snippet Rbook(book)}
   <div flex-bc h-12 px-3 pr-12 bg-gray-100 dark="bg-gray-700">
-    <a flex-1 href="/sda/{book.id}/1">
-      <p class:text-green={page.params.bookId == book.id}>
+    <a flex-1 href="/sda/{book.book_id}/1">
+      <p class:text-green={page.params.bookId == book.book_id}>
         {book.name}
       </p>
     </a>
