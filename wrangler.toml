@@ -3,7 +3,7 @@ compatibility_date = "2024-04-01"
 pages_build_output_dir = ".svelte-kit/cloudflare"
 compatibility_flags = [ "nodejs_compat" ]
 
-[vars]
+[env.production.vars]
 PUBLIC_R2 = "https://r2.lelexue.cn"
 R2 = "76f91d4a19eb310b8a1eee846a8d807b,85ac4a675838688f09e61e8e52ca24bc,dd28cc17212f27ebd63fe8bd597671369877f9bf31d0aad4c636b26a7cfa0b3f,holy"
 
