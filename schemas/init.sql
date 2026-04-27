@@ -1,6 +1,6 @@
 -- Cloudflare D1 Database Schema for Stone Project
 -- Bible, SDA, Book 三类书籍的数据库表
-
+DROP TABLE IF EXISTS books;
 -- 书籍目录表 (books)
 CREATE TABLE IF NOT EXISTS books (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS books (
   UNIQUE(cid, book_id)
 );
 
+DROP TABLE IF EXISTS chapters;
 -- 章节内容表 (chapters)
 CREATE TABLE IF NOT EXISTS chapters (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
