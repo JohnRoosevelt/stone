@@ -12,7 +12,7 @@ export async function load({ params: { cid, bookId }, data }) {
 
   // load parquet content only in browser
   const { loadParquetContent } = await import("$lib/parquet");
-  const dirZh = await loadParquetContent(cid, bookId);
+  const dirZh = await loadParquetContent({ cid, bookId });
 
   return { book, dirZh };
 }

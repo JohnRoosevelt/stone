@@ -66,6 +66,70 @@ async function deleteParagraph(db, { id, chapter_id, paragraph_order }) {
   return { success: true };
 }
 
+// 查询段落列表
+async function listParagraphs(db, { chapter_id, book_id, cid, lang_code }) {
+  const conditions = [];
+  const params = [];
+
+  if (chapter_id !== undefined && chapter_id !== null) {
+    conditions.push("chapter_id = ?");
+    params.push(chapter_id);
+  }
+  if (book_id !== undefined && book_id !== null) {
+    conditions.push("book_id = ?");
+    params.push(book_id);
+  }
+  if (cid !== undefined && cid !== null) {
+    conditions.push("cid = ?");
+    params.push(cid);
+  }
+  if (lang_code) {
+    conditions.push("lang_code = ?");
+    params.push(lang_code);
+  }
+
+  const where = conditions.length ? "WHERE " + conditions.join(" AND ") : "";
+
+  const sql = `
+    SELECT id, chapter_id, paragraph_order, book_id, cid, lang_code, text_content
+    FROM chapter_paragraphs
+    ${where}
+    ORDER BY chapter_id, paragraph_order
+  `;
+
+  const { results } = await db
+    .prepare(sql)
+    .bind(...params)
+    .all();
+  return results;
+}
+
+export async function GET({ url, platform }) {
+  try {
+    const db = getDB(platform);
+    const chapter_id = url.searchParams.get("chapter_id")
+      ? parseInt(url.searchParams.get("chapter_id"))
+      : null;
+    const book_id = url.searchParams.get("book_id")
+      ? parseInt(url.searchParams.get("book_id"))
+      : null;
+    const cid = url.searchParams.get("cid")
+      ? parseInt(url.searchParams.get("cid"))
+      : null;
+    const lang_code = url.searchParams.get("lang_code") || null;
+
+    const paragraphs = await listParagraphs(db, {
+      chapter_id,
+      book_id,
+      cid,
+      lang_code,
+    });
+    return json(paragraphs);
+  } catch (e) {
+    return json({ error: e.message }, { status: 500 });
+  }
+}
+
 export async function POST({ request, platform }) {
   try {
     const db = getDB(platform);

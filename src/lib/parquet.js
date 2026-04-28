@@ -46,11 +46,11 @@ function groupRows(rows, type) {
   return chapters;
 }
 
-export async function loadParquetContent(cid, bookId) {
-  console.log("[Parquet] Loading from R2:", cid, bookId);
+export async function loadParquetContent({ cid, bookId, lang = "zh" }) {
+  console.log("[Parquet] Loading from R2:", cid, bookId, lang);
   await ensureWasm();
 
-  const url = `${PUBLIC_R2}/${cid}/zh/${bookId}.parquet.zst`;
+  const url = `${PUBLIC_R2}/${cid}/${lang}/${bookId}.parquet.zst`;
   const resp = await fetch(url);
 
   const buffer = await resp.arrayBuffer();

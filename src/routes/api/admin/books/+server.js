@@ -1,6 +1,39 @@
 import { json } from "@sveltejs/kit";
 import { getDB } from "$lib/server/db";
 
+// 查询书籍列表
+async function listBooks(db, { cid, lang, q }) {
+  let sql, params;
+
+  if (q) {
+    sql = `
+      SELECT bb.cid, bb.book_id, bb.section, bb.featured,
+             bi.lang_code, bi.name, bi.title, bi.abbreviation
+      FROM book_base bb
+      JOIN book_i18n bi ON bi.cid = bb.cid AND bi.book_id = bb.book_id
+      WHERE bb.cid = ? AND bi.lang_code = ? AND bi.name LIKE ?
+      ORDER BY bb.book_id
+    `;
+    params = [cid, lang, `%${q}%`];
+  } else {
+    sql = `
+      SELECT bb.cid, bb.book_id, bb.section, bb.featured,
+             bi.lang_code, bi.name, bi.title, bi.abbreviation
+      FROM book_base bb
+      JOIN book_i18n bi ON bi.cid = bb.cid AND bi.book_id = bb.book_id
+      WHERE bb.cid = ? AND bi.lang_code = ?
+      ORDER BY bb.book_id
+    `;
+    params = [cid, lang];
+  }
+
+  const { results } = await db
+    .prepare(sql)
+    .bind(...params)
+    .all();
+  return results;
+}
+
 // 添加书籍
 async function addBook(
   db,
@@ -76,6 +109,24 @@ async function deleteBook(db, { cid, book_id }) {
     .bind(cid, book_id)
     .run();
   return { success: true };
+}
+
+export async function GET({ url, platform }) {
+  try {
+    const db = getDB(platform);
+    const cid = parseInt(url.searchParams.get("cid"));
+    const lang = url.searchParams.get("lang") || "zh";
+    const q = url.searchParams.get("q") || "";
+
+    if (isNaN(cid)) {
+      return json({ error: "cid is required" }, { status: 400 });
+    }
+
+    const books = await listBooks(db, { cid, lang, q });
+    return json(books);
+  } catch (e) {
+    return json({ error: e.message }, { status: 500 });
+  }
 }
 
 export async function POST({ request, platform }) {

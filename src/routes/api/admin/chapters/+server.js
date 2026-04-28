@@ -63,6 +63,58 @@ async function deleteChapter(db, { id, cid, book_id, chapter_id, lang_code }) {
   return { success: true };
 }
 
+// 查询章节列表
+async function listChapters(db, { cid, book_id, lang_code }) {
+  const conditions = [];
+  const params = [];
+
+  if (cid !== undefined && cid !== null) {
+    conditions.push("cid = ?");
+    params.push(cid);
+  }
+  if (book_id !== undefined && book_id !== null) {
+    conditions.push("book_id = ?");
+    params.push(book_id);
+  }
+  if (lang_code) {
+    conditions.push("lang_code = ?");
+    params.push(lang_code);
+  }
+
+  const where = conditions.length ? "WHERE " + conditions.join(" AND ") : "";
+
+  const sql = `
+    SELECT id, cid, book_id, chapter_id, lang_code, title
+    FROM chapters
+    ${where}
+    ORDER BY cid, book_id, chapter_id
+  `;
+
+  const { results } = await db
+    .prepare(sql)
+    .bind(...params)
+    .all();
+  return results;
+}
+
+export async function GET({ url, platform }) {
+  try {
+    const db = getDB(platform);
+    const cid = url.searchParams.get("cid")
+      ? parseInt(url.searchParams.get("cid"))
+      : null;
+    const book_id = url.searchParams.get("book_id")
+      ? parseInt(url.searchParams.get("book_id"))
+      : null;
+    const lang_code = url.searchParams.get("lang_code") || null;
+
+    const chapters = await listChapters(db, { cid, book_id, lang_code });
+    return json(chapters);
+  } catch (e) {
+    return json({ error: e.message }, { status: 500 });
+  }
+}
+
 export async function POST({ request, platform }) {
   try {
     const db = getDB(platform);
