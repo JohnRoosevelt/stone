@@ -1,7 +1,6 @@
 // Seed utility - fetches book data from R2 (.parquet) and stores in local SQLite
 import sda from "$lib/sda/sda.json";
 import bible from "$lib/bible/bible.json";
-import bookMeta from "$lib/book/book.json";
 import { loadParquetContent } from "$lib/parquet";
 
 const BOOK_META = { bible, sda, book: bookMeta };
@@ -40,8 +39,16 @@ export async function seedBookToDB(cid, bookId, onProgress = null) {
     return { chapterId: idx + 1, title, content };
   });
 
-  await db.seedBook(cid, bookId, bookMeta?.name || "", bookMeta?.tag || "", chapters);
-  console.log(`[Seed] ${cid}/${bookId} seeded with ${chapters.length} chapters`);
+  await db.seedBook(
+    cid,
+    bookId,
+    bookMeta?.name || "",
+    bookMeta?.tag || "",
+    chapters,
+  );
+  console.log(
+    `[Seed] ${cid}/${bookId} seeded with ${chapters.length} chapters`,
+  );
 
   if (onProgress) onProgress({ cid, bookId, chapterCount: chapters.length });
 }

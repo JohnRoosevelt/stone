@@ -8,27 +8,19 @@
   let activeId = $state("");
   let selectId = $state("");
 
-  const fav = [
-    { name: "先祖与先知", book_id: 1 },
-    { name: "先知与君王", book_id: 2 },
-    { name: "历代愿望", book_id: 3 },
-    { name: "使徒行述", book_id: 4 },
-    { name: "善恶之争", book_id: 5 },
-    { name: "基督比喻实训", book_id: 11 },
-    { name: "福山宝训", book_id: 12 },
-    { name: "喜乐的泉源", book_id: 13 },
-    { name: "乡村生活", book_id: 77 },
-    { name: "末世大事记", book_id: 81 },
-    { name: "救赎的故事", book_id: 107 },
-  ];
+  const fav = $derived(page.data.books.filter((b) => b.featured));
 
   const groupByTag = page.data.books.reduce((pre, cur) => {
-    if (!pre[cur.tag]) {
-      pre[cur.tag] = [];
+    if (!pre[cur.title]) {
+      pre[cur.title] = [];
     }
-    pre[cur.tag].push(cur);
+    pre[cur.title].push(cur);
     return pre;
   }, {});
+
+  const sortedTags = $derived(
+    Object.entries(groupByTag).sort(([a], [b]) => a.localeCompare(b)),
+  );
 
   function observeHeaders() {
     const observer = new IntersectionObserver(
@@ -49,7 +41,10 @@
       },
     );
 
-    const ids = ["fav", ...Object.keys(groupByTag)];
+    const ids = [
+      ...(fav.length > 0 ? ["fav"] : []),
+      ...Object.keys(groupByTag),
+    ];
     ids.forEach((id) => observer.observe(document.getElementById(id)));
   }
 
@@ -66,23 +61,25 @@
     relative
     scroll-y
   >
-    <div id="fav" space-y-px>
-      <div
-        px-3
-        sticky
-        top-0
-        z-3
-        bg="white dark:black"
-        class={activeId === "fav" ? "text-green font-700" : ""}
-      >
-        <span i-carbon-star-filled></span>
+    {#if fav.length > 0}
+      <div id="fav" space-y-px>
+        <div
+          px-3
+          sticky
+          top-0
+          z-3
+          bg="white dark:black"
+          class={activeId === "fav" ? "text-green font-700" : ""}
+        >
+          <span i-carbon-star-filled></span>
+        </div>
+        {#each fav as book}
+          {@render Rbook(book)}
+        {/each}
       </div>
-      {#each fav as book}
-        {@render Rbook(book)}
-      {/each}
-    </div>
+    {/if}
 
-    {#each Object.entries(groupByTag) as [tag, group]}
+    {#each sortedTags as [tag, group]}
       <div id={tag} space-y-px class:min-h-full={tag == "Z"}>
         <div
           px-3
@@ -102,26 +99,28 @@
   </section>
 
   <section absolute w-auto h-full top-0 right-4 z-3 flex-col flex-cc gap-px>
-    <button
-      onclick={() => {
-        selectId = "fav";
-        showId("fav", "start");
-      }}
-      aria-label="fav"
-      size-6
-      flex-cc
-      p-1
-      rounded-1
-      class={activeId === "fav"
-        ? "text-green font-700 bg-gray-200 dark:(bg-gray-600)"
-        : selectId == "fav"
-          ? "text-red bg-gray-300 dark:(bg-gray-800)"
-          : "bg-gray-300 dark:(bg-gray-800)"}
-    >
-      <span i-carbon-star-filled></span>
-    </button>
+    {#if fav.length > 0}
+      <button
+        onclick={() => {
+          selectId = "fav";
+          showId("fav", "start");
+        }}
+        aria-label="fav"
+        size-6
+        flex-cc
+        p-1
+        rounded-1
+        class={activeId === "fav"
+          ? "text-green font-700 bg-gray-200 dark:(bg-gray-600)"
+          : selectId == "fav"
+            ? "text-red bg-gray-300 dark:(bg-gray-800)"
+            : "bg-gray-300 dark:(bg-gray-800)"}
+      >
+        <span i-carbon-star-filled></span>
+      </button>
+    {/if}
 
-    {#each Object.entries(groupByTag) as [tag]}
+    {#each sortedTags as [tag]}
       <button
         onclick={() => {
           selectId = tag;

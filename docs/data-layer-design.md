@@ -4,11 +4,11 @@
 
 Three data loading strategies, unified through a single interface:
 
-| Strategy | Environment | Storage | Use Case |
-|----------|-------------|---------|----------|
-| **R2 Direct** | PWA / SPA | Network + HTTP cache | No OPFS browsers, simple deployment |
-| **Tauri + SQLx** | Tauri desktop/mobile | Native SQLite via Rust | Native app with full DB power |
-| **SQLite-WASM + OPFS** | Modern browsers | OPFS (Origin Private File System) | Offline-first PWA |
+| Strategy               | Environment          | Storage                           | Use Case                            |
+| ---------------------- | -------------------- | --------------------------------- | ----------------------------------- |
+| **R2 Direct**          | PWA / SPA            | Network + HTTP cache              | No OPFS browsers, simple deployment |
+| **Tauri + SQLx**       | Tauri desktop/mobile | Native SQLite via Rust            | Native app with full DB power       |
+| **SQLite-WASM + OPFS** | Modern browsers      | OPFS (Origin Private File System) | Offline-first PWA                   |
 
 ## Current State Analysis
 
@@ -147,7 +147,6 @@ function hasOPFS() {
 import { PUBLIC_R2 } from "$env/static/public";
 import bible from "$lib/bible/bible.json";
 import sda from "$lib/sda/sda.json";
-import book from "$lib/book/book.json";
 
 const ALL_BOOKS = { bible, sda, book };
 
@@ -547,32 +546,36 @@ App starts
 ## Migration Path
 
 ### Phase 1: Keep current R2 behavior (no change)
+
 - Routes work exactly as they do now
 - Provider factory returns `r2` by default
 
 ### Phase 2: Wire in OPFS provider
+
 - `dbManager` + `sqlite.worker.js` already exist
 - Uncomment FTS5 schema in worker
 - Connect provider to routes
 - Add "Download for offline" UI
 
 ### Phase 3: Add Tauri support (when needed)
+
 - Create `src-tauri/` with Rust backend
 - Implement SQLx commands
 - Provider factory auto-detects Tauri env
 
 ### Phase 4: Unified search UI
+
 - `DataProvider.search()` works across all strategies
 - Single search component, different backends
 
 ## Key Benefits
 
-| Aspect | R2 Direct | Tauri + SQLx | Wasm + OPFS |
-|--------|-----------|--------------|-------------|
-| **Offline** | ✗ | ✓ | ✓ |
-| **Search** | ✗ | ✓ (FTS5) | ✓ (FTS5) |
-| **Setup** | Zero | Rust toolchain | None (WASM) |
-| **Performance** | Network | Native | Near-native |
-| **Storage limit** | None | Disk size | Browser quota |
-| **PWA compatible** | ✓ | N/A (native) | ✓ |
-| **Old browsers** | ✓ | N/A | ✗ (fallback to R2) |
+| Aspect             | R2 Direct | Tauri + SQLx   | Wasm + OPFS        |
+| ------------------ | --------- | -------------- | ------------------ |
+| **Offline**        | ✗         | ✓              | ✓                  |
+| **Search**         | ✗         | ✓ (FTS5)       | ✓ (FTS5)           |
+| **Setup**          | Zero      | Rust toolchain | None (WASM)        |
+| **Performance**    | Network   | Native         | Near-native        |
+| **Storage limit**  | None      | Disk size      | Browser quota      |
+| **PWA compatible** | ✓         | N/A (native)   | ✓                  |
+| **Old browsers**   | ✓         | N/A            | ✗ (fallback to R2) |

@@ -1,9 +1,4 @@
 import { browser } from "$app/environment";
-import sda from "$lib/sda/sda.json";
-import bible from "$lib/bible/bible.json";
-import bookMeta from "$lib/book/book.json";
-
-const BOOK_CATALOG = { bible, sda, book: bookMeta };
 
 export async function load({ params: { cid, bookId }, data }) {
   console.log({ cid, bookId, data });
