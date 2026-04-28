@@ -5,11 +5,14 @@
 -- ============================================================
 
 -- Clean up
+DROP TABLE IF EXISTS chapter_paragraphs_fts;
+DROP TRIGGER IF EXISTS trg_paragraphs_ai;
+DROP TRIGGER IF EXISTS trg_paragraphs_ad;
+DROP TRIGGER IF EXISTS trg_paragraphs_au;
 DROP TABLE IF EXISTS chapter_paragraphs;
 DROP TABLE IF EXISTS chapters;
 DROP TABLE IF EXISTS book_i18n;
 DROP TABLE IF EXISTS book_base;
-DROP TABLE IF EXISTS chapter_paragraphs_fts;
 
 -- ------------------------------------------------------------
 -- Book base info (language independent)
@@ -40,68 +43,71 @@ CREATE TABLE book_i18n (
 -- Index for listing books by language
 CREATE INDEX idx_book_i18n_lang ON book_i18n(lang_code);
 
+
 -- ------------------------------------------------------------
--- Chapters
+-- Chapters (no id, natural composite PK)
 -- ------------------------------------------------------------
 CREATE TABLE chapters (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
     cid        INTEGER NOT NULL,
     book_id    INTEGER NOT NULL,
     chapter_id INTEGER NOT NULL,
     lang_code  TEXT    NOT NULL,
     title      TEXT    NOT NULL,
-    UNIQUE(cid, book_id, chapter_id, lang_code),
+    PRIMARY KEY (cid, book_id, chapter_id, lang_code),
     FOREIGN KEY (cid, book_id, lang_code)
         REFERENCES book_i18n(cid, book_id, lang_code) ON DELETE CASCADE
-) STRICT;
+) STRICT, WITHOUT ROWID;
 
 CREATE INDEX idx_chapters_book_cid ON chapters(book_id, cid);
 
+
 -- ------------------------------------------------------------
--- Paragraphs (with redundant book/cid/lang for efficient filtering)
+-- Paragraphs (no id, composite PK, implicit rowid for FTS)
 -- ------------------------------------------------------------
 CREATE TABLE chapter_paragraphs (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    cid             INTEGER NOT NULL,
+    book_id         INTEGER NOT NULL,
     chapter_id      INTEGER NOT NULL,
     paragraph_order INTEGER NOT NULL,
-    book_id         INTEGER NOT NULL,
-    cid             INTEGER NOT NULL,
     lang_code       TEXT    NOT NULL,
     text_content    TEXT    NOT NULL,
-    UNIQUE(chapter_id, paragraph_order),
-    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE
+    format          INTEGER DEFAULT NULL,
+    PRIMARY KEY (cid, book_id, chapter_id, paragraph_order),
+    FOREIGN KEY (cid, book_id, chapter_id, lang_code)
+        REFERENCES chapters(cid, book_id, chapter_id, lang_code) ON DELETE CASCADE
 ) STRICT;
 
 CREATE INDEX idx_paragraphs_book ON chapter_paragraphs(book_id);
 CREATE INDEX idx_paragraphs_cid_book ON chapter_paragraphs(cid, book_id);
 
+
 -- ------------------------------------------------------------
--- Full-text search virtual table
+-- Full-text search virtual table (external content, uses implicit rowid)
 -- ------------------------------------------------------------
 CREATE VIRTUAL TABLE chapter_paragraphs_fts USING fts5(
     text_content,
-    content='chapter_paragraphs',
-    content_rowid='id'
+    content='chapter_paragraphs'
 );
+
 
 -- ------------------------------------------------------------
 -- FTS sync triggers
 -- ------------------------------------------------------------
 CREATE TRIGGER trg_paragraphs_ai AFTER INSERT ON chapter_paragraphs BEGIN
     INSERT INTO chapter_paragraphs_fts(rowid, text_content)
-    VALUES (new.id, new.text_content);
+    VALUES (new.rowid, new.text_content);
 END;
 
 CREATE TRIGGER trg_paragraphs_ad AFTER DELETE ON chapter_paragraphs BEGIN
     INSERT INTO chapter_paragraphs_fts(chapter_paragraphs_fts, rowid, text_content)
-    VALUES('delete', old.id, old.text_content);
+    VALUES('delete', old.rowid, old.text_content);
 END;
 
 CREATE TRIGGER trg_paragraphs_au AFTER UPDATE ON chapter_paragraphs BEGIN
     INSERT INTO chapter_paragraphs_fts(chapter_paragraphs_fts, rowid, text_content)
-    VALUES('delete', old.id, old.text_content);
+    VALUES('delete', old.rowid, old.text_content);
     INSERT INTO chapter_paragraphs_fts(rowid, text_content)
-    VALUES (new.id, new.text_content);
+    VALUES (new.rowid, new.text_content);
 END;
 
 

@@ -48,18 +48,19 @@
   });
 
   // 对比 R2 解析数据与 D1 章节数据
-  let r2ParsedData = $state(null); // 解析后的章节数据（同 json-parquet 格式）
-  let chapterComparison = $derived.by(() => {
-    if (!r2ParsedData) return [];
-    return r2ParsedData.map((r2ch, index) => {
-      const chapterNum = r2ch.id !== undefined ? r2ch.id : index + 1;
-      const items = r2ch.verses || r2ch.ps || [];
-      const dbCh = chapters.find((c) => c.chapter_id === chapterNum);
-      return { chapterNum, inD1: !!dbCh, r2Count: items.length };
-    });
-  });
+  let r2ParsedData = $state([]); // 解析后的章节数据（同 json-parquet 格式
+  let chapterComparison = $state([]);
 
-  let r2PreviewExpanded = $state(true);
+  $effect(() => {
+    if (r2ParsedData.length > 0 && chapters.length > 0) {
+      chapterComparison = r2ParsedData.map((r2ch, index) => {
+        const chapterNum = r2ch.id !== undefined ? Number(r2ch.id) : index + 1;
+        const items = r2ch.verses || r2ch.ps || [];
+        const inD1 = chapters.some((c) => c.chapter_id === chapterNum);
+        return { chapterNum, inD1, r2Count: items.length };
+      });
+    }
+  });
 
   // 选中了一个章节，查看段落
   let selectedChapter = $state(null);
@@ -68,7 +69,13 @@
 
   // 编辑段落内容
   let showParagraphEdit = $state(false);
-  let editParagraphData = $state({ id: null, text_content: "" });
+  let editParagraphData = $state({
+    cid: null,
+    book_id: null,
+    chapter_id: null,
+    paragraph_order: null,
+    text_content: "",
+  });
 
   async function loadBooks(cid) {
     if (cid === null || cid === undefined) return;
@@ -90,7 +97,7 @@
   async function loadR2Url() {
     loading = true;
     error = "";
-    r2ParsedData = null;
+    r2ParsedData = [];
     chLoadingText = "获取...";
 
     try {
@@ -123,9 +130,13 @@
 
     try {
       let saved = 0;
+      // 只写入尚未同步到 D1 的章节
+      let pendingCh = 0;
       for (let i = 0; i < r2ParsedData.length; i++) {
+        if (chapterComparison[i]?.inD1) continue;
+        pendingCh++;
         const ch = r2ParsedData[i];
-        const chapter_id = ch.id !== undefined ? parseInt(ch.id) : i + 1;
+        const chapter_id = ch.id ?? i + 1;
 
         // 获取章节标题：从已有 chapters 中查找，或自动生成
         let chapterTitle = cid === 0 ? chapter_id : ch.n;
@@ -139,56 +150,50 @@
         console.log(body);
 
         // 写入 chapters 表
-        // const chRes = await fetch("/api/admin/chapters", {
-        //   method: "POST",
-        //   headers: { "Content-Type": "application/json" },
-        //   body,
-        // });
-        // if (!chRes.ok) {
-        //   const err = await chRes.json();
-        //   throw new Error(`写入章节 ${chapter_id} 失败: ${err.error}`);
-        // }
-
-        // 获取刚写入的 chapter id
-        // const chQuery = await fetch(
-        //   `/api/admin/chapters?cid=${cid}&book_id=${book_id}&chapter_id=${chapter_id}&lang_code=${lang_code}`,
-        // );
-        // const chList = await chQuery.json();
-        // const dbChapter = Array.isArray(chList) ? chList[0] : null;
-        // if (!dbChapter) throw new Error(`章节 ${chapter_id} 查询失败`);
-
+        const chRes = await fetch("/api/admin/chapters", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+        });
+        if (!chRes.ok) {
+          const err = await chRes.json();
+          throw new Error(`写入章节 ${chapter_id} 失败: ${err.error}`);
+        }
         {
           // 写入段落
           const items = ch.verses || ch.ps || [];
-          for (let i = 0; i < items.length; i++) {
-            const text_content = items[i].c || items[i].o || "_";
-            console.log(text_content, $state.snapshot(items[i]));
+          for (let j = 0; j < items.length; j++) {
+            const text_content = items[j].c || items[j].o || "_";
+            const format = items[j].t || null;
+            const paragraph_order = items[j].id || items[j].p || j + 1;
 
-            // const body = JSON.stringify({
-            //   chapter_id: dbChapter.id,
-            //   paragraph_order: i + 1,
-            //   book_id,
-            //   cid,
-            //   lang_code,
-            //   text_content,
-            // });
+            const body = JSON.stringify({
+              chapter_id,
+              paragraph_order,
+              book_id,
+              cid,
+              lang_code,
+              text_content,
+              format,
+            });
             // console.log(body);
 
-            // const pRes = await fetch("/api/admin/paragraphs", {
-            //   method: "POST",
-            //   headers: { "Content-Type": "application/json" },
-            //   body,
-            // });
-            // if (!pRes.ok) {
-            //   const err = await pRes.json();
-            //   throw new Error(`写入段落失败: ${err.error}`);
-            // }
+            const pRes = await fetch("/api/admin/paragraphs", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body,
+            });
+            if (!pRes.ok) {
+              const err = await pRes.json();
+              throw new Error(`写入段落失败: ${err.error}`);
+            }
             saved++;
           }
         }
       }
 
-      success = `写入完成: ${r2ParsedData.length} 章, ${saved} 段落`;
+      const skippedCh = r2ParsedData.length - pendingCh;
+      success = `写入完成: ${pendingCh} 章, ${saved} 段落${skippedCh > 0 ? `（${skippedCh} 章已存在，跳过）` : ""}`;
       chLoadingText = "";
 
       // 刷新章节列表
@@ -234,7 +239,10 @@
     loading = true;
     error = "";
     try {
-      const res = await fetch(`/api/admin/paragraphs?chapter_id=${chapter.id}`);
+      const { cid, book_id, chapter_id, lang_code } = chapter;
+      const res = await fetch(
+        `/api/admin/paragraphs?cid=${cid}&book_id=${book_id}&chapter_id=${chapter_id}&lang_code=${lang_code}`,
+      );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       paragraphs = Array.isArray(data) ? data : [];
@@ -248,7 +256,13 @@
 
   // 编辑段落
   function openParagraphEdit(p) {
-    editParagraphData = { id: p.id, text_content: p.text_content };
+    editParagraphData = {
+      cid: p.cid,
+      book_id: p.book_id,
+      chapter_id: p.chapter_id,
+      paragraph_order: p.paragraph_order,
+      text_content: p.text_content,
+    };
     showParagraphEdit = true;
   }
 
@@ -289,7 +303,12 @@
       const res = await fetch("/api/admin/paragraphs", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: p.id }),
+        body: JSON.stringify({
+          cid: p.cid,
+          book_id: p.book_id,
+          chapter_id: p.chapter_id,
+          paragraph_order: p.paragraph_order,
+        }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -297,6 +316,51 @@
       }
       success = "段落已删除";
       if (selectedChapter) await viewChapter(selectedChapter);
+    } catch (e) {
+      error = `删除失败: ${e.message}`;
+    } finally {
+      loading = false;
+    }
+  }
+
+  // 删除章节（级联删除段落）
+  async function deleteChapter(ch) {
+    if (
+      !confirm(
+        `确定删除第 ${ch.chapter_id} 章「${ch.title}」？删除后该章节的所有段落也将被删除。`,
+      )
+    )
+      return;
+    loading = true;
+    error = "";
+    try {
+      const res = await fetch("/api/admin/chapters", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cid: ch.cid,
+          book_id: ch.book_id,
+          chapter_id: ch.chapter_id,
+          lang_code: ch.lang_code,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      success = `章节 ${ch.chapter_id} 已删除`;
+      // 如果当前查看的章节正是被删除的章节，清空右侧段落面板
+      if (
+        selectedChapter?.cid === ch.cid &&
+        selectedChapter?.book_id === ch.book_id &&
+        selectedChapter?.chapter_id === ch.chapter_id &&
+        selectedChapter?.lang_code === ch.lang_code
+      ) {
+        selectedChapter = null;
+        paragraphs = [];
+        paragraphsLoaded = false;
+      }
+      await loadChapters();
     } catch (e) {
       error = `删除失败: ${e.message}`;
     } finally {
@@ -375,14 +439,6 @@
   <div class="w-full my-3 border rounded p-3 space-y-2 bg-gray-50">
     <div class="flex items-center justify-between">
       <div class="text-xs font-medium text-gray-600">R2 数据预览</div>
-      {#if r2ParsedData}
-        <button
-          onclick={() => (r2PreviewExpanded = !r2PreviewExpanded)}
-          class="text-xs text-blue-500 hover:text-blue-700"
-        >
-          {r2PreviewExpanded ? "收起" : "展开"}
-        </button>
-      {/if}
     </div>
 
     <!-- 自动生成的 R2 URL（只读） -->
@@ -424,28 +480,6 @@
           <span class="text-gray-400">（查询 D1 章节后可对比）</span>
         {/if}
       </div>
-
-      <!-- 展开后的对比详情列表 -->
-      {#if r2PreviewExpanded}
-        <div class="max-h-40 overflow-auto border rounded bg-white text-xs">
-          {#each chapterComparison as ch}
-            <div
-              class="flex items-center gap-2 px-2 py-1 border-b last:border-b-0 hover:bg-gray-50"
-              class:text-gray-300={ch.inD1}
-              class:text-gray-700={!ch.inD1}
-            >
-              <span>{ch.inD1 ? "✅" : "⬜"}</span>
-              <span class="font-mono w-16">第 {ch.chapterNum} 章</span>
-              <span class="text-gray-400">{ch.r2Count} 段</span>
-              {#if ch.inD1}
-                <span class="text-green-600 ml-auto">已同步</span>
-              {:else}
-                <span class="text-orange-500 ml-auto font-medium">待写入</span>
-              {/if}
-            </div>
-          {/each}
-        </div>
-      {/if}
     {/if}
   </div>
 {/if}
@@ -490,19 +524,31 @@
         </thead>
         <tbody>
           {#each chapters as ch}
+            {@const synced = chapterComparison.find(
+              (c) => c.chapterNum === ch.chapter_id,
+            )}
             <tr
               class="border-t hover:bg-gray-50"
-              class:bg-blue-50={selectedChapter?.id === ch.id}
+              class:bg-blue-50={selectedChapter?.cid === ch.cid &&
+                selectedChapter?.book_id === ch.book_id &&
+                selectedChapter?.chapter_id === ch.chapter_id &&
+                selectedChapter?.lang_code === ch.lang_code}
             >
               <td class="px-2 py-1.5 font-mono">{ch.chapter_id}</td>
               <td class="px-2 py-1.5">{ch.title}</td>
-              <td class="px-2 py-1.5">-</td>
-              <td class="px-2 py-1.5">
+              <td class="px-2 py-1.5">{synced?.r2Count}</td>
+              <td class="px-2 py-1.5 flex space-x-1">
                 <button
                   onclick={() => viewChapter(ch)}
                   class="px-1.5 py-0.5 bg-blue-500 text-white rounded text-xs"
                 >
                   查看
+                </button>
+                <button
+                  onclick={() => deleteChapter(ch)}
+                  class="px-1.5 py-0.5 bg-red-500 text-white rounded text-xs"
+                >
+                  删除
                 </button>
               </td>
             </tr>

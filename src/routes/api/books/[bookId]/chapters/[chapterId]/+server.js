@@ -16,7 +16,7 @@ export async function GET({ params, url, platform }) {
   const { results } = await db
     .prepare(
       `
-    SELECT paragraph_order, text_content
+    SELECT paragraph_order, text_content, format
     FROM chapter_paragraphs
     WHERE cid = ? AND book_id = ? AND lang_code = ? AND chapter_id = (
       SELECT id FROM chapters

@@ -17,48 +17,51 @@ async function addChapter(db, { cid, book_id, chapter_id, lang_code, title }) {
   return { success: true };
 }
 
-// 更新章节标题（通过主键 id 或 cid+book_id+chapter_id+lang_code）
+// 更新章节标题（通过复合主键）
 async function updateChapter(
   db,
-  { id, cid, book_id, chapter_id, lang_code, title },
+  { cid, book_id, chapter_id, lang_code, title },
 ) {
-  if (id) {
-    await db
-      .prepare("UPDATE chapters SET title = ? WHERE id = ?")
-      .bind(title, id)
-      .run();
-  } else if (cid && book_id && chapter_id && lang_code) {
+  if (
+    cid !== undefined &&
+    cid !== null &&
+    book_id !== undefined &&
+    book_id !== null &&
+    chapter_id !== undefined &&
+    chapter_id !== null &&
+    lang_code
+  ) {
     await db
       .prepare(
-        `
-      UPDATE chapters SET title = ?
-      WHERE cid = ? AND book_id = ? AND chapter_id = ? AND lang_code = ?
-    `,
+        "UPDATE chapters SET title = ? WHERE cid = ? AND book_id = ? AND chapter_id = ? AND lang_code = ?",
       )
       .bind(title, cid, book_id, chapter_id, lang_code)
       .run();
   } else {
-    throw new Error("Must provide id or (cid, book_id, chapter_id, lang_code)");
+    throw new Error("Must provide (cid, book_id, chapter_id, lang_code)");
   }
   return { success: true };
 }
 
-// 删除章节（级联删除段落）
-async function deleteChapter(db, { id, cid, book_id, chapter_id, lang_code }) {
-  if (id) {
-    await db.prepare("DELETE FROM chapters WHERE id = ?").bind(id).run();
-  } else if (cid && book_id && chapter_id && lang_code) {
+// 删除章节（级联删除段落，由 ON DELETE CASCADE 自动处理）
+async function deleteChapter(db, { cid, book_id, chapter_id, lang_code }) {
+  if (
+    cid !== undefined &&
+    cid !== null &&
+    book_id !== undefined &&
+    book_id !== null &&
+    chapter_id !== undefined &&
+    chapter_id !== null &&
+    lang_code
+  ) {
     await db
       .prepare(
-        `
-      DELETE FROM chapters
-      WHERE cid = ? AND book_id = ? AND chapter_id = ? AND lang_code = ?
-    `,
+        "DELETE FROM chapters WHERE cid = ? AND book_id = ? AND chapter_id = ? AND lang_code = ?",
       )
       .bind(cid, book_id, chapter_id, lang_code)
       .run();
   } else {
-    throw new Error("Must provide id or (cid, book_id, chapter_id, lang_code)");
+    throw new Error("Must provide (cid, book_id, chapter_id, lang_code)");
   }
   return { success: true };
 }
@@ -84,7 +87,7 @@ async function listChapters(db, { cid, book_id, lang_code }) {
   const where = conditions.length ? "WHERE " + conditions.join(" AND ") : "";
 
   const sql = `
-    SELECT id, cid, book_id, chapter_id, lang_code, title
+    SELECT cid, book_id, chapter_id, lang_code, title
     FROM chapters
     ${where}
     ORDER BY cid, book_id, chapter_id
@@ -120,9 +123,12 @@ export async function POST({ request, platform }) {
     const db = getDB(platform);
     const body = await request.json();
     if (
-      !body.cid ||
-      !body.book_id ||
-      !body.chapter_id ||
+      body.cid === undefined ||
+      body.cid === null ||
+      body.book_id === undefined ||
+      body.book_id === null ||
+      body.chapter_id === undefined ||
+      body.chapter_id === null ||
       !body.lang_code ||
       !body.title
     ) {

@@ -53,6 +53,7 @@ export async function GET({ url, platform }) {
       cp.chapter_id,
       cp.paragraph_order,
       cp.text_content,
+      cp.format,
       ch.title AS chapter_title,
       bi.name AS book_name
     FROM chapter_paragraphs cp

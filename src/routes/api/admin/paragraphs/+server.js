@@ -4,56 +4,106 @@ import { getDB } from "$lib/server/db";
 // 添加段落（需提供 book_id, cid, lang_code 冗余列）
 async function addParagraph(
   db,
-  { chapter_id, paragraph_order, book_id, cid, lang_code, text_content },
+  {
+    chapter_id,
+    paragraph_order,
+    book_id,
+    cid,
+    lang_code,
+    text_content,
+    format,
+  },
 ) {
   await db
     .prepare(
       `
-    INSERT INTO chapter_paragraphs (chapter_id, paragraph_order, book_id, cid, lang_code, text_content)
-    VALUES (?, ?, ?, ?, ?, ?)
-    ON CONFLICT(chapter_id, paragraph_order) DO UPDATE SET
-      text_content = excluded.text_content
+    INSERT INTO chapter_paragraphs (cid, book_id, chapter_id, paragraph_order, lang_code, text_content, format)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(cid, book_id, chapter_id, paragraph_order) DO UPDATE SET
+      text_content = excluded.text_content,
+      format = excluded.format
   `,
     )
-    .bind(chapter_id, paragraph_order, book_id, cid, lang_code, text_content)
+    .bind(
+      cid,
+      book_id,
+      chapter_id,
+      paragraph_order,
+      lang_code,
+      text_content,
+      format ?? null,
+    )
     .run();
   return { success: true };
 }
 
-// 更新段落（通过 id 或 chapter_id+paragraph_order）
+// 更新段落（通过复合主键）
 async function updateParagraph(
   db,
-  { id, chapter_id, paragraph_order, text_content },
+  { cid, book_id, chapter_id, paragraph_order, text_content, format },
 ) {
-  if (id) {
-    await db
-      .prepare("UPDATE chapter_paragraphs SET text_content = ? WHERE id = ?")
-      .bind(text_content, id)
-      .run();
-  } else if (chapter_id && paragraph_order) {
+  if (
+    cid !== undefined &&
+    cid !== null &&
+    book_id !== undefined &&
+    book_id !== null &&
+    chapter_id !== undefined &&
+    chapter_id !== null &&
+    paragraph_order !== undefined &&
+    paragraph_order !== null
+  ) {
     await db
       .prepare(
         `
-      UPDATE chapter_paragraphs SET text_content = ?
-      WHERE chapter_id = ? AND paragraph_order = ?
+      UPDATE chapter_paragraphs SET text_content = ?, format = ?
+      WHERE cid = ? AND book_id = ? AND chapter_id = ? AND paragraph_order = ?
     `,
       )
-      .bind(text_content, chapter_id, paragraph_order)
+      .bind(
+        text_content,
+        format ?? null,
+        cid,
+        book_id,
+        chapter_id,
+        paragraph_order,
+      )
       .run();
   } else {
-    throw new Error("Must provide id or (chapter_id, paragraph_order)");
+    throw new Error("Must provide (cid, book_id, chapter_id, paragraph_order)");
   }
   return { success: true };
 }
 
 // 删除段落
-async function deleteParagraph(db, { id, chapter_id, paragraph_order }) {
-  if (id) {
+async function deleteParagraph(
+  db,
+  { cid, book_id, chapter_id, paragraph_order },
+) {
+  if (
+    cid !== undefined &&
+    cid !== null &&
+    book_id !== undefined &&
+    book_id !== null &&
+    chapter_id !== undefined &&
+    chapter_id !== null &&
+    paragraph_order !== undefined &&
+    paragraph_order !== null
+  ) {
     await db
-      .prepare("DELETE FROM chapter_paragraphs WHERE id = ?")
-      .bind(id)
+      .prepare(
+        "DELETE FROM chapter_paragraphs WHERE cid = ? AND book_id = ? AND chapter_id = ? AND paragraph_order = ?",
+      )
+      .bind(cid, book_id, chapter_id, paragraph_order)
       .run();
-  } else if (chapter_id && paragraph_order) {
+  } else if (
+    cid === undefined &&
+    book_id === undefined &&
+    chapter_id !== undefined &&
+    chapter_id !== null &&
+    paragraph_order !== undefined &&
+    paragraph_order !== null
+  ) {
+    // 兼容旧调用：仅通过 chapter_id + paragraph_order 删除（同一本书内）
     await db
       .prepare(
         "DELETE FROM chapter_paragraphs WHERE chapter_id = ? AND paragraph_order = ?",
@@ -61,7 +111,7 @@ async function deleteParagraph(db, { id, chapter_id, paragraph_order }) {
       .bind(chapter_id, paragraph_order)
       .run();
   } else {
-    throw new Error("Must provide id or (chapter_id, paragraph_order)");
+    throw new Error("Must provide (cid, book_id, chapter_id, paragraph_order)");
   }
   return { success: true };
 }
@@ -91,10 +141,10 @@ async function listParagraphs(db, { chapter_id, book_id, cid, lang_code }) {
   const where = conditions.length ? "WHERE " + conditions.join(" AND ") : "";
 
   const sql = `
-    SELECT id, chapter_id, paragraph_order, book_id, cid, lang_code, text_content
+    SELECT chapter_id, paragraph_order, book_id, cid, lang_code, text_content, format
     FROM chapter_paragraphs
     ${where}
-    ORDER BY chapter_id, paragraph_order
+    ORDER BY cid, book_id, chapter_id, paragraph_order
   `;
 
   const { results } = await db
@@ -135,10 +185,10 @@ export async function POST({ request, platform }) {
     const db = getDB(platform);
     const body = await request.json();
     if (
-      !body.chapter_id ||
-      !body.paragraph_order ||
-      !body.book_id ||
-      !body.cid ||
+      body.cid == null ||
+      body.book_id == null ||
+      body.chapter_id == null ||
+      body.paragraph_order == null ||
       !body.lang_code ||
       !body.text_content
     ) {
