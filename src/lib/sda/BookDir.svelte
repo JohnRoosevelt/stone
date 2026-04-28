@@ -144,7 +144,7 @@
 
 {#snippet Rbook(book)}
   <div flex-bc h-12 px-3 pr-12 bg-gray-100 dark="bg-gray-700">
-    <a flex-1 href="/sda/{book.book_id}/1">
+    <a flex-1 href="/{page.params.cid}/{book.book_id}/1">
       <p class:text-green={page.params.bookId == book.book_id}>
         {book.name}
       </p>
