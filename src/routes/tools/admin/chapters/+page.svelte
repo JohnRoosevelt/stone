@@ -2,6 +2,7 @@
   import { PUBLIC_R2 } from "$env/static/public";
   import { listBooks } from "$lib/admin/api.js";
   import { loadParquetContent } from "$lib/parquet";
+  import { importAllToD1 } from "./import-all.js";
 
   const CID_TO_R2_TYPE = { 0: "bible", 1: "sda", 2: "book" };
   const CID_ARRAY = [
@@ -32,6 +33,10 @@
   let chapters = $state([]);
   let chaptersLoaded = $state(false);
   let chLoadingText = $state("");
+  // ─── 批量导入全部 ──────────────────────────────────────────
+  let importAllRunning = $state(false);
+  let importAllLog = $state([]);
+  let importAllTotal = $state({ books: 0, chapters: 0, paragraphs: 0 });
 
   let r2Url = $state("");
   $effect(() => {
@@ -75,6 +80,7 @@
     chapter_id: null,
     paragraph_order: null,
     text_content: "",
+    lang_code: "",
   });
 
   async function loadBooks(cid) {
@@ -136,7 +142,7 @@
         if (chapterComparison[i]?.inD1) continue;
         pendingCh++;
         const ch = r2ParsedData[i];
-        const chapter_id = ch.id ?? i + 1;
+        const chapter_id = Number(ch.id ?? i + 1);
 
         // 获取章节标题：从已有 chapters 中查找，或自动生成
         let chapterTitle = cid === 0 ? chapter_id : ch.n;
@@ -165,7 +171,7 @@
           for (let j = 0; j < items.length; j++) {
             const text_content = items[j].c || items[j].o || "_";
             const format = items[j].t || null;
-            const paragraph_order = items[j].id || items[j].p || j + 1;
+            const paragraph_order = Number(items[j].id ?? items[j].p ?? j + 1);
 
             const body = JSON.stringify({
               chapter_id,
@@ -262,6 +268,7 @@
       chapter_id: p.chapter_id,
       paragraph_order: p.paragraph_order,
       text_content: p.text_content,
+      lang_code: p.lang_code,
     };
     showParagraphEdit = true;
   }
@@ -308,6 +315,7 @@
           book_id: p.book_id,
           chapter_id: p.chapter_id,
           paragraph_order: p.paragraph_order,
+          lang_code: p.lang_code,
         }),
       });
       if (!res.ok) {
@@ -379,6 +387,37 @@
     const timer = setTimeout(() => loadBooks(cid), 300);
     return () => clearTimeout(timer);
   });
+  // ─── 批量导入全部书籍 ──────────────────────────────────────
+  async function handleImportAll() {
+    if (
+      !confirm(
+        "将遍历所有分类（圣经、怀著、书籍）下载 R2 数据并写入 D1，确定继续？",
+      )
+    )
+      return;
+
+    importAllRunning = true;
+    importAllLog = [];
+    importAllTotal = { books: 0, chapters: 0, paragraphs: 0 };
+    error = "";
+    success = "";
+
+    try {
+      const result = await importAllToD1({
+        lang: chLang,
+        onProgress: (msg) => {
+          importAllLog = [...importAllLog, msg];
+        },
+      });
+      importAllTotal = result;
+      success = `批量导入完成：${result.books} 本书、${result.chapters} 章、${result.paragraphs} 段`;
+    } catch (e) {
+      error = `批量导入失败: ${e.message}`;
+    } finally {
+      importAllRunning = false;
+      if (chSelectedBook) await loadChapters();
+    }
+  }
 </script>
 
 {#if error}
@@ -432,6 +471,13 @@
   >
     {loading ? "..." : "查询章节"}
   </button>
+  <button
+    onclick={handleImportAll}
+    disabled={importAllRunning || loading}
+    class="px-3 py-1 bg-amber-600 text-white rounded text-sm disabled:opacity-50 font-medium"
+  >
+    {importAllRunning ? "导入中..." : "导入全部"}
+  </button>
 </div>
 
 <!-- R2 初始化区域（自动生成 URL + 自动解析 + 对比 D1） -->
@@ -481,6 +527,40 @@
         {/if}
       </div>
     {/if}
+  </div>
+{/if}
+
+<!-- 批量导入进度面板 -->
+{#if importAllRunning || importAllLog.length > 0}
+  <div class="w-full border rounded bg-gray-50 p-3 max-h-60 overflow-auto">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-semibold text-gray-700">
+        批量导入进度
+        {#if importAllRunning}
+          <span class="text-amber-600 ml-2">导入中...</span>
+        {:else if importAllTotal.books > 0}
+          <span class="text-green-600 ml-2">
+            {importAllTotal.books} 本书 · {importAllTotal.chapters} 章 · {importAllTotal.paragraphs}
+            段
+          </span>
+        {/if}
+      </span>
+      {#if !importAllRunning}
+        <button
+          onclick={() => {
+            importAllLog = [];
+          }}
+          class="text-xs text-gray-400 hover:text-gray-600">清除</button
+        >
+      {/if}
+    </div>
+    {#each importAllLog as line}
+      <div
+        class="text-xs text-gray-600 font-mono leading-relaxed whitespace-pre-wrap"
+      >
+        {line}
+      </div>
+    {/each}
   </div>
 {/if}
 

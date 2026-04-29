@@ -19,7 +19,7 @@ async function addParagraph(
       `
     INSERT INTO chapter_paragraphs (cid, book_id, chapter_id, paragraph_order, lang_code, text_content, format)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(cid, book_id, chapter_id, paragraph_order) DO UPDATE SET
+    ON CONFLICT(cid, book_id, chapter_id, paragraph_order, lang_code) DO UPDATE SET
       text_content = excluded.text_content,
       format = excluded.format
   `,
@@ -40,79 +40,94 @@ async function addParagraph(
 // 更新段落（通过复合主键）
 async function updateParagraph(
   db,
-  { cid, book_id, chapter_id, paragraph_order, text_content, format },
+  {
+    cid,
+    book_id,
+    chapter_id,
+    paragraph_order,
+    lang_code,
+    text_content,
+    format,
+  },
 ) {
-  if (
-    cid !== undefined &&
-    cid !== null &&
-    book_id !== undefined &&
-    book_id !== null &&
-    chapter_id !== undefined &&
-    chapter_id !== null &&
-    paragraph_order !== undefined &&
-    paragraph_order !== null
-  ) {
-    await db
-      .prepare(
-        `
-      UPDATE chapter_paragraphs SET text_content = ?, format = ?
-      WHERE cid = ? AND book_id = ? AND chapter_id = ? AND paragraph_order = ?
-    `,
-      )
-      .bind(
-        text_content,
-        format ?? null,
-        cid,
-        book_id,
-        chapter_id,
-        paragraph_order,
-      )
-      .run();
-  } else {
-    throw new Error("Must provide (cid, book_id, chapter_id, paragraph_order)");
+  if (!lang_code) {
+    throw new Error(
+      "lang_code is required to prevent cross-language overwrites",
+    );
   }
+
+  const conditions = [];
+  const params = [];
+
+  if (cid !== undefined && cid !== null)
+    (conditions.push("cid = ?"), params.push(cid));
+  if (book_id !== undefined && book_id !== null)
+    (conditions.push("book_id = ?"), params.push(book_id));
+  if (chapter_id !== undefined && chapter_id !== null)
+    (conditions.push("chapter_id = ?"), params.push(chapter_id));
+  if (paragraph_order !== undefined && paragraph_order !== null)
+    (conditions.push("paragraph_order = ?"), params.push(paragraph_order));
+
+  conditions.push("lang_code = ?");
+  params.push(lang_code);
+
+  if (conditions.length < 2) {
+    throw new Error(
+      "Must provide at least one field condition besides lang_code",
+    );
+  }
+
+  const sql = `UPDATE chapter_paragraphs SET text_content = ?, format = ? WHERE ${conditions.join(" AND ")}`;
+  await db
+    .prepare(sql)
+    .bind(text_content, format ?? null, ...params)
+    .run();
   return { success: true };
 }
 
 // 删除段落
 async function deleteParagraph(
   db,
-  { cid, book_id, chapter_id, paragraph_order },
+  { cid, book_id, chapter_id, paragraph_order, lang_code },
 ) {
-  if (
-    cid !== undefined &&
-    cid !== null &&
-    book_id !== undefined &&
-    book_id !== null &&
-    chapter_id !== undefined &&
-    chapter_id !== null &&
-    paragraph_order !== undefined &&
-    paragraph_order !== null
-  ) {
-    await db
-      .prepare(
-        "DELETE FROM chapter_paragraphs WHERE cid = ? AND book_id = ? AND chapter_id = ? AND paragraph_order = ?",
-      )
-      .bind(cid, book_id, chapter_id, paragraph_order)
-      .run();
-  } else if (
-    cid === undefined &&
-    book_id === undefined &&
-    chapter_id !== undefined &&
-    chapter_id !== null &&
-    paragraph_order !== undefined &&
-    paragraph_order !== null
-  ) {
-    // 兼容旧调用：仅通过 chapter_id + paragraph_order 删除（同一本书内）
-    await db
-      .prepare(
-        "DELETE FROM chapter_paragraphs WHERE chapter_id = ? AND paragraph_order = ?",
-      )
-      .bind(chapter_id, paragraph_order)
-      .run();
-  } else {
-    throw new Error("Must provide (cid, book_id, chapter_id, paragraph_order)");
+  if (!lang_code) {
+    throw new Error("lang_code is required to prevent cross-language deletes");
   }
+
+  const conditions = [];
+  const params = [];
+
+  if (cid !== undefined && cid !== null) {
+    conditions.push("cid = ?");
+    params.push(cid);
+  }
+  if (book_id !== undefined && book_id !== null) {
+    conditions.push("book_id = ?");
+    params.push(book_id);
+  }
+  if (chapter_id !== undefined && chapter_id !== null) {
+    conditions.push("chapter_id = ?");
+    params.push(chapter_id);
+  }
+  if (paragraph_order !== undefined && paragraph_order !== null) {
+    conditions.push("paragraph_order = ?");
+    params.push(paragraph_order);
+  }
+
+  conditions.push("lang_code = ?");
+  params.push(lang_code);
+
+  if (conditions.length < 2) {
+    throw new Error(
+      "Must provide at least one field condition besides lang_code",
+    );
+  }
+
+  const sql = `DELETE FROM chapter_paragraphs WHERE ${conditions.join(" AND ")}`;
+  await db
+    .prepare(sql)
+    .bind(...params)
+    .run();
   return { success: true };
 }
 

@@ -15,6 +15,7 @@ export async function load({ params: { cid }, platform: { env } }) {
         ORDER BY bb.book_id
       `;
       const { results: books } = await db.prepare(sql).bind(numericCid).all();
+      // console.log("[books] D1 result:", books);
       return { books };
     } catch (e) {
       console.log("[books] D1 error:", e.message);

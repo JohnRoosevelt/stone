@@ -1,7 +1,7 @@
 import { browser } from "$app/environment";
 
 export async function load({ params: { cid, bookId }, data }) {
-  console.log({ cid, bookId, data });
+  // console.log({ cid, bookId, data });
 
   // todo:: in tauri, data is not available, .server.js is not called
   const { books, book } = data;

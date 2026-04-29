@@ -8,20 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "prepare": "svelte-kit sync || echo ''",
-    "db:init": "wrangler d1 migrations create stone-db init",
-    "db:migrate": "wrangler d1 migrations apply stone-db --local",
-    "db:push": "wrangler d1 migrations apply stone-db --remote",
-    "db:pull": "wrangler d1 export stone-db --remote --output ./remote_dump.sql && wrangler d1 execute stone-db --local --file ./remote_dump.sql",
-    "db:status": "wrangler d1 migrations list stone-db --remote",
-    "db:reset": "wrangler d1 execute stone-db --local --command 'DROP TABLE IF EXISTS d1_migrations;' && wrangler d1 execute stone-db --local --file schemas/init.sql",
-    "db:reset:remote": "wrangler d1 execute stone-db --remote --command 'DROP TABLE IF EXISTS d1_migrations;' && wrangler d1 execute stone-db --remote --file schemas/init.sql",
+    "db:init": "wrangler d1 execute stone-db --local --command 'DROP TABLE IF EXISTS d1_migrations;' && wrangler d1 execute stone-db --local --file schemas/init.sql",
+    "db:init:remote": "wrangler d1 execute stone-db --remote --command 'DROP TABLE IF EXISTS d1_migrations;' && wrangler d1 execute stone-db --remote --file schemas/init.sql",
     "db:seed": "wrangler d1 execute stone-db --local --file schemas/books.sql && wrangler d1 execute stone-db --local --file schemas/books.zh.sql && wrangler d1 execute stone-db --local --file schemas/books.en.sql",
-    "db:seed:remote": "wrangler d1 execute stone-db --remote --file schemas/books.sql && wrangler d1 execute stone-db --remote --file schemas/books.zh.sql && wrangler d1 execute stone-db --remote --file schemas/books.en.sql",
-    "db:seed:base": "wrangler d1 execute stone-db --local --file schemas/books.sql",
-    "db:seed:zh": "wrangler d1 execute stone-db --local --file schemas/books.zh.sql",
-    "db:seed:en": "wrangler d1 execute stone-db --local --file schemas/books.en.sql",
-    "db:setup": "wrangler d1 migrations apply stone-db --local && bun db:seed",
-    "db:setup:remote": "wrangler d1 migrations apply stone-db --remote && bun db:seed:remote"
+    "db:seed:remote": "wrangler d1 execute stone-db --remote --file schemas/books.sql && wrangler d1 execute stone-db --remote --file schemas/books.zh.sql && wrangler d1 execute stone-db --remote --file schemas/books.en.sql"
   },
   "devDependencies": {
     "@iconify-json/carbon": "^1.2.8",
