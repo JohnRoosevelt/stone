@@ -37,7 +37,6 @@ export async function load({
       id: ch.chapter_id,
       n: String(ch.title),
     }));
-    console.log({ dirZh });
 
     return { books, book, dirZh };
   } catch (e) {
