@@ -17,24 +17,24 @@
   </a>
 
   <a
-    href="/sda"
+    href="/1"
     data-sveltekit-replacestate
     flex-cc
     flex-col
     class:text-green={page.route.id.startsWith("/(pub)/[cid]") &&
-      page.params.cid === "sda"}
+      page.params.cid === "1"}
   >
     <span i-icons-sda text-9> </span>
     <span text-xs uppercase class="hidden" sm="block"> 怀著 </span>
   </a>
 
   <a
-    href="/bible"
+    href="/0"
     data-sveltekit-replacestate
     flex-cc
     flex-col
     class:text-green={page.route.id.startsWith("/(pub)/[cid]") &&
-      page.params.cid === "bible"}
+      page.params.cid === "0"}
   >
     <span i-icons-bible text-9> </span>
     <span text-xs uppercase class="hidden" sm="block"> 圣经 </span>

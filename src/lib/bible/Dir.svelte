@@ -1,17 +1,11 @@
 <script>
   import { page } from "$app/state";
-  import bible from "$lib/bible/bible.json";
   import { onMount } from "svelte";
   import { showId } from "$lib";
 
   let clientHeight = $state(0);
   let activeId = $state("");
   let selectId = $state("");
-
-  const bibleMap = bible.reduce((pre, cur) => {
-    pre[cur.id] = cur;
-    return pre;
-  }, {});
 
   const groupByTag = page.data.books.reduce((pre, cur) => {
     if (!pre[cur.title]) {
@@ -102,17 +96,14 @@
 
 {#snippet Rbook(book)}
   <div flex-bc h-12 px-3 bg-gray-100 dark="bg-gray-700">
-    <a flex-1 href="/bible/{book.book_id}/1">
+    <a flex-1 href="/0/{book.book_id}/1">
       <p flex-bc class:text-green={page.params.bookId == book.book_id}>
         <span>{book.name}</span>
         <span flex>
           <!-- https://symbl.cc/cn/unicode-table/#spacing-modifier-letters -->
           <!-- u+20FB -->
           <span text-green>˻</span>
-          <span>
-            {bibleMap[book.book_id].name.en}
-            {bibleMap[book.book_id].name.ZH}
-          </span>
+          <span>{book.abbreviation}</span>
           <span text-green>˼</span>
           <!-- u+20FC -->
         </span>

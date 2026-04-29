@@ -1,18 +1,6 @@
-import { browser } from "$app/environment";
-
 export async function load({ params: { cid, bookId }, data }) {
-  // console.log({ cid, bookId, data });
-
-  // todo:: in tauri, data is not available, .server.js is not called
-  const { books, book } = data;
-
-  if (!browser) {
-    return { books, book, dirZh: null };
-  }
-
-  // load parquet content only in browser
-  const { loadParquetContent } = await import("$lib/parquet");
-  const dirZh = await loadParquetContent({ cid, bookId });
-
-  return { book, dirZh };
+  // data 来自 +layout.server.js，包含 books, book, dirZh
+  // dirZh 从 D1 加载，不再需要 R2 parquet
+  const { books, book, dirZh } = data;
+  return { books, book, dirZh };
 }

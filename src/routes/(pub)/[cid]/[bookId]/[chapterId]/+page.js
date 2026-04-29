@@ -1,25 +1,5 @@
-import { browser } from "$app/environment";
-
-export async function load({ parent, params: { cid, bookId, chapterId } }) {
-  let titleZh, chapterZh;
-
-  if (!browser) {
-    return { titleZh, chapterZh };
-  }
-  const { dirZh } = await parent();
-
-  const chapterData = dirZh[chapterId - 1];
-
-  if (cid === "bible") {
-    titleZh = chapterData.id;
-    chapterZh = chapterData.verses;
-  } else if (cid === "book") {
-    titleZh = chapterData.n;
-    chapterZh = chapterData.ps;
-  } else {
-    titleZh = chapterData.n;
-    chapterZh = chapterData.ps;
-  }
-
+export async function load({ data }) {
+  // data 来自 +page.server.js，包含 titleZh, chapterZh（从 D1 加载）
+  const { titleZh, chapterZh } = data;
   return { titleZh, chapterZh };
 }

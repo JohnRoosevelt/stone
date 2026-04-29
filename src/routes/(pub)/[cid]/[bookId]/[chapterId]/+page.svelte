@@ -1,31 +1,18 @@
 <script>
   import LongpressCtrl from "$lib/sda/LongpressCtrl.svelte";
   import ArticleCtrl from "$lib/sda/ArticleCtrl.svelte";
-  import Sda from "./sda.svelte";
-  import Bible from "./bible.svelte";
+  import Article from "./Article.svelte";
   import { page } from "$app/state";
 
   let clientHeight = $state(0);
   let isShowCtrl = $state(false);
   let isShowLongpressCtrl = $state(false);
   let scrollPercentage = $state(0);
-
-  const Content = $derived.by(() => {
-    let rz;
-
-    switch (page.params.cid) {
-      case "bible":
-        rz = Bible;
-        break;
-
-      default:
-        rz = Sda;
-
-        break;
-    }
-    return rz;
-  });
 </script>
+
+<svelte:head>
+  <title>{page.data.book?.name} {page.data.titleZh}</title>
+</svelte:head>
 
 <svelte:document
   onselectionchange={() => {
@@ -45,38 +32,29 @@
   flex-cc
   relative
   bind:clientHeight
-  onclick={(event) => {
-    // console.log(2, event.target, event.type, event.eventPhase);
-
-    if (isShowLongpressCtrl) {
-      return;
-    }
+  onclick={() => {
+    if (isShowLongpressCtrl) return;
     isShowCtrl = !isShowCtrl;
   }}
 >
   <article
     style:height="{clientHeight}px"
-    style=""
     w-full
     relative
     scroll-y
     class="pb-50vh"
-    onscroll={(event) => {
+    onscroll={(e) => {
       isShowCtrl = false;
-
-      const { scrollTop, scrollHeight, clientHeight } = event.target;
-
-      scrollPercentage = Math.round(
-        (scrollTop / (scrollHeight - clientHeight)) * 100,
-      );
-      // console.log({ scrollPercentage, scrollTop, scrollHeight, clientHeight });
+      const { scrollTop, scrollHeight, clientHeight } = e.target;
+      scrollPercentage =
+        scrollHeight - clientHeight === 0
+          ? 0
+          : Math.round((scrollTop / (scrollHeight - clientHeight)) * 100);
     }}
   >
     <div h-1px id="article-top"></div>
     {#key page.params.chapterId}
-      {#if Content}
-        <Content />
-      {/if}
+      <Article />
     {/key}
     <div h-1px id="article-bottom"></div>
   </article>

@@ -4,15 +4,15 @@
   const title = $derived.by(() => {
     let title;
     switch (page.params.cid) {
-      case "bible":
+      case "0":
         title = "圣经";
         break;
 
-      case "sda":
+      case "1":
         title = "怀著";
         break;
 
-      case "book":
+      case "2":
         title = "书籍";
         break;
 
@@ -28,9 +28,9 @@
 </svelte:head>
 
 <section text-24 text-green>
-  {#if page.params.cid === "bible"}
+  {#if page.params.cid === "0"}
     <span i-icons-bible></span>
-  {:else if page.params.cid === "sda"}
+  {:else if page.params.cid === "1"}
     <span i-icons-sda></span>
   {:else}
     <span i-icons-logo></span>

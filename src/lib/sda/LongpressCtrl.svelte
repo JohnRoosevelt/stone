@@ -346,16 +346,21 @@
           }
           console.log(pp, parent);
 
-
           let bookName, chapterName, content;
           switch (page.params.cid) {
-            case "bible":
-              bookName = page.data.book.name.ZH;
+            case "0":
+              bookName = page.data.book.name;
               chapterName = page.data.titleZh;
               content = `${bookName} ${chapterName}:${pp}˼ ${selectedText}`;
               break;
 
-            case "sda":
+            case "1":
+              bookName = page.data.book.name;
+              chapterName = page.data.titleZh;
+              content = `${selectedText}   ${pp}˼ \n\n —— ${bookName} ${chapterName} `;
+              break;
+
+            case "2":
               bookName = page.data.book.name;
               chapterName = page.data.titleZh;
               content = `${selectedText}   ${pp}˼ \n\n —— ${bookName} ${chapterName} `;

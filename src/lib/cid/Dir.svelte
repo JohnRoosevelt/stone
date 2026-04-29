@@ -9,9 +9,9 @@
 {/key}
 
 {#snippet dir(cid)}
-  {#if cid === "bible"}
+  {#if cid === "0"}
     <Dir />
-  {:else if cid === "sda" || cid === "book"}
+  {:else if cid === "1" || cid === "2"}
     <SdaDir />
   {:else}
     {cid}

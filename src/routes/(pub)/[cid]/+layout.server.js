@@ -1,14 +1,14 @@
-const CID_MAP = { bible: 0, sda: 1, book: 2 };
+import { validateCid } from "$lib/server/db";
 
 export async function load({ params: { cid }, platform: { env } }) {
-  const numericCid = CID_MAP[cid];
+  const numericCid = validateCid(cid);
   if (numericCid === undefined) return { books: [] };
 
   const db = env?.DB;
   if (db) {
     try {
       const sql = `
-        SELECT bb.book_id, bi.name, bi.title, bb.section, bb.featured
+        SELECT bb.book_id, bi.name, bi.title, bi.abbreviation, bb.section, bb.featured
         FROM book_base bb
         JOIN book_i18n bi ON bi.cid = bb.cid AND bi.book_id = bb.book_id
         WHERE bb.cid = ? AND bi.lang_code = 'zh'
