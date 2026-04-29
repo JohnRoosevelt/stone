@@ -21,10 +21,10 @@ export async function load({
     const { results: paragraphs } = await db
       .prepare(
         `
-      SELECT paragraph_order, text_content, format
+      SELECT id, num, text_content, format
       FROM chapter_paragraphs
       WHERE cid = ? AND book_id = ? AND chapter_id = ? AND lang_code = 'zh'
-      ORDER BY paragraph_order
+      ORDER BY id
     `,
       )
       .bind(numericCid, Number(bookId), Number(chapterId))
@@ -33,7 +33,7 @@ export async function load({
     // bible/sda/book 统一使用 { t, p, c } 格式
     const chapterZh = paragraphs.map((p) => ({
       t: p.format ?? 7,
-      p: p.paragraph_order,
+      p: p.num ?? p.id,
       c: p.text_content,
     }));
 

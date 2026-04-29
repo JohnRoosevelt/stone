@@ -45,8 +45,10 @@ async function importBook({ cid, book, lang, log }) {
 
     const title = cid === 0 ? String(chapter_id) : ch.n || String(chapter_id);
     const items = ch.verses || ch.ps || [];
+
     const paragraphs = items.map((item, j) => ({
-      paragraph_order: item.id ?? item.p ?? j + 1,
+      id: j + 1,
+      num: item.p != null ? Number(item.p) : null,
       text_content: item.c || item.o || "_",
       format: item.t ?? null,
     }));

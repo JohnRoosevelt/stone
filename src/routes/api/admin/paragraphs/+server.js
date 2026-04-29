@@ -4,22 +4,15 @@ import { getDB } from "$lib/server/db";
 // 添加段落（需提供 book_id, cid, lang_code 冗余列）
 async function addParagraph(
   db,
-  {
-    chapter_id,
-    paragraph_order,
-    book_id,
-    cid,
-    lang_code,
-    text_content,
-    format,
-  },
+  { chapter_id, id, num, book_id, cid, lang_code, text_content, format },
 ) {
   await db
     .prepare(
       `
-    INSERT INTO chapter_paragraphs (cid, book_id, chapter_id, paragraph_order, lang_code, text_content, format)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(cid, book_id, chapter_id, paragraph_order, lang_code) DO UPDATE SET
+    INSERT INTO chapter_paragraphs (cid, book_id, chapter_id, id, num, lang_code, text_content, format)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(cid, book_id, chapter_id, id, lang_code) DO UPDATE SET
+      num = excluded.num,
       text_content = excluded.text_content,
       format = excluded.format
   `,
@@ -28,7 +21,8 @@ async function addParagraph(
       cid,
       book_id,
       chapter_id,
-      paragraph_order,
+      id,
+      num ?? null,
       lang_code,
       text_content,
       format ?? null,
@@ -40,15 +34,7 @@ async function addParagraph(
 // 更新段落（通过复合主键）
 async function updateParagraph(
   db,
-  {
-    cid,
-    book_id,
-    chapter_id,
-    paragraph_order,
-    lang_code,
-    text_content,
-    format,
-  },
+  { cid, book_id, chapter_id, id, num, lang_code, text_content, format },
 ) {
   if (!lang_code) {
     throw new Error(
@@ -65,8 +51,8 @@ async function updateParagraph(
     (conditions.push("book_id = ?"), params.push(book_id));
   if (chapter_id !== undefined && chapter_id !== null)
     (conditions.push("chapter_id = ?"), params.push(chapter_id));
-  if (paragraph_order !== undefined && paragraph_order !== null)
-    (conditions.push("paragraph_order = ?"), params.push(paragraph_order));
+  if (id !== undefined && id !== null)
+    (conditions.push("id = ?"), params.push(id));
 
   conditions.push("lang_code = ?");
   params.push(lang_code);
@@ -77,10 +63,10 @@ async function updateParagraph(
     );
   }
 
-  const sql = `UPDATE chapter_paragraphs SET text_content = ?, format = ? WHERE ${conditions.join(" AND ")}`;
+  const sql = `UPDATE chapter_paragraphs SET num = ?, text_content = ?, format = ? WHERE ${conditions.join(" AND ")}`;
   await db
     .prepare(sql)
-    .bind(text_content, format ?? null, ...params)
+    .bind(num ?? null, text_content, format ?? null, ...params)
     .run();
   return { success: true };
 }
@@ -88,7 +74,7 @@ async function updateParagraph(
 // 删除段落
 async function deleteParagraph(
   db,
-  { cid, book_id, chapter_id, paragraph_order, lang_code },
+  { cid, book_id, chapter_id, id, lang_code },
 ) {
   if (!lang_code) {
     throw new Error("lang_code is required to prevent cross-language deletes");
@@ -109,9 +95,9 @@ async function deleteParagraph(
     conditions.push("chapter_id = ?");
     params.push(chapter_id);
   }
-  if (paragraph_order !== undefined && paragraph_order !== null) {
-    conditions.push("paragraph_order = ?");
-    params.push(paragraph_order);
+  if (id !== undefined && id !== null) {
+    conditions.push("id = ?");
+    params.push(id);
   }
 
   conditions.push("lang_code = ?");
@@ -156,10 +142,10 @@ async function listParagraphs(db, { chapter_id, book_id, cid, lang_code }) {
   const where = conditions.length ? "WHERE " + conditions.join(" AND ") : "";
 
   const sql = `
-    SELECT chapter_id, paragraph_order, book_id, cid, lang_code, text_content, format
+    SELECT chapter_id, id, num, book_id, cid, lang_code, text_content, format
     FROM chapter_paragraphs
     ${where}
-    ORDER BY cid, book_id, chapter_id, paragraph_order
+    ORDER BY cid, book_id, chapter_id, id
   `;
 
   const { results } = await db
@@ -203,7 +189,7 @@ export async function POST({ request, platform }) {
       body.cid == null ||
       body.book_id == null ||
       body.chapter_id == null ||
-      body.paragraph_order == null ||
+      body.id == null ||
       !body.lang_code ||
       !body.text_content
     ) {

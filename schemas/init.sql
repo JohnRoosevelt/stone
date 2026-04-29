@@ -86,7 +86,7 @@ CREATE INDEX idx_chapters_book_cid ON chapters(book_id, cid);
 
 -- ============================================================
 -- chapter_paragraphs: 段落表（核心数据表，行数最多）
--- PK: (cid, book_id, chapter_id, paragraph_order, lang_code)
+-- PK: (cid, book_id, chapter_id, id, lang_code)
 --      — 包含 lang_code，确保中英文段落互不覆盖
 -- FK: → chapters, CASCADE 删除章节时自动清理段落
 -- STRICT: 严格类型约束
@@ -95,18 +95,19 @@ CREATE TABLE chapter_paragraphs (
     cid             INTEGER NOT NULL,
     book_id         INTEGER NOT NULL,
     chapter_id      INTEGER NOT NULL,
-    paragraph_order INTEGER NOT NULL,
+    id              INTEGER NOT NULL,
+    num             INTEGER DEFAULT NULL,
     lang_code       TEXT    NOT NULL,
     text_content    TEXT    NOT NULL,
     format          INTEGER DEFAULT NULL,
-    PRIMARY KEY (cid, book_id, chapter_id, paragraph_order, lang_code),
+    PRIMARY KEY (cid, book_id, chapter_id, id, lang_code),
     FOREIGN KEY (cid, book_id, chapter_id, lang_code)
         REFERENCES chapters(cid, book_id, chapter_id, lang_code) ON DELETE CASCADE
 ) STRICT;
 
 -- idx_paragraphs_lookup: 最常用查询 — 查看某语言某本书某章的段落
---   WHERE lang_code = ? AND book_id = ? AND chapter_id = ? ORDER BY paragraph_order
---      → 精确等值命中 3 列，覆盖全部 WHERE 条件，只需按 paragraph_order 排序
+--   WHERE lang_code = ? AND book_id = ? AND chapter_id = ? ORDER BY id
+--      → 精确等值命中 3 列，覆盖全部 WHERE 条件，只需按 id 排序
 --   WHERE lang_code = ? AND book_id = ?                          ← 前缀匹配
 --   WHERE lang_code = ?                                          ← 前缀匹配
 CREATE INDEX idx_paragraphs_lookup ON chapter_paragraphs(lang_code, book_id, chapter_id);
@@ -158,7 +159,7 @@ END;
 -- ✅ 最优查询（索引精确覆盖）
 --   1) 书籍列表：     SELECT name FROM book_i18n WHERE lang_code='zh' AND cid=0 ORDER BY book_id
 --   2) 章节列表：     SELECT chapter_id,title FROM chapters WHERE cid=0 AND book_id=1 AND lang_code='zh' ORDER BY chapter_id
---   3) 段落列表：     SELECT text_content FROM chapter_paragraphs WHERE lang_code='zh' AND book_id=1 AND chapter_id=1 ORDER BY paragraph_order
+--   3) 段落列表：     SELECT text_content FROM chapter_paragraphs WHERE lang_code='zh' AND book_id=1 AND chapter_id=1 ORDER BY id
 --   4) 全文搜索：     SELECT cp.* FROM chapter_paragraphs cp JOIN chapter_paragraphs_fts fts ON fts.rowid=cp.rowid WHERE fts MATCH '"耶稣"' AND cp.lang_code='zh'
 --   5) 删除章节：     DELETE FROM chapters WHERE cid=0 AND book_id=1 AND chapter_id=1 AND lang_code='zh'  (CASCADE 自动删段落)
 --   6) 删除书籍：     DELETE FROM book_base WHERE cid=0 AND book_id=1  (CASCADE 自动删 i18n → chapters → paragraphs → FTS)

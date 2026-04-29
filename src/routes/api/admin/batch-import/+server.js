@@ -50,12 +50,12 @@ export async function POST({ request, platform }) {
       if (!Array.isArray(paragraphs)) continue;
 
       for (const paragraph of paragraphs) {
-        const { paragraph_order, text_content, format } = paragraph;
+        const { id, num, text_content, format } = paragraph;
 
         // Validate required paragraph fields
-        if (paragraph_order == null || text_content == null) {
+        if (id == null || text_content == null) {
           return json(
-            { error: "Each paragraph must have paragraph_order, text_content" },
+            { error: "Each paragraph must have id, text_content" },
             { status: 400 },
           );
         }
@@ -64,9 +64,10 @@ export async function POST({ request, platform }) {
         const paragraphStmt = db
           .prepare(
             `
-            INSERT INTO chapter_paragraphs (cid, book_id, chapter_id, paragraph_order, lang_code, text_content, format)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(cid, book_id, chapter_id, paragraph_order, lang_code) DO UPDATE SET
+            INSERT INTO chapter_paragraphs (cid, book_id, chapter_id, id, num, lang_code, text_content, format)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(cid, book_id, chapter_id, id, lang_code) DO UPDATE SET
+              num = excluded.num,
               text_content = excluded.text_content,
               format = excluded.format
           `,
@@ -75,7 +76,8 @@ export async function POST({ request, platform }) {
             cid,
             book_id,
             chapter_id,
-            paragraph_order,
+            id,
+            num ?? null,
             lang_code,
             text_content,
             format ?? null,

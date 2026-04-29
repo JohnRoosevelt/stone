@@ -78,7 +78,8 @@
     cid: null,
     book_id: null,
     chapter_id: null,
-    paragraph_order: null,
+    id: null,
+    num: null,
     text_content: "",
     lang_code: "",
   });
@@ -171,11 +172,13 @@
           for (let j = 0; j < items.length; j++) {
             const text_content = items[j].c || items[j].o || "_";
             const format = items[j].t || null;
-            const paragraph_order = Number(items[j].id ?? items[j].p ?? j + 1);
+            const id = j + 1;
+            const num = items[j].p != null ? Number(items[j].p) : null;
 
             const body = JSON.stringify({
               chapter_id,
-              paragraph_order,
+              id,
+              num,
               book_id,
               cid,
               lang_code,
@@ -266,7 +269,8 @@
       cid: p.cid,
       book_id: p.book_id,
       chapter_id: p.chapter_id,
-      paragraph_order: p.paragraph_order,
+      id: p.id,
+      num: p.num,
       text_content: p.text_content,
       lang_code: p.lang_code,
     };
@@ -303,7 +307,7 @@
 
   // 删除段落
   async function deleteParagraph(p) {
-    if (!confirm(`确定删除第 ${p.paragraph_order} 段？`)) return;
+    if (!confirm(`确定删除第 ${p.id} 段？`)) return;
     loading = true;
     error = "";
     try {
@@ -314,7 +318,7 @@
           cid: p.cid,
           book_id: p.book_id,
           chapter_id: p.chapter_id,
-          paragraph_order: p.paragraph_order,
+          id: p.id,
           lang_code: p.lang_code,
         }),
       });
@@ -671,7 +675,7 @@
           <div class="text-xs border rounded p-2 hover:bg-gray-50">
             <div class="flex items-start justify-between gap-2">
               <span class="text-gray-400 font-mono w-8 shrink-0">
-                #{p.paragraph_order}
+                #{p.id}
               </span>
               <span class="flex-1 break-words">{p.text_content}</span>
               <div class="flex gap-1 shrink-0">
