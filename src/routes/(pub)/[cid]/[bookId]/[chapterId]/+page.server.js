@@ -35,6 +35,7 @@ export async function load({
       t: p.format ?? 7,
       p: p.num ?? p.id,
       c: p.text_content,
+      id: p.id,
     }));
 
     return { titleZh, chapterZh };

@@ -31,10 +31,8 @@
       DATAS.networkType = connection.effectiveType || connection.type;
     });
 
-    const { initSQLite } = await import("$lib/db/dbManager");
-    // const { initSQLite } = await import("$lib/db/sqlite");
-    const rz = await initSQLite();
-    DATAS.dbInfo = rz;
+    // 后续 Tauri 版本将使用 Rust SQLite 替代
+    console.log("[App] SQLite Worker removed, Tauri native SQL pending");
   });
 
   $effect(() => {

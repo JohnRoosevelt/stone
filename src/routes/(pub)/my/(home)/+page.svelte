@@ -63,9 +63,8 @@
     </div>
 
     <div>
-      <span>sqlite version:</span>
-      <span text-xs font-mono>{DATAS.dbInfo?.version}</span>
-      <span text-xs font-mono>OPFS: {DATAS.dbInfo?.hasOPFS}</span>
+      <span>database:</span>
+      <span text-xs font-mono text-gray-400>（待迁移至 Tauri 原生 SQL）</span>
     </div>
   </section>
 </article>

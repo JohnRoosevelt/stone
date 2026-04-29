@@ -151,10 +151,7 @@
       aria-label="search"
       text-gray
       onclick={() => {
-        console.log("to search");
-        // goto(`?s=${page.params.chapterId}`, {replaceState: true})
-        // DATAS.dialog = { c: Setting, show: true, p: "b" };
-        info("网页中暂不支持搜索");
+        goto(`/search?q=`, { replaceState: true });
       }}
     >
       <span i-carbon-search></span>

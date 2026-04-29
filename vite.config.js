@@ -12,16 +12,8 @@ export default defineConfig({
   },
   server: {
     port: 5175,
-    headers: {
-      "Cross-Origin-Opener-Policy": "same-origin",
-      "Cross-Origin-Embedder-Policy": "credentialless",
-    },
   },
   optimizeDeps: {
-    exclude: [
-      "@sqlite.org/sqlite-wasm",
-      "parquet-wasm",
-      "@dweb-browser/zstd-wasm",
-    ],
+    exclude: ["parquet-wasm", "@dweb-browser/zstd-wasm"],
   },
 });

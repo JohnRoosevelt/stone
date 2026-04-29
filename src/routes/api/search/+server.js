@@ -1,14 +1,9 @@
 import { json } from "@sveltejs/kit";
 import { getDB } from "$lib/server/db";
 
-// 转义 FTS5 特殊字符，并构建 AND 查询
-function buildMatchQuery(raw) {
-  const words = raw
-    .replace(/[*"()+\-~^]/g, " ")
-    .split(/\s+/)
-    .filter(Boolean);
-  if (words.length === 0) return "";
-  return words.map((w) => `"${w}"`).join(" AND ");
+/** 判断是否包含 CJK 中文 */
+function hasCJK(str) {
+  return /[\u4e00-\u9fff\u3400-\u4dbf]/.test(str);
 }
 
 /**
@@ -67,6 +62,18 @@ async function getRowidRange(db, { lang, cid, bookId }) {
   return { minRowid: row.minRowid, maxRowid: row.maxRowid };
 }
 
+/**
+ * 构建 FTS5 MATCH 查询（仅用于非中文）
+ */
+function buildFtsMatch(raw) {
+  const words = raw
+    .replace(/[*"()+\-~^]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (words.length === 0) return "";
+  return words.map((w) => `"${w}"`).join(" AND ");
+}
+
 export async function GET({ url, platform }) {
   try {
     const db = getDB(platform);
@@ -74,39 +81,47 @@ export async function GET({ url, platform }) {
     const lang = url.searchParams.get("lang") || "zh";
     const cidParam = url.searchParams.get("cid");
     const bookIdParam = url.searchParams.get("bookId");
+    const limit = Math.min(
+      parseInt(url.searchParams.get("limit") || "20"),
+      100,
+    );
+    const offset = parseInt(url.searchParams.get("offset") || "0");
 
     if (!q.trim()) {
       return json({ error: "Missing search query" }, { status: 400 });
     }
 
-    const matchStr = buildMatchQuery(q);
-    if (!matchStr) {
-      return json({ error: "Invalid search terms" }, { status: 400 });
-    }
-
-    // 解析可选的整数参数
     const cid = cidParam ? parseInt(cidParam) : undefined;
     const bookId = bookIdParam ? parseInt(bookIdParam) : undefined;
+    const isCJKQuery = hasCJK(q);
 
     const params = [];
-    const ftsJoins = [];
+    const joins = [];
     const whereConditions = [];
 
-    // ── FTS 全文匹配 ──
-    // 用 JOIN 替代 IN (SELECT ...)，让 SQLite 优化器有更多选择
-    ftsJoins.push(`JOIN chapter_paragraphs_fts fts ON fts.rowid = cp.rowid`);
-
-    // FTS MATCH 条件
-    whereConditions.push(`chapter_paragraphs_fts MATCH ?`);
-    params.push(matchStr);
-
-    // ── 语言过滤（总是有） ──
+    // 语言过滤（总是有）
     whereConditions.push("cp.lang_code = ?");
     params.push(lang);
 
+    if (isCJKQuery) {
+      // ── 中文搜索：用 LIKE 替代 FTS5 ──
+      // FTS5 的 unicode61 分词器无法正确拆分中文，连续汉字被当成一个 token，
+      // 导致短语匹配大量遗漏。LIKE 虽无索引加速，但配合 rowid 范围裁剪 + 其他索引，
+      // 对中文场景更准确。
+      whereConditions.push("cp.text_content LIKE ?");
+      params.push(`%${q}%`);
+    } else {
+      // ── 非中文（英文等）：用 FTS5 ──
+      const matchStr = buildFtsMatch(q);
+      if (!matchStr) {
+        return json({ error: "Invalid search terms" }, { status: 400 });
+      }
+      joins.push(`JOIN chapter_paragraphs_fts fts ON fts.rowid = cp.rowid`);
+      whereConditions.push(`chapter_paragraphs_fts MATCH ?`);
+      params.push(matchStr);
+    }
+
     // ── rowid 范围裁剪（可选） ──
-    // 有语言 + 分类（或更精确范围）时，提前算出 rowid 区间，
-    // 避免 FTS 命中大量其他分类的行却要全部回表
     if (cid !== undefined || bookId !== undefined) {
       const range = await getRowidRange(db, { lang, cid, bookId });
       if (range) {
@@ -115,7 +130,7 @@ export async function GET({ url, platform }) {
       }
     }
 
-    // ── 额外的过滤条件（索引可走 idx_paragraphs_lookup 前缀） ──
+    // ── 额外的过滤条件 ──
     if (cid !== undefined) {
       whereConditions.push("cp.cid = ?");
       params.push(cid);
@@ -125,10 +140,13 @@ export async function GET({ url, platform }) {
       params.push(bookId);
     }
 
-    const joins = ftsJoins.join("\n");
+    const joinStr = joins.join("\n");
     const where = whereConditions.length
       ? "WHERE " + whereConditions.join(" AND ")
       : "";
+
+    // ORDER BY：中文用 rowid（按原文顺序），非中文用 fts.rank（按相关度）
+    const orderBy = isCJKQuery ? "cp.cid, cp.rowid" : "cp.cid, fts.rank";
 
     const sql = `
       SELECT
@@ -142,9 +160,10 @@ export async function GET({ url, platform }) {
         cp.format,
         cp.lang_code,
         ch.title AS chapter_title,
-        bi.name AS book_name
+        bi.name AS book_name,
+        COUNT(*) OVER() AS _total
       FROM chapter_paragraphs cp
-      ${joins}
+      ${joinStr}
       JOIN chapters ch
         ON ch.cid = cp.cid
        AND ch.book_id = cp.book_id
@@ -155,15 +174,22 @@ export async function GET({ url, platform }) {
        AND bi.book_id = cp.book_id
        AND bi.lang_code = cp.lang_code
       ${where}
-      ORDER BY fts.rank
-      LIMIT 100
+      ORDER BY ${orderBy}
+      LIMIT ?
+      OFFSET ?
     `;
+
+    params.push(limit, offset);
 
     const { results } = await db
       .prepare(sql)
       .bind(...params)
       .all();
-    return json(results);
+    const total = results.length > 0 ? results[0]._total : 0;
+    const hasMore = offset + limit < total;
+    // 移除每行多余的 _total 字段
+    for (const r of results) delete r._total;
+    return json({ total, results, hasMore });
   } catch (e) {
     return json(
       { error: "Search failed", details: e.message },

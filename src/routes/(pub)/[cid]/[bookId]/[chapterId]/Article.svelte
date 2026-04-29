@@ -10,7 +10,7 @@
   style:font-size="{DATAS.fontSize}px"
   style:background={!DATAS.isDarkMode ? DATAS.bg : ""}
 >
-  {#each page.data.chapterZh as { t, p, c }, i}
+  {#each page.data.chapterZh as { t, p, c, id }, i}
     <p
       style:text-indent="calc(var(--spacing) * {(t == 7 && i > 0) ||
       (page.params.cid === '0' && i === 0)
@@ -19,7 +19,7 @@
       style:--before-left={t == 7
         ? `calc(var(--spacing) * -${parseInt(DATAS.fontSize / 2)})`
         : ""}
-      id="zh-{i}"
+      id="zh-{id}"
       px-5
       data-lang="zh"
       data-pp={p}
