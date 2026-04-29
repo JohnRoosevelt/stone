@@ -23,7 +23,7 @@
       px-5
       data-lang="zh"
       data-pp={p}
-      data-p={(page.params.cid === "2" ? i : p) + "˼"}
+      data-p={(page.params.cid !== "2" ? p : p - 1) + "˼"}
       data-i={i}
       class:flex-cc={t == 2 || (i === 0 && page.params.cid !== "0")}
       class:font-700={t == 2 || (i === 0 && page.params.cid !== "0")}

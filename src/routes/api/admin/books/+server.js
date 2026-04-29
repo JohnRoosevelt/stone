@@ -147,7 +147,7 @@ export async function PUT({ request, platform }) {
   try {
     const db = getDB(platform);
     const body = await request.json();
-    if (!body.cid || !body.book_id) {
+    if (body.cid == null || body.book_id == null) {
       return json({ error: "cid and book_id required" }, { status: 400 });
     }
     const result = await updateBook(db, body);
@@ -161,7 +161,7 @@ export async function DELETE({ request, platform }) {
   try {
     const db = getDB(platform);
     const body = await request.json();
-    if (!body.cid || !body.book_id) {
+    if (body.cid == null || body.book_id == null) {
       return json({ error: "cid and book_id required" }, { status: 400 });
     }
     const result = await deleteBook(db, body);

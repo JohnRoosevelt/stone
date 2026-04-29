@@ -30,7 +30,7 @@ export async function load({
       .bind(numericCid, Number(bookId), Number(chapterId))
       .all();
 
-    // bible/sda/book 统一使用 { t, p, c } 格式
+    // bible 章节标题显示为 /sda/book 统一使用 { t, p, c } 格式
     const chapterZh = paragraphs.map((p) => ({
       t: p.format ?? 7,
       p: p.num ?? p.id,

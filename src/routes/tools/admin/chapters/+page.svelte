@@ -143,16 +143,16 @@
         if (chapterComparison[i]?.inD1) continue;
         pendingCh++;
         const ch = r2ParsedData[i];
-        const chapter_id = Number(ch.id ?? i + 1);
+        const chapter_id = i + 1;
 
         // 获取章节标题：从已有 chapters 中查找，或自动生成
-        let chapterTitle = cid === 0 ? chapter_id : ch.n;
+        let title = ch.n || String(chapter_id);
         const body = JSON.stringify({
           cid,
           book_id,
           chapter_id,
           lang_code,
-          title: chapterTitle,
+          title,
         });
         console.log(body);
 

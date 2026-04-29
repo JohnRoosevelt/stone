@@ -33,7 +33,11 @@ export async function load({
       .all();
 
     // 统一 dirZh 格式: { id, n } 对所有分类一致
-    const dirZh = chapters.map((ch) => ({ id: ch.chapter_id, n: ch.title }));
+    const dirZh = chapters.map((ch) => ({
+      id: ch.chapter_id,
+      n: String(ch.title),
+    }));
+    console.log({ dirZh });
 
     return { books, book, dirZh };
   } catch (e) {

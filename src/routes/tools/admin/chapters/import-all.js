@@ -40,10 +40,10 @@ async function importBook({ cid, book, lang, log }) {
 
   for (let i = 0; i < r2Data.length; i++) {
     const ch = r2Data[i];
-    const chapter_id = Number(ch.id ?? i + 1);
+    const chapter_id = i + 1;
     if (existingIds.has(chapter_id)) continue;
 
-    const title = cid === 0 ? String(chapter_id) : ch.n || String(chapter_id);
+    const title = ch.n || String(chapter_id);
     const items = ch.verses || ch.ps || [];
 
     const paragraphs = items.map((item, j) => ({
