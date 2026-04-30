@@ -350,19 +350,19 @@
           switch (page.params.cid) {
             case "0":
               bookName = page.data.book.name;
-              chapterName = page.data.titleZh;
+              chapterName = page.data.title;
               content = `${bookName} ${chapterName}:${pp}˼ ${selectedText}`;
               break;
 
             case "1":
               bookName = page.data.book.name;
-              chapterName = page.data.titleZh;
+              chapterName = page.data.title;
               content = `${selectedText}   ${pp}˼ \n\n —— ${bookName} ${chapterName} `;
               break;
 
             case "2":
               bookName = page.data.book.name;
-              chapterName = page.data.titleZh;
+              chapterName = page.data.title;
               content = `${selectedText}   ${pp}˼ \n\n —— ${bookName} ${chapterName} `;
               break;
 

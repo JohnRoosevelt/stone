@@ -1,13 +1,8 @@
-export interface UploadResult {
-  Key: string;
-  url: string;
-}
-
 export async function uploadToR2(
-  file: File | Blob,
-  fileName: string,
-  contentType: string = file.type || "application/octet-stream",
-): Promise<UploadResult> {
+  file,
+  fileName,
+  contentType = file.type || "application/octet-stream",
+) {
   const res = await fetch(
     `/api/r2/upload?Key=${encodeURIComponent(fileName)}&contentType=${encodeURIComponent(contentType)}`,
   );

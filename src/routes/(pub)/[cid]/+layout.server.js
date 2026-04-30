@@ -1,4 +1,5 @@
 import { validateCid } from "$lib/server/db";
+export const prerender = false;
 
 export async function load({ params: { cid }, platform: { env } }) {
   const numericCid = validateCid(cid);

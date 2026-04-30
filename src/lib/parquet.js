@@ -1,7 +1,12 @@
 import { PUBLIC_R2 } from "$env/static/public";
-import initWasm, { readParquet } from "parquet-wasm/esm";
-import { tableFromIPC } from "apache-arrow";
-import initZstd, { decompress } from "@dweb-browser/zstd-wasm";
+import { tableFromIPC, tableFromArrays, tableToIPC } from "apache-arrow";
+import initZstd, { decompress, compress } from "@dweb-browser/zstd-wasm";
+import initWasm, {
+  readParquet,
+  Table,
+  WriterPropertiesBuilder,
+  writeParquet,
+} from "parquet-wasm/esm";
 
 let wasmInitialized = false;
 let zstdInitialized = false;
@@ -17,43 +22,49 @@ async function ensureWasm() {
   }
 }
 
-function groupRows(rows, type) {
-  if (type === "bible") {
-    const chapters = [];
-    let cur = null,
-      verseId = 1;
-    for (const row of rows) {
-      if (!cur || cur.id !== row.n) {
-        if (cur) chapters.push(cur);
-        cur = { id: row.n, verses: [] };
-        verseId = 1;
-      }
-      cur.verses.push({ id: verseId++, c: row.o });
+function groupRows(rows, numCid, isChapter = false) {
+  const fn = (r) => {
+    const rz = { c: r.c || r.o };
+    if (["sda", "1"].includes(String(numCid))) {
+      rz.t = r.t;
+      rz.p = r.p;
     }
-    if (cur) chapters.push(cur);
-    return chapters;
-  }
+    return rz;
+  };
 
+  if (isChapter) {
+    return rows.map(fn);
+  }
   const chapters = [];
   let cur = null;
   for (const row of rows) {
+    // console.log({ row });
     if (!cur || cur.n !== row.n) {
       cur = { n: row.n, ps: [] };
       chapters.push(cur);
     }
-    cur.ps.push({ t: row.t ?? 7, p: row.p, c: row.o });
+    cur.ps.push(fn(row));
   }
+
   return chapters;
 }
 
-export async function loadParquetContent({ cid, bookId, lang = "zh" }) {
-  console.log("[Parquet] Loading from R2:", cid, bookId, lang);
+export async function loadR2Parquet(path) {
+  console.log("[Parquet] Loading from R2:", path);
   await ensureWasm();
 
-  const url = `${PUBLIC_R2}/${cid}/${lang}/${bookId}.parquet.zst`;
+  const url = `${PUBLIC_R2}/${path}${path.endsWith(".parquet.zst") ? "" : ".parquet.zst"}`;
   const resp = await fetch(url);
 
   const buffer = await resp.arrayBuffer();
+  const [numCid, lang, bookId, chapterIdStr = "."] = path.split("/");
+  const [chapterId] = chapterIdStr.split(".");
+  const resultData = await loadParquetContent(buffer, numCid, !!chapterId);
+
+  return resultData;
+}
+
+export async function loadParquetContent(buffer, numCid, isChapter = false) {
   const uint8 = new Uint8Array(buffer);
   const parquetBuffer = decompress(uint8);
 
@@ -75,9 +86,50 @@ export async function loadParquetContent({ cid, bookId, lang = "zh" }) {
     return row;
   });
 
-  const resultData = groupRows(decompressedRows, cid);
+  const resultData = groupRows(decompressedRows, numCid, isChapter);
 
   console.log({ resultData });
 
   return resultData;
 }
+
+// =========================================================================
+// Write — build .parquet.zst bytes from rows
+// =========================================================================
+export async function writeChapterParquet(rows, type = "sda") {
+  await ensureWasm();
+  // console.log({ rows, type });
+  const arrays = {
+    c: rows.map((r) => r.c),
+  };
+  // t: rows[0]?.t ? new Int32Array(rows.map((r) => r.t)) : undefined,
+  // p: rows[0]?.p ? new Int32Array(rows.map((r) => r.p)) : undefined,
+
+  if (["sda", "1"].includes(String(type))) {
+    arrays.t = new Int32Array(rows.map((r) => r.t));
+    arrays.p = new Int32Array(rows.map((r) => r.p));
+  }
+
+  const at = tableFromArrays(arrays);
+  const wt = Table.fromIPCStream(tableToIPC(at, "stream"));
+  return compress(writeParquet(wt, new WriterPropertiesBuilder().build()), 19);
+}
+
+export async function writeBookParquet(rows, type = "sda") {
+  await ensureWasm();
+  const arrays = {
+    n: rows.map((r) => r.n),
+    c: rows.map((r) => r.c),
+  };
+
+  if (["sda", "1"].includes(String(type))) {
+    arrays.t = new Int32Array(rows.map((r) => r.t));
+    arrays.p = new Int32Array(rows.map((r) => r.p));
+  }
+
+  const at = tableFromArrays(arrays);
+  const wt = Table.fromIPCStream(tableToIPC(at, "stream"));
+  return compress(writeParquet(wt, new WriterPropertiesBuilder().build()), 19);
+}
+
+// =========================================================================

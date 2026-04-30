@@ -11,7 +11,7 @@
 </script>
 
 <svelte:head>
-  <title>{page.data.book?.name} {page.data.titleZh}</title>
+  <title>{page.data.book?.name} {page.data.title}</title>
 </svelte:head>
 
 <svelte:document

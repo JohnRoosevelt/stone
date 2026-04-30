@@ -10,7 +10,8 @@
   style:font-size="{DATAS.fontSize}px"
   style:background={!DATAS.isDarkMode ? DATAS.bg : ""}
 >
-  {#each page.data.chapterZh as { t, p, c, id }, i}
+  {#each page.data.sections as { t, p, c }, i}
+    {@const id = i + 1}
     <p
       style:text-indent="calc(var(--spacing) * {(t == 7 && i > 0) ||
       (page.params.cid === '0' && i === 0)

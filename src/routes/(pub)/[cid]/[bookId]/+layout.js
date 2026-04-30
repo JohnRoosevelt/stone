@@ -1,6 +1,18 @@
-export async function load({ params: { cid, bookId }, data }) {
-  // data 来自 +layout.server.js，包含 books, book, dirZh
-  // dirZh 从 D1 加载，不再需要 R2 parquet
-  const { books, book, dirZh } = data;
-  return { books, book, dirZh };
+import { browser } from "$app/environment";
+
+export async function load({ params: { cid, bookId }, parent }) {
+  const { books = [] } = await parent();
+
+  const book = books.find((b) => b.book_id === Number(bookId)) ?? null;
+
+  let chapters = [];
+
+  if (browser) {
+    // use loadR2Parquet get all book chapters
+    const { loadR2Parquet } = await import("$lib/parquet");
+    const data = await loadR2Parquet(`${cid}/${"zh"}/${bookId}`);
+    chapters = data;
+  }
+
+  return { book, chapters };
 }

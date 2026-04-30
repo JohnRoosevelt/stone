@@ -31,7 +31,8 @@
     }}
   >
     <div h-1px id="chapter-top"></div>
-    {#each page.data?.dirZh as { id, n }}
+    {#each page.data?.chapters as { n }, i}
+      {@const id = i + 1}
       <a
         onclick={() => {
           if (DATAS.isMobile) {
