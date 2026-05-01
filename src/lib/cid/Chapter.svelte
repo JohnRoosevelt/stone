@@ -1,6 +1,7 @@
 <script>
   import { page } from "$app/state";
   import { showId } from "$lib";
+  import { goBack } from "$lib/nav.js";
   import { DATAS } from "$lib/data.svelte";
 
   let clientHeight = $state(0);
@@ -83,17 +84,9 @@
     rounded-4
     text-gray
   >
-    <a
-      href="/{page.params.cid}"
-      data-sveltekit-replacestate
-      aria-label="scroll-to-back"
-      flex-cc
-      text-green
-      px-2
-      py-4
-    >
+    <button aria-label="返回" flex-cc text-green px-2 py-4 onclick={goBack}>
       <span i-carbon-chevron-left></span>
-    </a>
+    </button>
 
     <button
       aria-label="scroll-to-top"

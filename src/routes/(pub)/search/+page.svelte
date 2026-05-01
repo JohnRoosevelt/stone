@@ -64,7 +64,7 @@
   <title>搜索 - 脚前的灯</title>
 </svelte:head>
 
-<article w-full flex-1 flex flex-col min-h-0>
+<article w-full flex-1 flex flex-col min-h-0 overflow-hidden>
   <!-- 搜索输入区 -->
   <section
     w-full

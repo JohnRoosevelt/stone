@@ -144,7 +144,7 @@
       aria-label="search"
       text-gray
       onclick={() => {
-        goto(`/search?q=`, { replaceState: true });
+        goto(`/search?q=`);
       }}
     >
       <span i-carbon-search></span>

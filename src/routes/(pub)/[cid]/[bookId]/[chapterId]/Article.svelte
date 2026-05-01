@@ -1,7 +1,52 @@
 <script>
   import { page } from "$app/state";
+  import { onMount } from "svelte";
   import { CID } from "$lib/config";
   import { DATAS } from "$lib/data.svelte.js";
+  import { searchState } from "$lib/bible/searchStore.svelte.js";
+
+  onMount(() => {
+    const hash = page.url.hash || window.location.hash;
+    if (!hash.startsWith("#zh-")) return;
+    const id = hash.slice(1);
+
+    requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      // 滚动到屏幕中间
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+
+      // 整段高亮动画（绿底 + 红虚线框，3 秒后消失）
+      el.classList.add("search-highlight");
+      setTimeout(() => el.classList.remove("search-highlight"), 3000);
+
+      // 关键字加红色虚线边框（不消失）
+      const keyword = searchState.query?.trim();
+      if (!keyword) return;
+
+      const regex = new RegExp(
+        `(${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+        "gi",
+      );
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const nodesToReplace = [];
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (regex.test(node.textContent)) {
+          nodesToReplace.push(node);
+        }
+      }
+      for (const node of nodesToReplace) {
+        const span = document.createElement("span");
+        span.innerHTML = node.textContent.replace(
+          regex,
+          '<mark class="keyword-mark">$1</mark>',
+        );
+        node.parentNode.replaceChild(span, node);
+      }
+    });
+  });
 </script>
 
 <article
@@ -54,5 +99,42 @@
     &::before {
       text-indent: var(--before-left);
     }
+  }
+
+  /* 整段高亮（绿底 + 红虚线框，3 秒脉动后消失） */
+  :global(p.search-highlight) {
+    animation: highlight-pulse 3s ease-out forwards;
+    border-radius: 4px;
+  }
+
+  @keyframes highlight-pulse {
+    0% {
+      background-color: rgba(74, 222, 128, 0.25);
+      border: 2.5px dashed rgba(239, 68, 68, 0.7);
+      border-radius: 4px;
+    }
+    30% {
+      background-color: rgba(74, 222, 128, 0.15);
+      border: 2.5px dashed rgba(239, 68, 68, 0.4);
+      border-radius: 4px;
+    }
+    70% {
+      background-color: rgba(74, 222, 128, 0.05);
+      border: 2.5px dashed rgba(239, 68, 68, 0.15);
+      border-radius: 4px;
+    }
+    100% {
+      background-color: transparent;
+      border: 2.5px dashed transparent;
+      border-radius: 4px;
+    }
+  }
+
+  /* 关键字红色虚线边框（不消失） */
+  :global(mark.keyword-mark) {
+    border: 1.5px dashed rgba(239, 68, 68, 0.7);
+    border-radius: 3px;
+    padding: 0 1px;
+    background: transparent;
   }
 </style>
