@@ -104,6 +104,22 @@ export default defineConfig({
         " ",
       ),
     ),
+    ...Array.from(
+      "hover:border-blue hover:border-green hover:border-purple hover:border-orange".split(
+        " ",
+      ),
+    ),
+    ...Array.from(
+      "hover:text-blue hover:text-green hover:text-purple hover:text-orange".split(
+        " ",
+      ),
+    ),
+    /* 导航和首页图标（动态 class 绑定，需显式声明） */
+    ...Array.from(
+      "i-carbon-home i-icons-sda i-icons-bible i-carbon-user-settings i-carbon-user-avatar i-carbon-education".split(
+        " ",
+      ),
+    ),
     // ...Array.from({ length: 15 }, (_, i) => `indent-${i + 7}`),
     // ...Array.from({ length: 15 }, (_, i) => `-indent-${i + 7}`),
   ],

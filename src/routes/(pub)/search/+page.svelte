@@ -3,7 +3,14 @@
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import { goBack } from "$lib/nav.js";
-  import { searchState, searchHistory } from "$lib/bible/searchStore.svelte.js";
+  import {
+    searchState,
+    searchHistory,
+    SCOPES,
+  } from "$lib/bible/searchStore.svelte.js";
+
+  /** 范围选择选项（全部 + 各分类） */
+  const SCOPE_OPTIONS = [{ cid: undefined, label: "全部" }, ...SCOPES];
 
   /** 从 URL 读取初始搜索词和范围 */
   let query = $state(page.url.searchParams.get("q") || "");
@@ -28,11 +35,17 @@
   /** 清除输入 */
   function clearQuery() {
     query = "";
+    inputEl?.focus();
+  }
+
+  /** 点击历史标签快速搜索 */
+  function searchKeyword(keyword) {
+    query = keyword;
+    submitSearch();
   }
 
   // 挂载后自动聚焦
   onMount(() => {
-    // 略微延迟以确保 DOM 已渲染
     requestAnimationFrame(() => {
       inputEl?.focus();
     });
@@ -48,59 +61,95 @@
   <section
     w-full
     flex-shrink-0
-    flex-cc
-    gap-2
     px-4
     py-3
     bg="white dark:black"
     b-b="1px solid gray-200 dark:gray-700"
   >
-    <!-- 返回按钮 -->
-    <button text-5 text-gray-500 aria-label="返回" onclick={goBack}>
-      <span i-carbon-arrow-left></span>
-    </button>
+    <!-- 搜索条 + 返回 -->
+    <div flex-cc gap-2>
+      <button text-5 text-gray-500 aria-label="返回" onclick={goBack}>
+        <span i-carbon-arrow-left></span>
+      </button>
 
-    <div flex-1 flex-cc gap-2 px-3 py-1.5 rounded-2 bg="gray-100 dark:gray-800">
-      <span i-carbon-search text-5 text-gray-400></span>
-      <input
-        bind:this={inputEl}
-        type="text"
-        maxlength="40"
-        bind:value={query}
-        placeholder="输入关键词搜索"
-        class="b-0 ring-0 px-1 outline-0 flex-1 bg-transparent"
-        onkeydown={(e) => {
-          if (e.key === "Enter") submitSearch();
-        }}
-      />
-      {#if query}
-        <button text-5 text-gray-400 aria-label="清除搜索" onclick={clearQuery}>
-          <span i-carbon-close></span>
-        </button>
-      {/if}
+      <div
+        flex-1
+        flex-cc
+        gap-2
+        px-3
+        py-1.5
+        rounded-2
+        bg="gray-100 dark:gray-800"
+      >
+        <span i-carbon-search text-5 text-gray-400></span>
+        <input
+          bind:this={inputEl}
+          type="text"
+          maxlength="40"
+          bind:value={query}
+          placeholder="输入关键词搜索"
+          class="b-0 ring-0 px-1 outline-0 flex-1 bg-transparent"
+          onkeydown={(e) => {
+            if (e.key === "Enter") submitSearch();
+          }}
+        />
+        {#if query}
+          <button
+            text-5
+            text-gray-400
+            aria-label="清除搜索"
+            onclick={clearQuery}
+          >
+            <span i-carbon-close></span>
+          </button>
+        {/if}
+      </div>
+      <button
+        flex-shrink-0
+        px-4
+        py-1.5
+        rounded-2
+        bg="green"
+        text-white
+        font-500
+        class:opacity-50={!query.trim()}
+        disabled={!query.trim()}
+        onclick={submitSearch}
+      >
+        搜索
+      </button>
     </div>
-    <button
-      flex-shrink-0
-      px-4
-      py-1.5
-      rounded-2
-      bg="green"
-      text-white
-      font-500
-      class:opacity-50={!query.trim()}
-      disabled={!query.trim()}
-      onclick={submitSearch}
-    >
-      搜索
-    </button>
+
+    <!-- 范围选择标签 -->
+    <div flex-cc gap-1.5 mt-2 ml-9>
+      {#each SCOPE_OPTIONS as { cid, label }}
+        <button
+          px-2.5
+          py-1
+          text-xs
+          rounded-full
+          font-500
+          whitespace-nowrap
+          transition300
+          class:bg-green={scopeCid === cid}
+          class:text-white={scopeCid === cid}
+          class:bg-gray-100={scopeCid !== cid}
+          class:text-gray-500={scopeCid !== cid}
+          class="dark:bg-gray-800 dark:text-gray-400"
+          onclick={() => (scopeCid = cid)}
+        >
+          {label}
+        </button>
+      {/each}
+    </div>
   </section>
 
-  <!-- 历史记录 / 空状态 -->
+  <!-- 内容区 -->
   <section w-full flex-1 flex-col overflow-y-auto>
     {#if searchHistory.length > 0}
+      <!-- 搜索历史 -->
       <div
         w-full
-        flex-1
         flex
         items-center
         px-5
@@ -132,10 +181,7 @@
             rounded-lg
             sm="w-auto"
             class="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600 transition-colors"
-            onclick={() => {
-              query = keyword;
-              submitSearch();
-            }}
+            onclick={() => searchKeyword(keyword)}
           >
             <span i-carbon-history text-gray-400 text-3 flex-shrink-0></span>
             <span class="text-gray-700 dark:text-gray-200" truncate>
@@ -144,17 +190,18 @@
           </button>
         {/each}
       </div>
+    {:else}
+      <!-- 空状态提示 -->
+      <div w-full flex-1 flex-cc flex-col text-gray-400 gap-4 px-6>
+        <span i-carbon-search text-10></span>
+        <div text-center leading-relaxed>
+          <p text-sm>输入关键词搜索经文和著作</p>
+          <p text-xs mt-2 opacity-60>
+            支持全文搜索，可按分类筛选<br />
+            单击历史记录快速重新搜索
+          </p>
+        </div>
+      </div>
     {/if}
   </section>
-
-  <div w-full flex-1 flex-cc flex-col text-gray-400 gap-4 px-6>
-    <span i-carbon-download text-10></span>
-    <div text-center leading-relaxed>
-      <p text-sm>下载 App 获得更好的查找体验</p>
-      <p text-xs mt-2 opacity-60>
-        支持全文搜索、离线阅读、笔记标注<br />
-        随时随地查经灵修
-      </p>
-    </div>
-  </div>
 </article>

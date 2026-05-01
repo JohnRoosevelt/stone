@@ -1,5 +1,6 @@
 <script>
   import { page } from "$app/state";
+  import { CID } from "$lib/config";
   import { info } from "$lib/global/Toast";
   import { slide } from "svelte/transition";
 
@@ -348,19 +349,14 @@
 
           let bookName, chapterName, content;
           switch (page.params.cid) {
-            case "0":
+            case CID.BIBLE:
               bookName = page.data.book.name;
               chapterName = page.data.title;
               content = `${bookName} ${chapterName}:${pp}˼ ${selectedText}`;
               break;
 
-            case "1":
-              bookName = page.data.book.name;
-              chapterName = page.data.title;
-              content = `${selectedText}   ${pp}˼ \n\n —— ${bookName} ${chapterName} `;
-              break;
-
-            case "2":
+            case CID.SDA:
+            case CID.BOOKS:
               bookName = page.data.book.name;
               chapterName = page.data.title;
               content = `${selectedText}   ${pp}˼ \n\n —— ${bookName} ${chapterName} `;

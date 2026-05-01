@@ -1,6 +1,5 @@
 import { json } from "@sveltejs/kit";
 import { getDB } from "$lib/server/db";
-import { uploadBookParquet } from "$lib/server/parquet-writer";
 
 // 添加段落（需提供 book_id, cid, lang_code 冗余列）
 async function addParagraph(
@@ -197,36 +196,6 @@ export async function POST({ request, platform }) {
       return json({ error: "Missing required fields" }, { status: 400 });
     }
     const result = await addParagraph(db, body);
-
-    // After D1 mutation succeeds, regenerate parquet.zst asynchronously
-    const { cid, book_id, lang_code } = body;
-    (async () => {
-      try {
-        const { results: allRows } = await db
-          .prepare(
-            `SELECT chapter_id, text_content, format, num FROM chapter_paragraphs WHERE cid = ? AND book_id = ? AND lang_code = ? ORDER BY chapter_id, id`,
-          )
-          .bind(cid, book_id, lang_code)
-          .all();
-        if (allRows && allRows.length > 0) {
-          const ok = await uploadBookParquet(platform, allRows, {
-            cid,
-            book_id,
-            lang_code,
-          });
-          if (ok)
-            console.log(
-              `[parquet] Regenerated: ${cid}/${lang_code}/${book_id}.parquet.zst`,
-            );
-        }
-      } catch (e) {
-        console.error(
-          `[parquet] Regeneration failed for ${cid}/${lang_code}/${book_id}:`,
-          e.message,
-        );
-      }
-    })().catch(() => {});
-
     return json(result);
   } catch (e) {
     return json({ error: e.message }, { status: 500 });
@@ -241,36 +210,6 @@ export async function PUT({ request, platform }) {
       return json({ error: "text_content required" }, { status: 400 });
     }
     const result = await updateParagraph(db, body);
-
-    // After D1 mutation succeeds, regenerate parquet.zst asynchronously
-    const { cid, book_id, lang_code } = body;
-    (async () => {
-      try {
-        const { results: allRows } = await db
-          .prepare(
-            `SELECT chapter_id, text_content, format, num FROM chapter_paragraphs WHERE cid = ? AND book_id = ? AND lang_code = ? ORDER BY chapter_id, id`,
-          )
-          .bind(cid, book_id, lang_code)
-          .all();
-        if (allRows && allRows.length > 0) {
-          const ok = await uploadBookParquet(platform, allRows, {
-            cid,
-            book_id,
-            lang_code,
-          });
-          if (ok)
-            console.log(
-              `[parquet] Regenerated: ${cid}/${lang_code}/${book_id}.parquet.zst`,
-            );
-        }
-      } catch (e) {
-        console.error(
-          `[parquet] Regeneration failed for ${cid}/${lang_code}/${book_id}:`,
-          e.message,
-        );
-      }
-    })().catch(() => {});
-
     return json(result);
   } catch (e) {
     return json({ error: e.message }, { status: 500 });
@@ -282,36 +221,6 @@ export async function DELETE({ request, platform }) {
     const db = getDB(platform);
     const body = await request.json();
     const result = await deleteParagraph(db, body);
-
-    // After D1 mutation succeeds, regenerate parquet.zst asynchronously
-    const { cid, book_id, lang_code } = body;
-    (async () => {
-      try {
-        const { results: allRows } = await db
-          .prepare(
-            `SELECT chapter_id, text_content, format, num FROM chapter_paragraphs WHERE cid = ? AND book_id = ? AND lang_code = ? ORDER BY chapter_id, id`,
-          )
-          .bind(cid, book_id, lang_code)
-          .all();
-        if (allRows && allRows.length > 0) {
-          const ok = await uploadBookParquet(platform, allRows, {
-            cid,
-            book_id,
-            lang_code,
-          });
-          if (ok)
-            console.log(
-              `[parquet] Regenerated: ${cid}/${lang_code}/${book_id}.parquet.zst`,
-            );
-        }
-      } catch (e) {
-        console.error(
-          `[parquet] Regeneration failed for ${cid}/${lang_code}/${book_id}:`,
-          e.message,
-        );
-      }
-    })().catch(() => {});
-
     return json(result);
   } catch (e) {
     return json({ error: e.message }, { status: 500 });

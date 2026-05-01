@@ -1,6 +1,7 @@
 <script>
   import { page } from "$app/state";
-  import Dir from "../bible/Dir.svelte";
+  import { CID } from "$lib/config";
+  import BibleDir from "../bible/Dir.svelte";
   import SdaDir from "../sda/BookDir.svelte";
 </script>
 
@@ -9,9 +10,9 @@
 {/key}
 
 {#snippet dir(cid)}
-  {#if cid === "0"}
-    <Dir />
-  {:else if cid === "1" || cid === "2"}
+  {#if cid === CID.BIBLE}
+    <BibleDir />
+  {:else if cid === CID.SDA || cid === CID.BOOKS}
     <SdaDir />
   {:else}
     {cid}

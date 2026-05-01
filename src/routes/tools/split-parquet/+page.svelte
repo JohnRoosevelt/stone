@@ -1,6 +1,7 @@
 <script>
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
+  import { CID_LIST } from "$lib/config";
   import {
     writeChapterParquet,
     writeBookParquet,
@@ -9,11 +10,12 @@
   } from "$lib/parquet";
   import { uploadToR2 } from "$lib/r2-upload";
 
-  const CID_OPTIONS = [
-    { value: 0, slug: "bible", label: "0 · 圣经" },
-    { value: 1, slug: "sda", label: "1 · 预言之灵" },
-    { value: 2, slug: "book", label: "2 · 书籍" },
-  ];
+  /** 从 CID_LIST 派生含 slug 的选项列表 */
+  const CID_OPTIONS = CID_LIST.map(({ id, name }) => ({
+    value: Number(id),
+    slug: name === "圣经" ? "bible" : name === "怀著" ? "sda" : "book",
+    label: `${id} · ${name}`,
+  }));
 
   let cid = $state(0);
   let lang = $state("zh"); //en

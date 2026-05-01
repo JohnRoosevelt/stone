@@ -1,5 +1,6 @@
 import { PUBLIC_R2 } from "$env/static/public";
 import { dev } from "$app/environment";
+import { CID } from "$lib/config";
 import { tableFromIPC, tableFromArrays, tableToIPC } from "apache-arrow";
 import initZstd, { decompress, compress } from "@dweb-browser/zstd-wasm";
 import initWasm, {
@@ -26,7 +27,7 @@ async function ensureWasm() {
 function groupRows(rows, numCid, isChapter = false) {
   const fn = (r) => {
     const rz = { c: r.c || r.o };
-    if (["sda", "1"].includes(String(numCid))) {
+    if (["sda", CID.SDA].includes(String(numCid))) {
       rz.t = r.t;
       rz.p = r.p;
     }
@@ -113,7 +114,7 @@ export async function writeChapterParquet(rows, type = "sda") {
   // t: rows[0]?.t ? new Int32Array(rows.map((r) => r.t)) : undefined,
   // p: rows[0]?.p ? new Int32Array(rows.map((r) => r.p)) : undefined,
 
-  if (["sda", "1"].includes(String(type))) {
+  if (["sda", CID.SDA].includes(String(type))) {
     arrays.t = new Int32Array(rows.map((r) => r.t));
     arrays.p = new Int32Array(rows.map((r) => r.p));
   }
@@ -130,7 +131,7 @@ export async function writeBookParquet(rows, type = "sda") {
     c: rows.map((r) => r.c),
   };
 
-  if (["sda", "1"].includes(String(type))) {
+  if (["sda", CID.SDA].includes(String(type))) {
     arrays.t = new Int32Array(rows.map((r) => r.t));
     arrays.p = new Int32Array(rows.map((r) => r.p));
   }
@@ -139,5 +140,3 @@ export async function writeBookParquet(rows, type = "sda") {
   const wt = Table.fromIPCStream(tableToIPC(at, "stream"));
   return compress(writeParquet(wt, new WriterPropertiesBuilder().build()), 19);
 }
-
-// =========================================================================

@@ -6,7 +6,6 @@
   import { handleVisibilityChange, wakeLock } from "$lib/wakeLock";
   import { SvelteToast } from "@zerodevx/svelte-toast";
   import { onMount } from "svelte";
-  import { UAParser } from "ua-parser-js";
 
   // $inspect(DATAS).with(console.trace);
   const { children } = $props();
@@ -18,9 +17,6 @@
     DATAS.isDarkMode = localStorage.getItem("theme") == "dark";
 
     wakeLock();
-    // UA parsing
-    const parser = new UAParser();
-    DATAS.uaInfo = parser.getResult();
 
     // Network type detection
     const connection = navigator.connection ||

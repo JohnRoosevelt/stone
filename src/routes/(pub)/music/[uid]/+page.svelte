@@ -1,7 +1,13 @@
 <script>
   import { page } from "$app/state";
   const { data } = $props();
+
+  const title = $derived(data.user?.name ?? "音乐");
 </script>
+
+<svelte:head>
+  <title>{title} - 脚前的灯</title>
+</svelte:head>
 
 <ul px-5 space-y-2>
   <li font-700>

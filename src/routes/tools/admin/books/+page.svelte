@@ -1,4 +1,5 @@
 <script>
+  import { CID_LIST } from "$lib/config";
   import {
     listBooks,
     createBook,
@@ -38,12 +39,14 @@
   let importCid = $state(1);
   let importText = $state("");
 
-  const CID_MAP = { 0: "圣经", 1: "怀著", 2: "书籍" };
-  const CID_ARRAY = [
-    { value: 0, label: "圣经" },
-    { value: 1, label: "怀著" },
-    { value: 2, label: "书籍" },
-  ];
+  /** 从 CID_LIST 派生数值键映射和选项列表 */
+  const CID_MAP = Object.fromEntries(
+    CID_LIST.map(({ id, name }) => [Number(id), name]),
+  );
+  const CID_ARRAY = CID_LIST.map(({ id, name }) => ({
+    value: Number(id),
+    label: name,
+  }));
 
   async function loadBooks(cid) {
     if (cid === null || cid === undefined) return;
@@ -205,6 +208,10 @@
 {/if}
 
 <!-- 工具栏 -->
+<svelte:head>
+  <title>书籍管理 - 脚前的灯</title>
+</svelte:head>
+
 <div class="w-full flex gap-2 items-center flex-wrap">
   <select bind:value={selectedCid} class="px-2 py-1 border rounded text-sm">
     <option value={null}>选择分类</option>

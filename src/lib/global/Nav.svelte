@@ -1,76 +1,47 @@
 <script>
   import { page } from "$app/state";
+  import { NAV_ITEMS } from "$lib/config";
 
-  const hidden = $derived(!page.route.id.includes("(home)"));
-  const isCidRoute = $derived(page.route.id.startsWith("/(pub)/[cid]"));
+  /**
+   * 判断导航项是否应高亮
+   */
+  function isActive(item) {
+    if (item.matchExact) {
+      return page.url.pathname === item.matchExact;
+    }
+    if (item.matchCid) {
+      return (
+        page.route.id?.startsWith("/(pub)/[cid]") &&
+        page.params.cid === item.matchCid
+      );
+    }
+    return false;
+  }
 </script>
 
 {#snippet nav()}
-  <a
-    href="/"
-    data-sveltekit-replacestate
-    flex-cc
-    flex-col
-    class:text-green={page.url.pathname === "/"}
-  >
-    <span i-carbon-home text-9> </span>
-    <span text-xs uppercase class="hidden" sm="block"> 首页 </span>
-  </a>
-
-  <a
-    href="/1"
-    data-sveltekit-replacestate
-    flex-cc
-    flex-col
-    class:text-green={isCidRoute && page.params.cid === "1"}
-  >
-    <span i-icons-sda text-9> </span>
-    <span text-xs uppercase class="hidden" sm="block"> 怀著 </span>
-  </a>
-
-  <a
-    href="/0"
-    data-sveltekit-replacestate
-    flex-cc
-    flex-col
-    class:text-green={isCidRoute && page.params.cid === "0"}
-  >
-    <span i-icons-bible text-9> </span>
-    <span text-xs uppercase class="hidden" sm="block"> 圣经 </span>
-  </a>
-
-  <!-- 音乐栏目暂不做 -->
-  <!-- <a
-    href="/music"
-    data-sveltekit-replacestate
-    flex-cc
-    flex-col
-    class:text-green={page.url.pathname === "/music"}
-  >
-    <span i-carbon-music text-9> </span>
-    <span text-xs uppercase class="hidden" sm="block"> 音乐 </span>
-  </a> -->
-
-  <a
-    href="/my"
-    data-sveltekit-replacestate
-    flex-cc
-    flex-col
-    class:text-green={page.url.pathname === "/my"}
-  >
-    <span alt="icon" i-carbon-user-settings text-9></span>
-    <span text-xs uppercase class="hidden" sm="block"> 我的 </span>
-  </a>
+  {#each NAV_ITEMS as item}
+    <a
+      href={item.href}
+      data-sveltekit-replacestate
+      flex-cc
+      flex-col
+      class:text-green={isActive(item)}
+      aria-current={isActive(item) ? "page" : undefined}
+    >
+      <span class="{item.icon} text-9"></span>
+      <span text-xs uppercase class="hidden" sm="block"> {item.label} </span>
+    </a>
+  {/each}
 {/snippet}
 
 <!-- only show on mobile -->
-<!-- only show on tab home -->
 <footer
   data-device="mobile"
   class="w-full h-12 text-3 px-8 flex-bc"
   bg="white dark:black"
   sm="hidden"
-  class:hidden
+  class:hidden={!page.route.id?.includes("(home)")}
 >
   {@render nav()}
 </footer>

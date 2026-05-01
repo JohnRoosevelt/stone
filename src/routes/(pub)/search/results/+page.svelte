@@ -331,15 +331,22 @@
 
       <!-- 加载更多 -->
       {#if searchState.loadingMore}
-        <div w-full py-4 flex-cc text-gray-400>
+        <div w-full py-4 flex-cc text-gray-400 gap-2>
           <span i-carbon-loading text-5 animate-spin></span>
-          <span text-sm ml-2>加载中…</span>
+          <span text-sm>加载中…</span>
         </div>
       {:else if searchState.hasMore}
-        <div w-full py-4 flex-cc text-gray-400 text-sm>向下滚动加载更多</div>
-      {:else if searchState.searched && searchState.results.length < searchState.total}
-        <div w-full py-4 flex-cc text-gray-400 text-sm>
-          已加载全部 {searchState.total} 条结果
+        <div w-full py-4 flex-cc text-gray-400 text-sm gap-1.5>
+          <span i-carbon-arrow-down></span>
+          <span>向下滚动加载更多</span>
+          <span text-xs opacity-60>
+            ({searchState.results.length}/{searchState.total})
+          </span>
+        </div>
+      {:else if searchState.searched && searchState.results.length > 0}
+        <div w-full py-4 flex-cc text-gray-400 text-sm gap-1.5>
+          <span i-carbon-checkmark></span>
+          <span>已加载全部 {searchState.total} 条结果</span>
         </div>
       {/if}
     {:else}
