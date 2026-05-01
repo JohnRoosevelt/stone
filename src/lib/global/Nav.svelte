@@ -2,6 +2,7 @@
   import { page } from "$app/state";
 
   const hidden = $derived(!page.route.id.includes("(home)"));
+  const isCidRoute = $derived(page.route.id.startsWith("/(pub)/[cid]"));
 </script>
 
 {#snippet nav()}
@@ -21,8 +22,7 @@
     data-sveltekit-replacestate
     flex-cc
     flex-col
-    class:text-green={page.route.id.startsWith("/(pub)/[cid]") &&
-      page.params.cid === "1"}
+    class:text-green={isCidRoute && page.params.cid === "1"}
   >
     <span i-icons-sda text-9> </span>
     <span text-xs uppercase class="hidden" sm="block"> 怀著 </span>
@@ -33,14 +33,14 @@
     data-sveltekit-replacestate
     flex-cc
     flex-col
-    class:text-green={page.route.id.startsWith("/(pub)/[cid]") &&
-      page.params.cid === "0"}
+    class:text-green={isCidRoute && page.params.cid === "0"}
   >
     <span i-icons-bible text-9> </span>
     <span text-xs uppercase class="hidden" sm="block"> 圣经 </span>
   </a>
 
-  <a
+  <!-- 音乐栏目暂不做 -->
+  <!-- <a
     href="/music"
     data-sveltekit-replacestate
     flex-cc
@@ -49,7 +49,7 @@
   >
     <span i-carbon-music text-9> </span>
     <span text-xs uppercase class="hidden" sm="block"> 音乐 </span>
-  </a>
+  </a> -->
 
   <a
     href="/my"

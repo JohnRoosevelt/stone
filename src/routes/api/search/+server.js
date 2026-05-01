@@ -82,8 +82,8 @@ export async function GET({ url, platform }) {
     const cidParam = url.searchParams.get("cid");
     const bookIdParam = url.searchParams.get("bookId");
     const limit = Math.min(
-      parseInt(url.searchParams.get("limit") || "20"),
-      100,
+      parseInt(url.searchParams.get("limit") || "200"),
+      200,
     );
     const offset = parseInt(url.searchParams.get("offset") || "0");
 

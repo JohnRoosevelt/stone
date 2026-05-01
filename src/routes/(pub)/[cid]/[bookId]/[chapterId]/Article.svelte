@@ -10,8 +10,13 @@
   style:font-size="{DATAS.fontSize}px"
   style:background={!DATAS.isDarkMode ? DATAS.bg : ""}
 >
-  {#each page.data.sections as { t, p, c }, i}
+  {#each page.data.sections as sec, i}
     {@const id = i + 1}
+    <!-- { t, p, c } -->
+    {@const t = sec.t || 7}
+    {@const p = sec.p || id}
+    {@const c = sec.c || ""}
+
     <p
       style:text-indent="calc(var(--spacing) * {(t == 7 && i > 0) ||
       (page.params.cid === '0' && i === 0)

@@ -1,13 +1,13 @@
 <script>
   import Footer from "$lib/global/Footer.svelte";
-  import Hearder from "$lib/global/Hearder.svelte";
+  import Header from "$lib/global/Header.svelte";
   import Nav from "$lib/global/Nav.svelte";
   import { DATAS } from "$lib/data.svelte";
 
   const { children } = $props();
 </script>
 
-<Hearder />
+<Header />
 
 <article
   data-layout="pub"

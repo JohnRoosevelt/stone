@@ -40,7 +40,8 @@
     >
       预言之灵
     </a>
-    <a
+    <!-- 音乐栏目暂不做 -->
+    <!-- <a
       data-sveltekit-replacestate
       href="/music"
       w-full
@@ -51,7 +52,7 @@
       hover="border-green text-green"
     >
       音乐
-    </a>
+    </a> -->
     <a
       data-sveltekit-replacestate
       href="/my"
