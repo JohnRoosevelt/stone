@@ -188,15 +188,16 @@
   }
 
   async function batchSplitAll() {
-    cid = 0;
+    cid = 2;
     lang = "zh";
-    for (let id = 3; id <= 66; id++) {
+    for (let id = 1; id <= 4; id++) {
       console.log({ id });
       bookId = id;
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      if (!clientData.data) {
-        await new Promise((resolve) => setTimeout(resolve, 10000));
-      }
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (!clientData?.data) continue;
+      // if (!clientData.data) {
+      //   await new Promise((resolve) => setTimeout(resolve, 4000));
+      // }
       await splitCurrentBook();
     }
   }

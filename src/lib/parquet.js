@@ -1,4 +1,5 @@
 import { PUBLIC_R2 } from "$env/static/public";
+import { dev } from "$app/environment";
 import { tableFromIPC, tableFromArrays, tableToIPC } from "apache-arrow";
 import initZstd, { decompress, compress } from "@dweb-browser/zstd-wasm";
 import initWasm, {
@@ -53,15 +54,22 @@ export async function loadR2Parquet(path) {
   console.log("[Parquet] Loading from R2:", path);
   await ensureWasm();
 
-  const url = `${PUBLIC_R2}/${path}${path.endsWith(".parquet.zst") ? "" : ".parquet.zst"}`;
-  const resp = await fetch(url);
+  try {
+    const base = `${PUBLIC_R2}/${path}${path.endsWith(".parquet.zst") ? "" : ".parquet.zst"}`;
+    const url = new URL(base);
+    if (dev) url.searchParams.set("data", String(Date.now()));
+    const resp = await fetch(url);
 
-  const buffer = await resp.arrayBuffer();
-  const [numCid, lang, bookId, chapterIdStr = "."] = path.split("/");
-  const [chapterId] = chapterIdStr.split(".");
-  const resultData = await loadParquetContent(buffer, numCid, !!chapterId);
+    const buffer = await resp.arrayBuffer();
+    const [numCid, lang, bookId, chapterIdStr = "."] = path.split("/");
+    const [chapterId] = chapterIdStr.split(".");
+    const resultData = await loadParquetContent(buffer, numCid, !!chapterId);
 
-  return resultData;
+    return resultData;
+  } catch (e) {
+    console.error("[Parquet] Failed to load:", e);
+    return [];
+  }
 }
 
 export async function loadParquetContent(buffer, numCid, isChapter = false) {
