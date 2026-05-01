@@ -9,13 +9,21 @@
     SCOPES,
   } from "$lib/bible/searchStore.svelte.js";
 
-  /** 范围选择选项（全部 + 各分类） */
-  const SCOPE_OPTIONS = [{ cid: undefined, label: "全部" }, ...SCOPES];
+  /** 范围选择选项 */
+  const SCOPE_OPTIONS = SCOPES;
+
+  /** 本地引用以确保响应性 */
+  let historyItems = $state(searchHistory);
+
+  /** 监听 searchHistory 变化同步到本地 */
+  $effect(() => {
+    historyItems = searchHistory;
+  });
 
   /** 从 URL 读取初始搜索词和范围 */
   let query = $state(page.url.searchParams.get("q") || "");
   let scopeCid = $state(
-    page.url.searchParams.get("cid") || (searchState.scopeCid ?? undefined),
+    page.url.searchParams.get("cid") || (searchState.scopeCid ?? 0),
   );
 
   /** 输入框引用（自动 focus） */
@@ -74,9 +82,10 @@
 
       <div
         flex-1
+        min-w-0
         flex-cc
-        gap-2
-        px-3
+        gap-1
+        px-2
         py-1.5
         rounded-2
         bg="gray-100 dark:gray-800"
@@ -87,8 +96,8 @@
           type="text"
           maxlength="40"
           bind:value={query}
-          placeholder="输入关键词搜索"
-          class="b-0 ring-0 px-1 outline-0 flex-1 bg-transparent"
+          placeholder="搜索"
+          class="b-0 ring-0 px-0.5 outline-0 flex-1 min-w-0 bg-transparent"
           onkeydown={(e) => {
             if (e.key === "Enter") submitSearch();
           }}
@@ -106,8 +115,9 @@
       </div>
       <button
         flex-shrink-0
-        px-4
+        px-3
         py-1.5
+        text-sm
         rounded-2
         bg="green"
         text-white
@@ -145,8 +155,8 @@
   </section>
 
   <!-- 内容区 -->
-  <section w-full flex-1 flex-col overflow-y-auto>
-    {#if searchHistory.length > 0}
+  <section w-full flex-1 h-full flex-col overflow-y-auto>
+    {#if historyItems.length > 0}
       <!-- 搜索历史 -->
       <div
         w-full
@@ -164,13 +174,14 @@
           class="hover:text-red transition-colors"
           onclick={() => {
             searchHistory.length = 0;
+            historyItems = [];
           }}
         >
           清除
         </button>
       </div>
       <div w-full px-3 pb-2 grid grid-cols-2 sm="flex flex-row flex-wrap" gap-1>
-        {#each searchHistory as keyword, i}
+        {#each historyItems as keyword, i}
           <button
             text-left
             px-3
@@ -192,14 +203,11 @@
       </div>
     {:else}
       <!-- 空状态提示 -->
-      <div w-full flex-1 flex-cc flex-col text-gray-400 gap-4 px-6>
+      <div w-full h-full flex-cc flex-col text-gray-400 gap-4 px-6>
         <span i-carbon-search text-10></span>
         <div text-center leading-relaxed>
           <p text-sm>输入关键词搜索经文和著作</p>
-          <p text-xs mt-2 opacity-60>
-            支持全文搜索，可按分类筛选<br />
-            单击历史记录快速重新搜索
-          </p>
+          <p text-xs mt-2 opacity-60>支持全文搜索，可按分类筛选</p>
         </div>
       </div>
     {/if}

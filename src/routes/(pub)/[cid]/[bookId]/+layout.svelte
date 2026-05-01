@@ -28,12 +28,13 @@
     showId("article-top", "end");
   });
 
-  // in mobile, open the chapter dir at left
+  // 手机端：从书籍目录进来时弹出章节列表方便选章
+  // 从搜索结果（URL 带锚点）进来时不弹，直接定位到段落
   afterNavigate(({ from, to }) => {
     if (!from) return;
-    const isSameRoute = from.route.id === to.route.id;
-    if (isSameRoute) return;
+    if (from.route.id === to.route.id) return;
     if (!DATAS.isMobile) return;
+    if (to.url.hash) return;
     DATAS.dialog = { c: Chapter, show: true, p: "l" };
   });
 </script>
