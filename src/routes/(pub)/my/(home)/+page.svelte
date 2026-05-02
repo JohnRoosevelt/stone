@@ -1,11 +1,28 @@
 <script>
-  import { dev } from "$app/environment";
   import { DATAS } from "$lib/data.svelte";
 
+  const roadmap = [
+    {
+      title: "线上搜索",
+      desc: "已支持线上全文搜索",
+      done: true,
+    },
+    {
+      title: "搜索优化 + KV",
+      desc: "引入 Cloudflare KV 缓存，优化关键字查找性能",
+      done: false,
+    },
+    {
+      title: "App 发布",
+      desc: "打包为 Tauri 桌面/移动应用，支持离线存储",
+      done: false,
+    },
+  ];
+
+  let showRoadmap = $state(false);
   let showDebug = $state(false);
   let loadingUa = $state(false);
 
-  /** 展开调试信息时懒加载 UA 解析 */
   async function toggleDebug() {
     showDebug = !showDebug;
     if (showDebug && !DATAS.uaInfo?.ua) {
@@ -24,10 +41,10 @@
 </script>
 
 <svelte:head>
-  <title>个人中心</title>
+  <title>我的 - 脚前的灯</title>
 </svelte:head>
 
-<article w-full h-full overflow-y-auto px-4 py-4 space-y-6>
+<article w-full h-full overflow-y-auto px-4 py-4 space-y-5>
   <!-- ─── 设置 ─── -->
   <section space-y-3>
     <h2 text-lg font-semibold flex-cc gap-2>
@@ -35,6 +52,7 @@
       设置
     </h2>
 
+    <!-- 深色模式 -->
     <div
       class="flex items-center justify-between p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
     >
@@ -50,10 +68,8 @@
         h-7
         rounded-full
         transition300
-        class:bg-green={DATAS.isDarkMode}
-        class:bg-gray-300={!DATAS.isDarkMode}
-        class:dark:bg-gray-600={!DATAS.isDarkMode}
         relative
+        class={DATAS.isDarkMode ? "bg-green" : "bg-gray-300 dark:bg-gray-600"}
         onclick={() => (DATAS.isDarkMode = !DATAS.isDarkMode)}
         aria-label="切换深色模式"
       >
@@ -66,165 +82,188 @@
           bg-white
           shadow
           transition300
-          class:left-0.5={!DATAS.isDarkMode}
-          class:left-5={DATAS.isDarkMode}
+          class={DATAS.isDarkMode ? "left-5" : "left-0.5"}
         ></span>
       </button>
     </div>
 
+    <!-- 字体大小 -->
     <div
-      class="flex items-center justify-between p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
+      class="p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
     >
-      <div flex-cc gap-3>
-        <span i-carbon-screen text-xl></span>
+      <div flex-cc gap-3 mb-3>
+        <span i-carbon-text-size text-xl></span>
         <div>
-          <div font-medium>全屏阅读</div>
-          <div text-sm text-gray-500>阅读时隐藏侧边栏</div>
+          <div font-medium>字体大小</div>
+          <div text-sm text-gray-500>{DATAS.fontSize}px</div>
         </div>
       </div>
-      <button
-        w-12
-        h-7
-        rounded-full
-        transition300
-        class:bg-green={DATAS.isFullScreen}
-        class:bg-gray-300={!DATAS.isFullScreen}
-        class:dark:bg-gray-600={!DATAS.isFullScreen}
-        relative
-        onclick={() => (DATAS.isFullScreen = !DATAS.isFullScreen)}
-        aria-label="切换全屏阅读"
-      >
-        <span
-          absolute
-          top-0.5
-          w-6
-          h-6
+      <div flex-cc gap-3>
+        <button
+          w-8
+          h-8
           rounded-full
-          bg-white
-          shadow
-          transition300
-          class:left-0.5={!DATAS.isFullScreen}
-          class:left-5={DATAS.isFullScreen}
-        ></span>
-      </button>
-    </div>
-  </section>
-
-  <!-- ─── 功能（预留） ─── -->
-  <section space-y-3>
-    <h2 text-lg font-semibold flex-cc gap-2>
-      <span i-carbon-bookmark></span>
-      我的
-    </h2>
-
-    <div class="grid grid-cols-2 gap-3">
-      <div
-        class="flex flex-col items-center gap-2 p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 opacity-60"
-      >
-        <span i-carbon-history text-3xl text-gray-400></span>
-        <div text-sm text-gray-500>阅读历史</div>
-        <div text-xs text-gray-400>即将推出</div>
-      </div>
-
-      <div
-        class="flex flex-col items-center gap-2 p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 opacity-60"
-      >
-        <span i-carbon-bookmark text-3xl text-gray-400></span>
-        <div text-sm text-gray-500>书签</div>
-        <div text-xs text-gray-400>即将推出</div>
-      </div>
-
-      <div
-        class="flex flex-col items-center gap-2 p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 opacity-60"
-      >
-        <span i-carbon-download text-3xl text-gray-400></span>
-        <div text-sm text-gray-500>离线缓存</div>
-        <div text-xs text-gray-400>即将推出</div>
-      </div>
-
-      <div
-        class="flex flex-col items-center gap-2 p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 opacity-60"
-      >
-        <span i-carbon-notebook text-3xl text-gray-400></span>
-        <div text-sm text-gray-500>笔记</div>
-        <div text-xs text-gray-400>即将推出</div>
+          bg-gray-100
+          dark:bg-gray-700
+          flex-cc
+          flex-shrink-0
+          class={DATAS.fontSize <= 12 ? "opacity-30" : ""}
+          disabled={DATAS.fontSize <= 12}
+          onclick={() => (DATAS.fontSize = Math.max(12, DATAS.fontSize - 2))}
+          aria-label="减小字号"
+        >
+          <span i-carbon-subtract text-lg></span>
+        </button>
+        <input
+          type="range"
+          min="12"
+          max="28"
+          step="1"
+          bind:value={DATAS.fontSize}
+          class="flex-1 accent-green"
+          aria-label="字体大小"
+        />
+        <button
+          w-8
+          h-8
+          rounded-full
+          bg-gray-100
+          dark:bg-gray-700
+          flex-cc
+          flex-shrink-0
+          class={DATAS.fontSize >= 28 ? "opacity-30" : ""}
+          disabled={DATAS.fontSize >= 28}
+          onclick={() => (DATAS.fontSize = Math.min(28, DATAS.fontSize + 2))}
+          aria-label="增大字号"
+        >
+          <span i-carbon-add text-lg></span>
+        </button>
       </div>
     </div>
   </section>
 
-  {#if dev}
-    <!-- ─── 工具（仅开发模式） ─── -->
-    <section space-y-3>
-      <h2 text-lg font-semibold flex-cc gap-2>
-        <span i-carbon-tools></span>
-        工具
-      </h2>
-
-      <div class="grid grid-cols-2 gap-3">
-        <a
-          href="/tools/json-parquet"
-          class="flex items-center gap-3 p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition300"
-        >
-          <span i-carbon-data-structured text-2xl text-green></span>
-          <div>
-            <div font-medium>JSON/Parquet</div>
-            <div text-sm text-gray-500>格式转换</div>
-          </div>
-        </a>
-
-        <a
-          href="/tools/split-parquet"
-          class="flex items-center gap-3 p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition300"
-        >
-          <span i-carbon-data-table text-2xl text-green></span>
-          <div>
-            <div font-medium>Parquet 拆分</div>
-            <div text-sm text-gray-500>章节拆分</div>
-          </div>
-        </a>
-      </div>
-    </section>
-  {/if}
-
-  <!-- ─── 网络状态 ─── -->
-  <section
-    class="flex items-center gap-2 px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
-  >
-    <span
-      i-carbon-circle-filled
-      class:text-green={DATAS.online}
-      class:text-gray-400={!DATAS.online}
-    ></span>
-    <span text-sm text-gray-500>
-      {DATAS.online ? DATAS.networkType : "离线"}
-    </span>
-  </section>
-
-  <!-- ─── 调试信息（可展开） ─── -->
-  <section space-y-2>
+  <!-- ─── 折叠区块通用样式 ─── -->
+  {#snippet foldBtn(icon, label, expanded, toggle, loading)}
     <button
-      class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition300"
-      onclick={toggleDebug}
+      class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300"
+      onclick={toggle}
     >
       <span flex-cc gap-2>
-        {#if loadingUa}
+        {#if loading}
           <span i-carbon-loading text-4 animate-spin></span>
         {:else}
-          <span i-carbon-debug></span>
+          <span {icon} text-green></span>
         {/if}
-        调试信息
+        {label}
       </span>
       <span
-        class="transition300"
-        class:rotate-180={showDebug}
+        class="transition300 text-gray-400 {expanded ? 'rotate-180' : ''}"
         i-carbon-chevron-down
       ></span>
     </button>
+  {/snippet}
+
+  <!-- ─── 开发规划 ─── -->
+  <div
+    class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+  >
+    <button
+      class="w-full flex items-center justify-between px-4 py-3.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300"
+      onclick={() => (showRoadmap = !showRoadmap)}
+    >
+      <span flex-cc gap-2>
+        <span i-carbon-development text-green></span>
+        开发规划
+      </span>
+      <span
+        class="transition300 text-gray-400 {showRoadmap ? 'rotate-180' : ''}"
+        i-carbon-chevron-down
+      ></span>
+    </button>
+
+    {#if showRoadmap}
+      <div>
+        {#each roadmap as item, i}
+          <div
+            class="flex items-center gap-3 px-4 py-3.5 {i < roadmap.length - 1
+              ? 'border-b border-gray-100 dark:border-gray-800'
+              : ''}"
+          >
+            <span
+              class="w-6 h-6 rounded-full flex-cc text-xs font-700 flex-shrink-0 {item.done
+                ? 'bg-green text-white'
+                : 'bg-green/20 text-green'}"
+            >
+              {#if item.done}
+                <span i-carbon-checkmark></span>
+              {:else}
+                {i + 1}
+              {/if}
+            </span>
+            <div class="min-w-0">
+              <div
+                class="text-sm font-500 {item.done
+                  ? 'text-green line-through opacity-60'
+                  : ''}"
+              >
+                {item.title}
+              </div>
+              <div
+                class="text-xs {item.done ? 'text-green/60' : 'text-gray-400'}"
+              >
+                {item.desc}
+              </div>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </div>
+
+  <!-- ─── 关于 ─── -->
+  <a
+    href="/my/about"
+    class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 no-underline"
+  >
+    <span flex-cc gap-2>
+      <span i-carbon-information text-green></span>
+      关于
+    </span>
+    <span i-carbon-chevron-right text-gray-400></span>
+  </a>
+
+  <!-- ─── 调试信息 ─── -->
+  <section space-y-2>
+    {@render foldBtn(
+      "i-carbon-debug",
+      "调试信息",
+      showDebug,
+      toggleDebug,
+      loadingUa,
+    )}
 
     {#if showDebug}
       <div
         class="px-4 py-3 space-y-1.5 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-mono text-gray-500"
       >
+        <div class="flex items-center gap-1">
+          <span text-gray-400>network: </span>
+          {#if DATAS.online}
+            {#if DATAS.connectionType === "wifi"}
+              <span i-carbon-wifi class="text-green"></span>
+              <span class="text-green">WiFi</span>
+            {:else if DATAS.connectionType === "cellular"}
+              <span i-carbon-radio></span>
+              <span>{DATAS.networkType}</span>
+            {:else}
+              <span i-carbon-network-3 class="text-green"></span>
+              <span>{DATAS.networkType || "在线"}</span>
+            {/if}
+          {:else}
+            <span i-carbon-wifi-off class="text-gray-400"></span>
+            <span>离线</span>
+          {/if}
+        </div>
         <div>
           <span text-gray-400>device: </span>
           {DATAS.uaInfo?.device?.vendor || "-"}
@@ -248,7 +287,11 @@
         </div>
         <div>
           <span text-gray-400>database: </span>
-          <span text-gray-400>（待迁移至 Tauri 原生 SQL）</span>
+          （待迁移至 Tauri 原生 SQL）
+        </div>
+        <div>
+          <span text-gray-400>version: </span>
+          {__GIT_COMMIT__}
         </div>
       </div>
     {/if}

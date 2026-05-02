@@ -18,8 +18,21 @@
 >
   <div flex-cc gap-4>
     <div flex-cc gap-1>
-      <span i-carbon-circle-filled class:text-green={DATAS.online}></span>
-      <span>{DATAS.online ? DATAS.networkType : "offline"}</span>
+      {#if DATAS.online}
+        {#if DATAS.connectionType === "wifi"}
+          <span i-carbon-wifi text-green></span>
+          <span>WiFi</span>
+        {:else if DATAS.connectionType === "cellular"}
+          <span i-carbon-radio></span>
+          <span>{DATAS.networkType}</span>
+        {:else}
+          <span i-carbon-network-3 text-green></span>
+          <span>{DATAS.networkType}</span>
+        {/if}
+      {:else}
+        <span i-carbon-wifi-off text-gray-400></span>
+        <span>离线</span>
+      {/if}
     </div>
 
     <button

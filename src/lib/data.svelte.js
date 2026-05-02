@@ -15,6 +15,7 @@ export const DATAS = $state({
   // ── 网络 ──
   online: false,
   networkType: "unknown",
+  connectionType: "unknown",
 
   // ── 主题 ──
   isDarkMode: false,

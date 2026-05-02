@@ -77,9 +77,6 @@
         }
       }}
     >
-      <!-- <span i-carbon-fit-to-screen></span>
-      {DATAS.isFullScreen}
-      <span i-carbon-screen></span> -->
       <span i-carbon={DATAS.isFullScreen ? "screen" : "fit-to-screen"}></span>
     </button>
 

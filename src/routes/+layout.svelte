@@ -21,10 +21,14 @@
     // Network type detection
     const connection = navigator.connection ||
       navigator.mozConnection ||
-      navigator.webkitConnection || { type: "unknown" };
-    DATAS.networkType = connection.effectiveType || connection.type;
+      navigator.webkitConnection || { type: "unknown", effectiveType: "" };
+    DATAS.networkType =
+      connection.effectiveType || connection.type || "unknown";
+    DATAS.connectionType = connection.type || "unknown";
     connection.addEventListener("change", () => {
-      DATAS.networkType = connection.effectiveType || connection.type;
+      DATAS.networkType =
+        connection.effectiveType || connection.type || "unknown";
+      DATAS.connectionType = connection.type || "unknown";
     });
 
     // 后续 Tauri 版本将使用 Rust SQLite 替代

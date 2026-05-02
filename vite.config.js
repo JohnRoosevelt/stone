@@ -2,8 +2,17 @@ import { sveltekit } from "@sveltejs/kit/vite";
 import { defineConfig } from "vite";
 import UnoCSS from "unocss/vite";
 import path from "path";
+import { execSync } from "child_process";
+
+let GIT_COMMIT = "unknown";
+try {
+  GIT_COMMIT = execSync("git rev-parse --short HEAD").toString().trim();
+} catch (_) {}
 
 export default defineConfig({
+  define: {
+    __GIT_COMMIT__: JSON.stringify(GIT_COMMIT),
+  },
   plugins: [UnoCSS(), sveltekit()],
   resolve: {
     alias: {
