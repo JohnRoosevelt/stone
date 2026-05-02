@@ -10,41 +10,79 @@
     if (!hash.startsWith("#zh-")) return;
     const id = hash.slice(1);
 
+    // 等两帧确保 SvelteKit hash 定位和渲染都已完成
     requestAnimationFrame(() => {
-      const el = document.getElementById(id);
-      if (!el) return;
+      requestAnimationFrame(() => {
+        const el = document.getElementById(id);
+        if (!el) return;
 
-      // 滚动到屏幕中间
-      el.scrollIntoView({ block: "center", behavior: "smooth" });
-
-      // 整段高亮动画（绿底 + 红虚线框，3 秒后消失）
-      el.classList.add("search-highlight");
-      setTimeout(() => el.classList.remove("search-highlight"), 3000);
-
-      // 关键字加红色虚线边框（不消失）
-      const keyword = searchState.query?.trim();
-      if (!keyword) return;
-
-      const regex = new RegExp(
-        `(${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-        "gi",
-      );
-      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      const nodesToReplace = [];
-      while (walker.nextNode()) {
-        const node = walker.currentNode;
-        if (regex.test(node.textContent)) {
-          nodesToReplace.push(node);
+        // 找可滚动的父容器，手动滚动到居中位置
+        const scrollParent =
+          el.closest("[scroll-y]") || el.closest(".scroll-y");
+        if (scrollParent) {
+          const elRect = el.getBoundingClientRect();
+          const parentRect = scrollParent.getBoundingClientRect();
+          const offset =
+            elRect.top -
+            parentRect.top -
+            parentRect.height / 2 +
+            elRect.height / 2;
+          scrollParent.scrollBy({ top: offset, behavior: "smooth" });
+        } else {
+          el.scrollIntoView({ block: "center", behavior: "smooth" });
         }
-      }
-      for (const node of nodesToReplace) {
-        const span = document.createElement("span");
-        span.innerHTML = node.textContent.replace(
-          regex,
-          '<mark class="keyword-mark">$1</mark>',
-        );
-        node.parentNode.replaceChild(span, node);
-      }
+
+        // 整段高亮动画
+        el.classList.add("search-highlight");
+        setTimeout(() => el.classList.remove("search-highlight"), 3000);
+
+        // 关键字加红色虚线边框（不消失，支持多词）
+        const keyword = searchState.query?.trim();
+        if (!keyword) return;
+
+        const words = keyword.split(/\s+/).filter(Boolean);
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        const nodesToReplace = [];
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          const hasMatch = words.some((w) =>
+            new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi").test(
+              node.textContent,
+            ),
+          );
+          if (hasMatch) nodesToReplace.push(node);
+        }
+        for (const node of nodesToReplace) {
+          const text = node.textContent;
+          const sorted = [...words].sort((a, b) => b.length - a.length);
+          const ranges = [];
+          for (const w of sorted) {
+            const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const re = new RegExp(escaped, "gi");
+            let m;
+            while ((m = re.exec(text)) !== null) {
+              ranges.push({ start: m.index, end: m.index + m[0].length });
+            }
+          }
+          ranges.sort((a, b) => a.start - b.start);
+          const unique = ranges.filter(
+            (r, i) => i === 0 || r.start !== ranges[i - 1].start,
+          );
+          let html = text;
+          for (let i = unique.length - 1; i >= 0; i--) {
+            const { start, end } = unique[i];
+            html =
+              html.slice(0, start) +
+              '<mark class="keyword-mark">' +
+              html.slice(start, end) +
+              "</mark>" +
+              html.slice(end);
+          }
+          const span = document.createElement("span");
+          span.innerHTML = html;
+          node.parentNode.replaceChild(span, node);
+        }
+      });
     });
   });
 </script>
@@ -110,31 +148,31 @@
   @keyframes highlight-pulse {
     0% {
       background-color: rgba(74, 222, 128, 0.25);
-      border: 2.5px dashed rgba(239, 68, 68, 0.7);
+      box-shadow: 0 0 0 2.5px rgba(239, 68, 68, 0.7);
       border-radius: 4px;
     }
     30% {
       background-color: rgba(74, 222, 128, 0.15);
-      border: 2.5px dashed rgba(239, 68, 68, 0.4);
+      box-shadow: 0 0 0 2.5px rgba(239, 68, 68, 0.4);
       border-radius: 4px;
     }
     70% {
       background-color: rgba(74, 222, 128, 0.05);
-      border: 2.5px dashed rgba(239, 68, 68, 0.15);
+      box-shadow: 0 0 0 2.5px rgba(239, 68, 68, 0.15);
       border-radius: 4px;
     }
     100% {
       background-color: transparent;
-      border: 2.5px dashed transparent;
+      box-shadow: 0 0 0 0 transparent;
       border-radius: 4px;
     }
   }
 
-  /* 关键字红色虚线边框（不消失） */
+  /* 关键字红色虚线边框（不消失，outline 不占布局空间） */
   :global(mark.keyword-mark) {
-    border: 1.5px dashed rgba(239, 68, 68, 0.7);
-    border-radius: 3px;
-    padding: 0 1px;
+    outline: 1.5px dashed rgba(239, 68, 68, 0.7);
+    outline-offset: -0.5px;
+    border-radius: 2px;
     background: transparent;
   }
 </style>

@@ -246,13 +246,33 @@ export async function doSearch(q, cid, append = false) {
 export function highlightText(text, keyword) {
   if (!keyword || !text) return text;
   const words = keyword.trim().split(/\s+/).filter(Boolean);
-  let result = text;
-  for (const w of words) {
+  // 词从长到短排序，长词优先避免嵌套
+  const sorted = [...words].sort((a, b) => b.length - a.length);
+  // 收集所有匹配位置
+  const ranges = [];
+  for (const w of sorted) {
     const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    result = result.replace(
-      new RegExp(`(${escaped})`, "gi"),
-      "<mark style='background:#b3e6b3;padding:0 2px;border-radius:2px'>$1</mark>",
-    );
+    const re = new RegExp(escaped, "gi");
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      ranges.push({ start: m.index, end: m.index + m[0].length });
+    }
+  }
+  // 去重并按位置排序
+  ranges.sort((a, b) => a.start - b.start);
+  const unique = ranges.filter(
+    (r, i) => i === 0 || r.start !== ranges[i - 1].start,
+  );
+  // 从后往前替换
+  const mark =
+    "<mark style='background:#b3e6b3;padding:0 2px;border-radius:2px'>";
+  let result = text;
+  for (let i = unique.length - 1; i >= 0; i--) {
+    const { start, end } = unique[i];
+    result =
+      result.slice(0, start) +
+      `${mark}${result.slice(start, end)}</mark>` +
+      result.slice(end);
   }
   return result;
 }
@@ -275,10 +295,24 @@ export function getSnippet(text, keyword, before = 60, after = 80) {
   const trimmed = keyword.trim();
   if (!trimmed) return text;
 
-  // 找到第一个匹配位置（不区分大小写）
-  const idx = text.toLowerCase().indexOf(trimmed.toLowerCase());
+  const words = trimmed.split(/\s+/).filter(Boolean);
+
+  // 找到第一个匹配位置（完整短语优先）
+  let idx = text.toLowerCase().indexOf(trimmed.toLowerCase());
+
+  // 完整短语没找到，找第一个出现的单词
   if (idx === -1) {
-    // 没有匹配（可能是追加加载时 keyword 不匹配），返回前 after*2 字
+    for (const w of words) {
+      const pos = text.toLowerCase().indexOf(w.toLowerCase());
+      if (pos !== -1) {
+        idx = pos;
+        break;
+      }
+    }
+  }
+
+  // 仍然没找到，返回前 after*2 字（仍然尝试高亮每个单词）
+  if (idx === -1) {
     const short = text.slice(0, after * 2);
     return highlightText(short, keyword);
   }

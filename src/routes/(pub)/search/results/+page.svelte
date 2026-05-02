@@ -317,7 +317,6 @@
                   <div
                     class="text-black/85 dark:text-white/85"
                     leading="170%"
-                    line-clamp-3
                     style:font-size="{DATAS.fontSize}px"
                   >
                     {@html getSnippet(r.text_content, searchState.query)}
