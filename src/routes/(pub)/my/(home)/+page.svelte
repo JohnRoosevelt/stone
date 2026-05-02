@@ -292,6 +292,7 @@
         <div>
           <span text-gray-400>version: </span>
           {__GIT_COMMIT__}
+          <span text-gray-400> ({__BUILD_TIME__})</span>
         </div>
       </div>
     {/if}

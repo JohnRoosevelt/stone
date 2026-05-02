@@ -1,5 +1,5 @@
 <article
-  class="space-y-6 text-sm leading-relaxed text-gray-700 dark:text-gray-300"
+  class="space-y-6 text-base leading-relaxed text-gray-700 dark:text-gray-300"
 >
   <!-- 缘起 -->
   <section space-y-3>
@@ -130,9 +130,9 @@
         </div>
       </div>
 
-      <div class="flex gap-4 pt-2 text-xs text-gray-500">
-        <span>📱 微信号：zjl-yhc</span>
-        <span>📧 邮箱：john8.roosevelt@gmail.com</span>
+      <div class="space-y-1 pt-2 text-xs text-gray-500">
+        <div>📱 微信号：zjl-yhc</div>
+        <div>📧 邮箱：john8.roosevelt@gmail.com</div>
       </div>
 
       <p class="text-xs text-gray-400 mt-2">
