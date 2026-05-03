@@ -55,10 +55,11 @@
     searchState.scopeCid = cid;
     bookExpanded = {};
 
-    // URL 同步 cid 参数（replaceState 不产生新历史）
+    // URL 同步 cid 参数（仅更新地址栏，不触发 SvelteKit 导航生命周期）
+    // 避免 afterNavigate → recordNavigation 将当前 URL 误入历史栈
     const url = new URL(page.url);
     url.searchParams.set("cid", String(cid));
-    goto(url, { replaceState: true });
+    history.replaceState(history.state, "", url.toString());
 
     // 切换分类时始终重新搜索（store 不按 cid 分别缓存结果）
     await doSearch(searchState.query, cid);
