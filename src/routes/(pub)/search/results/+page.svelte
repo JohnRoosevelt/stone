@@ -69,9 +69,42 @@
     });
   }
 
+  /**
+   * 内容未填满时自动加载更多
+   */
+  async function autoLoadIfNeeded() {
+    if (
+      !scrollContainer ||
+      !searchState.hasMore ||
+      searchState.loadingMore ||
+      searchState.loading
+    )
+      return;
+    const el = scrollContainer;
+    if (el.scrollHeight - el.clientHeight < 200) {
+      await loadMore();
+      // DOM 更新后再次检查（递归直到填满或无更多数据）
+      requestAnimationFrame(() => autoLoadIfNeeded());
+    }
+  }
+
   /** 切换书籍折叠 */
   function toggleBook(bookId) {
     bookExpanded[bookId] = !bookExpanded[bookId];
+    // 折叠后内容变短可能导致无滚动条，检查自动加载更多
+    requestAnimationFrame(() => autoLoadIfNeeded());
+  }
+
+  /** 一键折叠/展开所有 */
+  let allExpanded = $derived(
+    grouped.length > 0 && grouped.every((b) => bookExpanded[b.bookId]),
+  );
+  function toggleAll() {
+    const expand = !allExpanded;
+    for (const book of grouped) {
+      bookExpanded[book.bookId] = expand;
+    }
+    requestAnimationFrame(() => autoLoadIfNeeded());
   }
 
   /** 加载更多 */
@@ -96,6 +129,14 @@
     goto(`/search?q=${encodeURIComponent(searchState.query)}${cidParam}`);
   }
 
+  // ── 保存当前状态（供返回时恢复）──
+  function saveState() {
+    if (scrollContainer) {
+      searchState.scrollTop = scrollContainer.scrollTop;
+    }
+    searchState.expanded = { ...bookExpanded };
+  }
+
   // ── 页面初始化 ──
   onMount(() => {
     const urlQuery = page.url.searchParams.get("q") || "";
@@ -106,28 +147,38 @@
     const initCid = urlCid !== undefined ? urlCid : 0;
     activeCid = initCid;
 
+    // 恢复上次的折叠状态
+    if (Object.keys(searchState.expanded).length > 0) {
+      bookExpanded = { ...searchState.expanded };
+    }
+
     if (urlQuery.trim()) {
       // doSearch 内部会先查缓存，有缓存直接返回不调 API
       searchState.query = urlQuery;
       searchState.scopeCid = initCid;
       doSearch(urlQuery, initCid);
     }
-
-    requestAnimationFrame(() => {
-      if (scrollContainer && searchState.scrollTop > 0) {
-        scrollContainer.scrollTop = searchState.scrollTop;
-      }
-    });
   });
 
-  // 搜索完成后默认展开所有书
+  // 搜索完成后：恢复滚动位置 → 展开新书 → 自动加载
   $effect(() => {
     if (searchState.searched && !searchState.loading) {
+      // 先恢复滚动位置（等 DOM 渲染完）
+      requestAnimationFrame(() => {
+        if (scrollContainer && searchState.scrollTop > 0) {
+          scrollContainer.scrollTop = searchState.scrollTop;
+        }
+      });
+
+      // 展开未设置折叠状态的书（已从 searchState.expanded 恢复的跳过）
       for (const item of searchState.results) {
         if (bookExpanded[item.book_id] === undefined) {
           bookExpanded[item.book_id] = true;
         }
       }
+
+      // 等 DOM 更新后检查内容高度，未填满时自动加载更多
+      requestAnimationFrame(() => autoLoadIfNeeded());
     }
   });
 </script>
@@ -206,14 +257,50 @@
     {/each}
   </section>
 
+  <!-- 折叠全部/展开全部（在滚动容器外，始终可见） -->
+  {#if searchState.searched && grouped.length > 0}
+    <div
+      w-full
+      flex-shrink-0
+      flex-cc
+      gap-2
+      px-3
+      py-1.5
+      b-b="1px solid gray-200 dark:gray-700"
+      class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm"
+    >
+      <button
+        text-sm
+        text-gray-400
+        hover:text-green
+        flex-cc
+        gap-1
+        transition-colors
+        onclick={toggleAll}
+      >
+        <span
+          transition-transform
+          class={allExpanded ? "rotate-90" : "rotate-0"}
+        >
+          <span i-carbon-chevron-right></span>
+        </span>
+        {allExpanded ? "折叠全部已加载" : "展开全部已加载"}
+      </button>
+      <span flex-1></span>
+      <span text-xs text-gray-400>
+        {grouped.length} 本书
+      </span>
+    </div>
+  {/if}
+
   <!-- 搜索结果区 -->
   <section
+    bind:this={scrollContainer}
     w-full
     flex-1
     overflow-y-auto
     px-3
-    py-3
-    space-y-3
+    pb-3
     onscroll={onScroll}
     class="bg-gray-50 dark:bg-gray-950"
   >
@@ -237,15 +324,16 @@
         </span>
       </div>
     {:else if searchState.searched && grouped.length > 0}
+      <div class="h-3"></div>
       <!-- ====== 按书分组 ====== -->
       {#each grouped as book (book.bookId)}
         <section
           class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700"
           rounded-xl
-          overflow-hidden
           shadow-sm
+          mb-3
         >
-          <!-- 书籍标题 -->
+          <!-- 书籍标题（sticky，滚动时固定在顶部） -->
           <button
             w-full
             flex
@@ -256,7 +344,10 @@
             text-sm
             font-600
             text-green
-            class="bg-green/5 dark:bg-green/10 hover:bg-green/10 dark:hover:bg-green/15"
+            sticky
+            top-0
+            z-1
+            class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm hover:bg-green/10 dark:hover:bg-green/15 rounded-t-xl"
             onclick={() => toggleBook(book.bookId)}
           >
             <span
@@ -283,10 +374,7 @@
                 flex
                 gap-2
                 class="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-850 active:bg-gray-100 no-underline"
-                onclick={() => {
-                  if (scrollContainer)
-                    searchState.scrollTop = scrollContainer.scrollTop;
-                }}
+                onclick={saveState}
               >
                 <span
                   font-mono
@@ -325,6 +413,8 @@
               </a>
             {/each}
           {/if}
+          <!-- 占位 spacer：折叠时让 section 高于标题，sticky 才能固定 -->
+          <div class="h-1"></div>
         </section>
       {/each}
 

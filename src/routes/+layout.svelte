@@ -6,6 +6,8 @@
   import { handleVisibilityChange, wakeLock } from "$lib/wakeLock";
   import { SvelteToast } from "@zerodevx/svelte-toast";
   import { onMount } from "svelte";
+  import { afterNavigate } from "$app/navigation";
+  import { recordNavigation } from "$lib/nav.js";
 
   // $inspect(DATAS).with(console.trace);
   const { children } = $props();
@@ -33,6 +35,11 @@
 
     // 后续 Tauri 版本将使用 Rust SQLite 替代
     console.log("[App] SQLite Worker removed, Tauri native SQL pending");
+  });
+
+  // 记录导航历史，供 goBack 智能返回使用
+  afterNavigate((nav) => {
+    recordNavigation(nav.from);
   });
 
   $effect(() => {
