@@ -300,7 +300,6 @@
     w-full
     flex-1
     overflow-y-auto
-    px-3
     pb-3
     onscroll={onScroll}
     class="bg-gray-50 dark:bg-gray-950"
@@ -329,8 +328,7 @@
       <!-- ====== 按书分组 ====== -->
       {#each grouped as book (book.bookId)}
         <section
-          class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700"
-          rounded-xl
+          class="bg-white dark:bg-gray-900 border-t border-b border-gray-200 dark:border-gray-700"
           shadow-sm
           mb-3
         >
@@ -348,7 +346,7 @@
             sticky
             top-0
             z-1
-            class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm hover:bg-green/10 dark:hover:bg-green/15 rounded-t-xl"
+            class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm hover:bg-green/10 dark:hover:bg-green/15"
             onclick={() => toggleBook(book.bookId)}
           >
             <span
@@ -373,26 +371,26 @@
                 px-3
                 py-2.5
                 flex
-                gap-2
+                flex-col
+                gap-1.5
                 class="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-850 active:bg-gray-100 no-underline"
                 onclick={saveState}
               >
-                <span
-                  font-mono
-                  text-red
-                  font-600
-                  mt-0.5
-                  flex-shrink-0
-                  w-7
-                  text-right
-                  style:font-size="{DATAS.fontSize}px"
-                >
-                  {r._seq}
-                </span>
-                <div flex-1 min-w-0>
+                <!-- 序号 + 书籍信息 → 同一行 -->
+                <div flex items-center gap-2>
+                  <span
+                    font-mono
+                    text-red
+                    font-600
+                    flex-shrink-0
+                    w-7
+                    text-right
+                    style:font-size="{DATAS.fontSize}px"
+                  >
+                    {r._seq}
+                  </span>
                   <div
                     text-gray-400
-                    mb-0.5
                     style:font-size="{Math.max(DATAS.fontSize - 4, 12)}px"
                   >
                     第 {r.chapter_id} 章
@@ -403,13 +401,14 @@
                       · {r.chapter_title}
                     {/if}
                   </div>
-                  <div
-                    class="text-black/85 dark:text-white/85"
-                    leading="170%"
-                    style:font-size="{DATAS.fontSize}px"
-                  >
-                    {@html getSnippet(r.text_content, searchState.query)}
-                  </div>
+                </div>
+                <!-- 查出来的内容 → 单独一行 -->
+                <div
+                  class="text-black/85 dark:text-white/85"
+                  leading="170%"
+                  style:font-size="{DATAS.fontSize}px"
+                >
+                  {@html getSnippet(r.text_content, searchState.query)}
                 </div>
               </a>
             {/each}

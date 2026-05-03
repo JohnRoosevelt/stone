@@ -223,9 +223,9 @@ export async function doSearch(q, cid, append = false) {
     // 更新 offset 为当前结果总数，确保下次追加从正确位置开始
     searchState.offset = searchState.results.length;
 
-    // ── 非追加模式才写入缓存并记录历史 ──
+    // ── 每次请求（首次 & 追加）都更新缓存 ──
+    saveToCache();
     if (!append) {
-      saveToCache();
       recordHistory(trimmed);
     }
   } catch (e) {
