@@ -2,7 +2,6 @@
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
-  import { goBack } from "$lib/nav.js";
   import { DATAS } from "$lib/data.svelte.js";
   import {
     searchState,
@@ -201,7 +200,12 @@
     py-2
     class="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-700"
   >
-    <button text-5 text-gray-500 aria-label="返回" onclick={goBack}>
+    <button
+      text-5
+      text-gray-500
+      aria-label="返回"
+      onclick={() => history.back()}
+    >
       <span i-carbon-arrow-left></span>
     </button>
     <div flex-1 text-sm class="text-gray-500 dark:text-gray-400" truncate>
@@ -273,7 +277,7 @@
       <button
         text-sm
         text-gray-400
-        hover:text-green
+        hover="text-green"
         flex-cc
         gap-1
         transition-colors

@@ -1,7 +1,6 @@
 <script>
   import { page } from "$app/state";
   import { slide } from "svelte/transition";
-  import { goto, goBack } from "$lib/nav.js";
   import { DATAS } from "$lib/data.svelte";
   import { showId } from "$lib";
   import Setting from "$lib/sda/Setting.svelte";
@@ -25,7 +24,14 @@
     rounded-4
     text-gray
   >
-    <button aria-label="返回" flex-cc text-green px-2 py-4 onclick={goBack}>
+    <button
+      aria-label="返回"
+      flex-cc
+      text-green
+      px-2
+      py-4
+      onclick={() => history.back()}
+    >
       <span i-carbon-chevron-left></span>
     </button>
 
@@ -134,17 +140,9 @@
       <span i-carbon-media-library></span>
     </button>
 
-    <button
-      flex-1
-      h-full
-      aria-label="search"
-      text-gray
-      onclick={() => {
-        goto(`/search?q=`);
-      }}
-    >
+    <a href="/search" flex-1 flex-cc h-full aria-label="search">
       <span i-carbon-search></span>
-    </button>
+    </a>
 
     <div flex-1 h-full flex-cc gap-px>
       <button
@@ -159,31 +157,31 @@
         <span i-carbon-menu></span>
       </button>
 
-      <button
+      <a
         w-12
         h-full
-        aria-label="pre"
-        disabled={page.params.chapterId == 1}
+        aria-label="previous"
+        data-sveltekit-replacestate
+        href={page.params.chapterId == 1
+          ? ""
+          : `/${page.params.cid}/${page.params.bookId}/${page.params.chapterId - 1}`}
         class:text-gray={page.params.chapterId == 1}
-        onclick={(e) => {
-          goto(page.params.chapterId - 1, { replaceState: true });
-        }}
       >
         <span i-carbon-arrow-left></span>
-      </button>
+      </a>
 
-      <button
+      <a
         w-12
         h-full
         aria-label="next"
-        disabled={page.params.chapterId == page.data.chapters?.length}
+        data-sveltekit-replacestate
+        href={page.params.chapterId == page.data.chapters?.length
+          ? ""
+          : `/${page.params.cid}/${page.params.bookId}/${page.params.chapterId - 1 + 2}`}
         class:text-gray={page.params.chapterId == page.data.chapters?.length}
-        onclick={(e) => {
-          goto(page.params.chapterId - 1 + 2, { replaceState: true });
-        }}
       >
         <span i-carbon-arrow-right></span>
-      </button>
+      </a>
     </div>
   </section>
 {/if}

@@ -1,7 +1,6 @@
 <script>
   import { page } from "$app/state";
   import { showId } from "$lib";
-  import { goBack } from "$lib/nav.js";
   import { DATAS } from "$lib/data.svelte";
 
   let clientHeight = $state(0);
@@ -84,7 +83,14 @@
     rounded-4
     text-gray
   >
-    <button aria-label="返回" flex-cc text-green px-2 py-4 onclick={goBack}>
+    <button
+      aria-label="back"
+      flex-cc
+      text-green
+      px-2
+      py-4
+      onclick={() => history.back()}
+    >
       <span i-carbon-chevron-left></span>
     </button>
 

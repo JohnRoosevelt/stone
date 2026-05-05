@@ -2,7 +2,6 @@
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
-  import { goBack } from "$lib/nav.js";
   import {
     searchState,
     searchHistory,
@@ -76,7 +75,12 @@
   >
     <!-- 搜索条 + 返回 -->
     <div flex-cc gap-2>
-      <button text-5 text-gray-500 aria-label="返回" onclick={goBack}>
+      <button
+        text-5
+        text-gray-500
+        aria-label="返回"
+        onclick={() => history.back()}
+      >
         <span i-carbon-arrow-left></span>
       </button>
 
