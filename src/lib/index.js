@@ -30,7 +30,8 @@ export async function delay(ms) {
  */
 export function safeGoBack(fallback = "/") {
   if (window.history.length <= 2) {
-    goto(fallback);
+    // 用 replaceState 模拟 history.back() 的语义：丢弃当前页，不新增历史
+    goto(fallback, { replaceState: true });
   } else {
     history.back();
   }
