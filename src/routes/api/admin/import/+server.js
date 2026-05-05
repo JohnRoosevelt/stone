@@ -62,20 +62,127 @@ export async function GET({ url, platform }) {
 
 /**
  * POST /api/admin/import
- * Body: { cid, bookId, lang, chapters }
+ * Body: { cid, bookId, lang }
  *
- * 客户端已解析好 R2 parquet 数据，服务端只负责写入 D1。
- * chapters: [{ chapterId, title, paragraphs: [{ id, num, textContent, format }] }]
+ * 服务端从 R2 读取 parquet 数据，校验后写入 D1。
+ * 不再依赖客户端传输整本书的章节/段落数据，避免请求体过大。
  */
 export async function POST({ request, platform }) {
   try {
-    const { cid, bookId, lang = "zh", chapters } = await request.json();
-    if (cid == null || bookId == null || !chapters) {
-      return json({ error: "cid, bookId, chapters required" }, { status: 400 });
+    const { cid, bookId, lang = "zh" } = await request.json();
+    if (cid == null || bookId == null) {
+      return json({ error: "cid, bookId required" }, { status: 400 });
     }
 
     const db = getDB(platform);
-    // 清空旧数据
+
+    // ── 1. 校验：该书在 book_base / book_i18n 中存在 ──────────
+    const book = await db
+      .prepare(
+        `SELECT bb.cid, bb.book_id, bi.name
+         FROM book_base bb
+         JOIN book_i18n bi ON bi.cid = bb.cid AND bi.book_id = bb.book_id AND bi.lang_code = ?
+         WHERE bb.cid = ? AND bb.book_id = ?`,
+      )
+      .bind(lang, cid, bookId)
+      .first();
+
+    if (!book) {
+      return json(
+        { error: `Book not found: cid=${cid}, bookId=${bookId}, lang=${lang}` },
+        { status: 404 },
+      );
+    }
+
+    // ── 2. 从 R2 读取 .parquet.zst 并解析 ────────────────────
+    const { loadBookFromR2 } = await import("$lib/server/r2-parquet.js");
+    const { chapters, chapterCount, paragraphCount } = await loadBookFromR2(
+      platform,
+      cid,
+      lang,
+      bookId,
+    );
+
+    console.log("[import] parsed from R2:", {
+      chapterCount,
+      paragraphCount,
+      firstChapter: chapters[0]
+        ? {
+            chapterId: chapters[0].chapterId,
+            title: chapters[0].title,
+            paragraphs: chapters[0].paragraphs.length,
+          }
+        : null,
+      lastChapter: chapters[chapters.length - 1]
+        ? {
+            chapterId: chapters[chapters.length - 1].chapterId,
+            title: chapters[chapters.length - 1].title,
+            paragraphs: chapters[chapters.length - 1].paragraphs.length,
+          }
+        : null,
+      chapterIds: chapters
+        .map((c) => c.chapterId)
+        .slice(0, 30)
+        .join(","),
+    });
+
+    if (chapterCount === 0) {
+      return json({ error: "No chapters found in R2 data" }, { status: 400 });
+    }
+
+    // ── 3. 校验 & 清理数据 ──────────────────────────────────
+    const cleanChapters = [];
+    let skippedParagraphs = 0;
+
+    for (const ch of chapters) {
+      if (!ch.paragraphs || ch.paragraphs.length === 0) {
+        console.log("[import] Skipping empty chapter:", ch.chapterId);
+        continue;
+      }
+
+      // chapterId 兜底（parquet n 可能为 null/0）
+      const chapterId = Number(ch.chapterId) > 0 ? Number(ch.chapterId) : 1;
+
+      // 过滤空段落
+      const cleanParagraphs = ch.paragraphs.filter((p) => {
+        if (!p.textContent || p.textContent.trim() === "") {
+          skippedParagraphs++;
+          return false;
+        }
+        return true;
+      });
+
+      if (cleanParagraphs.length === 0) {
+        console.log(
+          "[import] Skipping chapter after filtering empty paragraphs:",
+          chapterId,
+        );
+        continue;
+      }
+
+      cleanChapters.push({
+        chapterId,
+        title: ch.title || `第 ${chapterId} 章`,
+        paragraphs: cleanParagraphs,
+      });
+    }
+
+    if (cleanChapters.length === 0) {
+      return json(
+        { error: "No valid chapters after filtering" },
+        { status: 400 },
+      );
+    }
+
+    if (skippedParagraphs > 0) {
+      console.log(
+        "[import] Skipped",
+        skippedParagraphs,
+        "empty paragraphs during import",
+      );
+    }
+
+    // ── 4. 清空旧数据（事务级） ──────────────────────────────
     await db
       .prepare(
         "DELETE FROM chapter_paragraphs WHERE cid = ? AND book_id = ? AND lang_code = ?",
@@ -89,12 +196,12 @@ export async function POST({ request, platform }) {
       .bind(cid, bookId, lang)
       .run();
 
-    // 批量构建所有 INSERT 语句
+    // ── 5. 批量写入（使用 cleanChapters） ──────────────────
     const stmts = [];
-    let chapterCount = 0;
-    let paragraphCount = 0;
+    let insertedChapters = 0;
+    let insertedParagraphs = 0;
 
-    for (const ch of chapters) {
+    for (const ch of cleanChapters) {
       stmts.push(
         db
           .prepare(
@@ -102,17 +209,11 @@ export async function POST({ request, platform }) {
              VALUES (?, ?, ?, ?, ?)
              ON CONFLICT DO NOTHING`,
           )
-          .bind(
-            cid,
-            bookId,
-            Number(ch.chapterId),
-            lang,
-            ch.title || `第 ${ch.chapterId} 章`,
-          ),
+          .bind(cid, bookId, ch.chapterId, lang, ch.title),
       );
-      chapterCount++;
+      insertedChapters++;
 
-      for (const p of ch.paragraphs || []) {
+      for (const p of ch.paragraphs) {
         stmts.push(
           db
             .prepare(
@@ -123,7 +224,7 @@ export async function POST({ request, platform }) {
             .bind(
               cid,
               bookId,
-              Number(ch.chapterId),
+              ch.chapterId,
               p.id,
               p.num ?? null,
               lang,
@@ -131,19 +232,30 @@ export async function POST({ request, platform }) {
               p.format ?? null,
             ),
         );
-        paragraphCount++;
+        insertedParagraphs++;
       }
     }
 
     await db.batch(stmts);
+
+    console.log("[import] Inserted:", {
+      cid,
+      bookId,
+      lang,
+      insertedChapters,
+      insertedParagraphs,
+      skippedParagraphs,
+    });
 
     return json({
       success: true,
       cid,
       bookId,
       lang,
-      chapterCount,
-      paragraphCount,
+      bookName: book.name,
+      chapterCount: insertedChapters,
+      paragraphCount: insertedParagraphs,
+      skippedParagraphs,
     });
   } catch (e) {
     console.error("[import] POST error:", e.stack || e.message);

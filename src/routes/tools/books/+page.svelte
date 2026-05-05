@@ -37,7 +37,7 @@
     }
   }
 
-  /** 存解析后的原始数据，供同步用 */
+  /** 存解析后的原始数据，供预览用 */
   let parsedChapters = $state({});
 
   async function loadR2(bookId) {
@@ -58,27 +58,21 @@
     }
   }
 
+  /**
+   * 同步单本书：服务端从 R2 读取并写入 D1，无需客户端传输整本书数据
+   */
   async function syncToDb(bookId) {
     loadingR2 = { ...loadingR2, [bookId]: true };
     try {
-      const raw = parsedChapters[bookId];
-      if (!raw) throw new Error("请先读取R2");
-      const chapters = raw.map((ch) => ({
-        chapterId: Number(ch.n) || 0,
-        title: `第 ${ch.n} 章`,
-        paragraphs: (ch.ps || []).map((p, i) => ({
-          id: i,
-          num: p.p != null ? Number(p.p) : i + 1,
-          textContent: p.c || "",
-          format: p.t != null ? Number(p.t) : null,
-        })),
-      }));
       const res = await fetch("/api/admin/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cid, bookId, lang, chapters }),
+        body: JSON.stringify({ cid, bookId, lang }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `HTTP ${res.status}`);
+      }
       const data = await res.json();
       r2Data = {
         ...r2Data,
@@ -197,19 +191,14 @@
       }}
       class="px-3 py-1.5 rounded-md text-sm font-medium border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition150"
     >
-      批量读取R2
+      批量预览R2
     </button>
     <button
       onclick={async () => {
         for (const book of books) {
-          const r2 = r2Data[book.book_id];
-          if (
-            r2 &&
-            !r2.synced &&
-            (r2.chapters !== book.chapters || r2.paragraphs !== book.paragraphs)
-          ) {
-            await syncToDb(book.book_id);
-          }
+          // 已同步的直接跳过
+          if (r2Data[book.book_id]?.synced) continue;
+          await syncToDb(book.book_id);
         }
       }}
       class="px-3 py-1.5 rounded-md text-sm font-medium bg-green text-white hover:bg-green/80 transition150"
@@ -280,46 +269,48 @@
                   >
                   <span class="text-gray-400">/{book.paragraphs}</span>
                 </td>
-                <td class="px-3 sm:px-4 py-2.5 text-center text-xs space-y-1">
-                  {#if r2Data[book.book_id]}
-                    {#if r2Data[book.book_id].error}
-                      <span
-                        class="text-red text-xs block"
-                        title={r2Data[book.book_id].error}>失败</span
+                <td class="px-3 sm:px-4 py-2.5 text-center text-xs space-y-1.5">
+                  {#if r2Data[book.book_id]?.synced}
+                    <div class="font-medium">
+                      <span class="text-green"
+                        >{r2Data[book.book_id].chapters}章</span
                       >
-                    {:else}
-                      <div class="font-medium">
-                        <span class="text-green"
-                          >{r2Data[book.book_id].chapters}章</span
-                        >
-                        <span class="text-gray-400">
-                          /{r2Data[book.book_id].paragraphs}段</span
-                        >
-                      </div>
-                      {#if r2Data[book.book_id].chapters !== book.chapters || r2Data[book.book_id].paragraphs !== book.paragraphs}
-                        {#if r2Data[book.book_id].synced}
-                          <span class="text-green text-xs">✓ 已同步</span>
-                        {:else}
-                          <button
-                            onclick={() => syncToDb(book.book_id)}
-                            class="px-2 py-0.5 rounded text-xs font-medium bg-green text-white hover:bg-green/80 transition150"
-                          >
-                            同步
-                          </button>
-                        {/if}
-                      {:else}
-                        <span class="text-green text-xs">✓</span>
-                      {/if}
-                    {/if}
+                      <span class="text-gray-400">
+                        /{r2Data[book.book_id].paragraphs}段</span
+                      >
+                    </div>
+                    <span class="text-green text-xs block">✓ 已同步</span>
                   {:else if loadingR2[book.book_id]}
-                    <span class="text-gray-400 text-xs block">处理中...</span>
+                    <span class="text-gray-400 text-xs block">同步中...</span>
                   {:else}
-                    <button
-                      onclick={() => loadR2(book.book_id)}
-                      class="px-2 py-0.5 rounded text-xs font-medium border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition150"
-                    >
-                      读取R2
-                    </button>
+                    <div class="flex flex-col items-center gap-1">
+                      <button
+                        onclick={() => syncToDb(book.book_id)}
+                        class="px-2.5 py-1 rounded text-xs font-medium bg-green text-white hover:bg-green/80 transition150"
+                      >
+                        同步到DB
+                      </button>
+                      {#if r2Data[book.book_id]?.error}
+                        <span
+                          class="text-red text-xs block"
+                          title={r2Data[book.book_id].error}>上次失败</span
+                        >
+                      {:else}
+                        <button
+                          onclick={() => loadR2(book.book_id)}
+                          class="px-2 py-0.5 rounded text-xs font-medium border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition150"
+                        >
+                          预览R2
+                        </button>
+                      {/if}
+                    </div>
+                    {#if r2Data[book.book_id] && !r2Data[book.book_id].error}
+                      <div class="font-medium text-gray-500">
+                        R2: {r2Data[book.book_id].chapters}章 /{r2Data[
+                          book.book_id
+                        ].paragraphs}段
+                      </div>
+                    {/if}
                   {/if}
                 </td>
               </tr>
