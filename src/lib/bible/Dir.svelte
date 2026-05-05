@@ -96,7 +96,7 @@
 
 {#snippet Rbook(book)}
   <div flex-bc h-12 px-3 bg-gray-100 dark="bg-gray-700">
-    <a flex-1 href="/0/{book.book_id}/1">
+    <a data-sveltekit-replacestate flex-1 href="/0/{book.book_id}/1">
       <p flex-bc class:text-green={page.params.bookId == book.book_id}>
         <span>{book.name}</span>
         <span flex>
