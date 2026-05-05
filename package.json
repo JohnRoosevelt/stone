@@ -9,9 +9,11 @@
     "preview": "vite preview",
     "prepare": "svelte-kit sync || echo ''",
     "db:init": "wrangler d1 execute stone-db --local --command 'DROP TABLE IF EXISTS d1_migrations;' && wrangler d1 execute stone-db --local --file schemas/init.sql",
-    "db:init:remote": "wrangler d1 execute stone-db --remote --command 'DROP TABLE IF EXISTS d1_migrations;' && wrangler d1 execute stone-db --remote --file schemas/init.sql",
     "db:seed": "wrangler d1 execute stone-db --local --file schemas/books.sql && wrangler d1 execute stone-db --local --file schemas/books.zh.sql && wrangler d1 execute stone-db --local --file schemas/books.en.sql",
-    "db:seed:remote": "wrangler d1 execute stone-db --remote --file schemas/books.sql && wrangler d1 execute stone-db --remote --file schemas/books.zh.sql && wrangler d1 execute stone-db --remote --file schemas/books.en.sql"
+    "db:reset": "bun db:init && bun db:seed",
+    "db:init:remote": "wrangler d1 execute stone-db --remote --command 'DROP TABLE IF EXISTS d1_migrations;' && wrangler d1 execute stone-db --remote --file schemas/init.sql",
+    "db:seed:remote": "wrangler d1 execute stone-db --remote --file schemas/books.sql && wrangler d1 execute stone-db --remote --file schemas/books.zh.sql && wrangler d1 execute stone-db --remote --file schemas/books.en.sql",
+    "db:reset:remote": "bun db:init:remote && bun db:seed:remote"
   },
   "devDependencies": {
     "@iconify-json/carbon": "^1.2.8",
@@ -43,7 +45,6 @@
     "@dweb-browser/zstd-wasm": "^1.2.1",
     "apache-arrow": "^21.1.0",
     "parquet-wasm": "^0.7.1",
-    "parquetjs": "^0.11.2",
     "ua-parser-js": "^2.0.4"
   }
 }

@@ -15,16 +15,36 @@ const navigationHistory = [];
 /** 是否正在执行 goBack 导航（防止 afterNavigate 重复记录） */
 let isGoBackNavigation = false;
 
+/** 是否正在执行 replaceState 导航（防止 afterNavigate 记录历史） */
+let isReplaceStateNavigation = false;
+
+/**
+ * 自定义 goto，自动处理 replaceState 场景：
+ * 当使用 replaceState 时，跳过历史记录，避免污染返回栈
+ */
+export async function goto(url, opts) {
+  if (opts?.replaceState) {
+    isReplaceStateNavigation = true;
+  }
+  const { goto: svelteGoto } = await import("$app/navigation");
+  return svelteGoto(url, opts);
+}
+
 /**
  * 记录导航来源（由布局中的 afterNavigate 调用）
  * @param {{ url: { pathname: string, search: string } } | null} from - 来源页信息
  */
 export function recordNavigation(from) {
+  if (isReplaceStateNavigation) {
+    isReplaceStateNavigation = false;
+    return;
+  }
   if (isGoBackNavigation) {
     isGoBackNavigation = false;
     return;
   }
-  if (!from) return;
+  if (!from || from.url.pathname + from.url.search === navigationHistory.at(-1))
+    return;
   navigationHistory.push(from.url.pathname + from.url.search);
 }
 

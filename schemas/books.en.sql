@@ -244,9 +244,3 @@ INSERT OR IGNORE INTO book_i18n (cid, book_id, lang_code, name, title, abbreviat
 INSERT OR IGNORE INTO book_i18n (cid, book_id, lang_code, name, title, abbreviation) VALUES (1, 128, 'en', 'Maranatha', 'M', 'Mar');
 INSERT OR IGNORE INTO book_i18n (cid, book_id, lang_code, name, title, abbreviation) VALUES (1, 132, 'en', 'Sermons and Talks, vol. 1', 'S', '1SAT');
 INSERT OR IGNORE INTO book_i18n (cid, book_id, lang_code, name, title, abbreviation) VALUES (1, 133, 'en', 'Sermons and Talks, vol. 2', 'S', '2SAT');
-
--- ---------- General Books (cid=2) ----------
-INSERT OR IGNORE INTO book_i18n (cid, book_id, lang_code, name, title, abbreviation) VALUES (2, 4, 'en', 'Joshua White', 'J', NULL);
-INSERT OR IGNORE INTO book_i18n (cid, book_id, lang_code, name, title, abbreviation) VALUES (2, 2, 'en', 'Study on Fundamentals of Christian Education', 'S', NULL);
-INSERT OR IGNORE INTO book_i18n (cid, book_id, lang_code, name, title, abbreviation) VALUES (2, 1, 'en', 'Guide to True Education', 'G', NULL);
-INSERT OR IGNORE INTO book_i18n (cid, book_id, lang_code, name, title, abbreviation) VALUES (2, 3, 'en', 'Lessons from Nature', 'L', NULL);

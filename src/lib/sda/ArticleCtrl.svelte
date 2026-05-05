@@ -1,8 +1,7 @@
 <script>
   import { page } from "$app/state";
   import { slide } from "svelte/transition";
-  import { goto } from "$app/navigation";
-  import { goBack } from "$lib/nav.js";
+  import { goto, goBack } from "$lib/nav.js";
   import { DATAS } from "$lib/data.svelte";
   import { showId } from "$lib";
   import Setting from "$lib/sda/Setting.svelte";
