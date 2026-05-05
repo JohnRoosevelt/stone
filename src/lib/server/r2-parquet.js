@@ -243,10 +243,14 @@ function groupIntoChapters(rows) {
       paragraphIdx = 0;
     }
 
-    // 内容 textContent = p.c（浏览器端 syncToDb 中 p.c || ""）
+    paragraphIdx++;
+    // id = 1-based 段落序号（数据库 PK）
+    // num = 来源数据段落号（SDA 有 p 列），无则同 id，确保 >= 1
+    let num = row.p != null ? Number(row.p) : paragraphIdx;
+    if (!Number.isFinite(num) || num < 1) num = paragraphIdx;
     const p = {
-      id: paragraphIdx++,
-      num: row.p != null ? Number(row.p) : paragraphIdx,
+      id: paragraphIdx,
+      num,
       textContent: row.c || "",
       format: row.t != null ? Number(row.t) : null,
     };

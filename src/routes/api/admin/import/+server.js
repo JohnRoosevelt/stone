@@ -2,9 +2,12 @@ import { json } from "@sveltejs/kit";
 import { getDB } from "$lib/server/db";
 
 /**
- * GET /api/admin/import?cid=0&lang=zh
+ * GET /api/admin/import
  *
- * 一次查询返回所有书的章节数、段落数、导入状态
+ * 多级查询：
+ *   ?cid=0&lang=zh                   → 书籍列表（含章节/段落计数）
+ *   ?cid=0&lang=zh&bookId=1          → 该书的章节列表
+ *   ?cid=0&lang=zh&bookId=1&chapterId=1 → 该章的段落列表
  */
 export async function GET({ url, platform }) {
   try {
@@ -16,6 +19,80 @@ export async function GET({ url, platform }) {
       return json({ error: "cid required" }, { status: 400 });
     }
 
+    const bookId = url.searchParams.get("bookId");
+    const chapterId = url.searchParams.get("chapterId");
+
+    // ── 查询段落 ───────────────────────────────────────
+    if (bookId != null && chapterId != null) {
+      const { results } = await db
+        .prepare(
+          `SELECT id, num, text_content, format
+           FROM chapter_paragraphs
+           WHERE cid = ? AND book_id = ? AND chapter_id = ? AND lang_code = ?
+           ORDER BY id`,
+        )
+        .bind(cid, parseInt(bookId), parseInt(chapterId), lang)
+        .all();
+
+      return json({
+        type: "paragraphs",
+        cid,
+        lang,
+        bookId: parseInt(bookId),
+        chapterId: parseInt(chapterId),
+        total: results.length,
+        paragraphs: results.map((r) => ({
+          id: r.id,
+          num: r.num,
+          textContent: r.text_content,
+          format: r.format,
+        })),
+      });
+    }
+
+    // ── 查询章节 ───────────────────────────────────────
+    if (bookId != null) {
+      const { results } = await db
+        .prepare(
+          `SELECT chapter_id, title
+           FROM chapters
+           WHERE cid = ? AND book_id = ? AND lang_code = ?
+           ORDER BY chapter_id`,
+        )
+        .bind(cid, parseInt(bookId), lang)
+        .all();
+
+      // 同时统计段数
+      const cpRows = await db
+        .prepare(
+          `SELECT chapter_id, COUNT(*) AS cnt
+           FROM chapter_paragraphs
+           WHERE cid = ? AND book_id = ? AND lang_code = ?
+           GROUP BY chapter_id`,
+        )
+        .bind(cid, parseInt(bookId), lang)
+        .all();
+
+      const paraCountMap = {};
+      for (const r of cpRows.results || []) {
+        paraCountMap[r.chapter_id] = Number(r.cnt);
+      }
+
+      return json({
+        type: "chapters",
+        cid,
+        lang,
+        bookId: parseInt(bookId),
+        total: results.length,
+        chapters: results.map((r) => ({
+          chapterId: r.chapter_id,
+          title: r.title,
+          paragraphs: paraCountMap[r.chapter_id] || 0,
+        })),
+      });
+    }
+
+    // ── 书籍列表 ───────────────────────────────────────
     const { results } = await db
       .prepare(
         `SELECT
@@ -45,6 +122,7 @@ export async function GET({ url, platform }) {
       .all();
 
     return json({
+      type: "books",
       cid,
       lang,
       total: results.length,

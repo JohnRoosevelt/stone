@@ -1,6 +1,6 @@
 <script>
   import { page } from "$app/state";
-  import { showId } from "$lib";
+  import { showId, safeGoBack } from "$lib";
   import { DATAS } from "$lib/data.svelte";
 
   let clientHeight = $state(0);
@@ -89,7 +89,7 @@
       text-green
       px-2
       py-4
-      onclick={() => history.back()}
+      onclick={() => safeGoBack()}
     >
       <span i-carbon-chevron-left></span>
     </button>

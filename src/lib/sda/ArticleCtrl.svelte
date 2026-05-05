@@ -2,7 +2,7 @@
   import { page } from "$app/state";
   import { slide } from "svelte/transition";
   import { DATAS } from "$lib/data.svelte";
-  import { showId } from "$lib";
+  import { showId, safeGoBack } from "$lib";
   import Setting from "$lib/sda/Setting.svelte";
   import Chapter from "$lib/cid/Chapter.svelte";
   import { info } from "$lib/global/Toast";
@@ -30,7 +30,7 @@
       text-green
       px-2
       py-4
-      onclick={() => history.back()}
+      onclick={() => safeGoBack()}
     >
       <span i-carbon-chevron-left></span>
     </button>

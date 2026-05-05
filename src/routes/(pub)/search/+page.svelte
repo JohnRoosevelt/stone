@@ -2,6 +2,7 @@
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
+  import { safeGoBack } from "$lib";
   import {
     searchState,
     searchHistory,
@@ -79,7 +80,7 @@
         text-5
         text-gray-500
         aria-label="返回"
-        onclick={() => history.back()}
+        onclick={() => safeGoBack()}
       >
         <span i-carbon-arrow-left></span>
       </button>

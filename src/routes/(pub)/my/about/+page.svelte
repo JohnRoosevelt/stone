@@ -1,8 +1,9 @@
 <script>
   import AboutApp from "../AboutApp.svelte";
+  import { safeGoBack } from "$lib";
 
   function goBack() {
-    history.back();
+    safeGoBack();
   }
 </script>
 
