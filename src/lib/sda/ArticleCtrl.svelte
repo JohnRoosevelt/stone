@@ -115,7 +115,7 @@
   >
     <button
       flex-1
-      h-full
+      flex-cc
       aria-label="lang"
       class:text-gray={DATAS.showSdaEnglish}
       onclick={(event) => {
@@ -130,7 +130,7 @@
 
     <button
       flex-1
-      h-full
+      flex-cc
       aria-label="media"
       text-gray
       onclick={() => {
@@ -144,10 +144,10 @@
       <span i-carbon-search></span>
     </a>
 
-    <div flex-1 h-full flex-cc gap-px>
+    <div flex-1 flex-cc gap-px>
       <button
         w-12
-        h-full
+        flex-cc
         sm="hidden"
         aria-label="menu"
         onclick={(e) => {
@@ -159,7 +159,7 @@
 
       <a
         w-12
-        h-full
+        flex-cc
         aria-label="previous"
         data-sveltekit-replacestate
         href={page.params.chapterId == 1
@@ -172,7 +172,7 @@
 
       <a
         w-12
-        h-full
+        flex-cc
         aria-label="next"
         data-sveltekit-replacestate
         href={page.params.chapterId == page.data.chapters?.length
