@@ -106,7 +106,7 @@
                       >
                         <span
                           class="text-gray-400 font-mono shrink-0 text-right tabular-nums whitespace-nowrap"
-                          >id:{p.id} t:{p.format ?? "-"} p: {p.num}</span
+                          >id:{p.id} t:{p.format ?? "-"} p: {p.num ?? "-"}</span
                         >
 
                         <span class="text-gray-700 min-w-0 flex-1"

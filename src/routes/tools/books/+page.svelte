@@ -2,17 +2,16 @@
   import { onMount } from "svelte";
   import { CID_MAP, CID_LIST } from "$lib/config";
   import ChapterDrilldown from "./ChapterDrilldown.svelte";
+  import R2Preview from "./R2Preview.svelte";
 
   let cid = $state(0);
   let lang = $state("zh");
   let books = $state([]);
   let loading = $state(false);
-  let loadingR2 = $state({}); // book_id → true
-  let r2Data = $state({}); // book_id → { chapters, paragraphs, error? }
   let error = $state("");
 
-  // ── 展开的书（点击书名切换） ────────────────────────────
   let expandedBook = $state(null);
+  let previewBook = $state(null);
 
   const LANGS = [
     { value: "zh", label: "中文" },
@@ -41,32 +40,7 @@
     }
   }
 
-  /** 存解析后的原始数据，供预览用 */
-  let parsedChapters = $state({});
-
-  async function loadR2(bookId) {
-    loadingR2 = { ...loadingR2, [bookId]: true };
-    try {
-      const { loadR2Parquet } = await import("$lib/parquet");
-      const chapters = await loadR2Parquet(`${cid}/${lang}/${bookId}`);
-      const paraCount = chapters.reduce((s, ch) => s + (ch.ps?.length || 0), 0);
-      parsedChapters = { ...parsedChapters, [bookId]: chapters };
-      r2Data = {
-        ...r2Data,
-        [bookId]: { chapters: chapters.length, paragraphs: paraCount },
-      };
-    } catch (e) {
-      r2Data = { ...r2Data, [bookId]: { error: e.message } };
-    } finally {
-      loadingR2 = { ...loadingR2, [bookId]: false };
-    }
-  }
-
-  /**
-   * 同步单本书：服务端从 R2 读取并写入 D1，无需客户端传输整本书数据
-   */
   async function syncToDb(bookId) {
-    loadingR2 = { ...loadingR2, [bookId]: true };
     try {
       const res = await fetch("/api/admin/import", {
         method: "POST",
@@ -77,20 +51,9 @@
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `HTTP ${res.status}`);
       }
-      const data = await res.json();
-      r2Data = {
-        ...r2Data,
-        [bookId]: {
-          chapters: data.chapterCount,
-          paragraphs: data.paragraphCount,
-          synced: true,
-        },
-      };
       await loadBooks();
     } catch (e) {
-      r2Data = { ...r2Data, [bookId]: { error: e.message } };
-    } finally {
-      loadingR2 = { ...loadingR2, [bookId]: false };
+      error = e.message;
     }
   }
 
@@ -100,13 +63,9 @@
 
   onMount(() => loadBooks());
 
-  // 汇总
   let totalBooks = $derived(books.length);
   let totalChapters = $derived(books.reduce((s, b) => s + b.chapters, 0));
   let totalParagraphs = $derived(books.reduce((s, b) => s + b.paragraphs, 0));
-  let r2LoadedCount = $derived(
-    Object.values(r2Data).filter((v) => !v.error).length,
-  );
 </script>
 
 <svelte:head>
@@ -128,8 +87,6 @@
               : 'text-gray-400 hover:text-gray-600'}"
             onclick={() => {
               lang = l.value;
-              parsedChapters = {};
-              r2Data = {};
               expandedBook = null;
               loadBooks();
             }}
@@ -151,8 +108,6 @@
             : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}"
           onclick={() => {
             cid = opt.value;
-            parsedChapters = {};
-            r2Data = {};
             expandedBook = null;
             loadBooks();
           }}
@@ -180,34 +135,12 @@
         >{totalParagraphs}</strong
       >
     </span>
-    <span class="bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 rounded-lg">
-      R2 已读 <strong class="text-green ml-1">{r2LoadedCount}</strong>
-      <span class="text-gray-400">/{totalBooks}</span>
-    </span>
 
     <div class="flex-1"></div>
 
     <button
       onclick={async () => {
-        const CONCURRENCY = 10;
-        const queue = [...books];
-        async function work() {
-          while (queue.length > 0) {
-            const book = queue.shift();
-            await loadR2(book.book_id);
-          }
-        }
-        await Promise.all(Array.from({ length: CONCURRENCY }, () => work()));
-      }}
-      class="px-3 py-1.5 rounded-md text-sm font-medium border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition150"
-    >
-      批量预览R2
-    </button>
-    <button
-      onclick={async () => {
         for (const book of books) {
-          // 已同步的直接跳过
-          if (r2Data[book.book_id]?.synced) continue;
           await syncToDb(book.book_id);
         }
       }}
@@ -245,7 +178,7 @@
           {#if loading}
             <tr>
               <td
-                colspan="6"
+                colspan="4"
                 class="px-4 py-12 text-center text-gray-400 text-sm"
               >
                 加载中...
@@ -254,7 +187,7 @@
           {:else if books.length === 0}
             <tr>
               <td
-                colspan="6"
+                colspan="4"
                 class="px-4 py-12 text-center text-gray-400 text-sm"
               >
                 暂无数据
@@ -263,7 +196,7 @@
           {:else}
             {#each books as book, i}
               {#key book.book_id}
-                <!-- 书籍行 -->
+                <!-- Book row -->
                 <tr
                   class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition150 cursor-pointer"
                   onclick={() => toggleBook(book.book_id)}
@@ -290,67 +223,47 @@
                     >
                     <span class="text-gray-400">/{book.paragraphs}</span>
                   </td>
-                  <td
-                    class="px-3 sm:px-4 py-2.5 text-center text-xs space-y-1.5"
-                  >
-                    {#if r2Data[book.book_id]?.synced}
-                      <div class="font-medium">
-                        <span class="text-green"
-                          >{r2Data[book.book_id].chapters}章</span
-                        >
-                        <span class="text-gray-400">
-                          /{r2Data[book.book_id].paragraphs}段</span
-                        >
-                      </div>
-                      <span class="text-green text-xs whitespace-nowrap"
-                        >✓ 已同步</span
+                  <td class="px-3 sm:px-4 py-2.5 text-center text-xs">
+                    <div
+                      class="flex flex-row items-center justify-center gap-1 flex-nowrap"
+                    >
+                      <button
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          syncToDb(book.book_id);
+                        }}
+                        class="px-2.5 py-1 rounded text-xs font-medium bg-green text-white hover:bg-green/80 transition150 whitespace-nowrap"
                       >
-                    {:else if loadingR2[book.book_id]}
-                      <span class="text-gray-400 text-xs whitespace-nowrap"
-                        >同步中...</span
+                        同步到DB
+                      </button>
+                      <button
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          previewBook =
+                            previewBook === book.book_id ? null : book.book_id;
+                        }}
+                        class="px-2 py-0.5 rounded text-xs font-medium border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition150 whitespace-nowrap"
                       >
-                    {:else}
-                      <div
-                        class="flex flex-row items-center justify-center gap-1 flex-nowrap"
-                      >
-                        <button
-                          onclick={(e) => {
-                            e.stopPropagation();
-                            syncToDb(book.book_id);
-                          }}
-                          class="px-2.5 py-1 rounded text-xs font-medium bg-green text-white hover:bg-green/80 transition150 whitespace-nowrap"
-                        >
-                          同步到DB
-                        </button>
-                        {#if r2Data[book.book_id]?.error}
-                          <span
-                            class="text-red text-xs whitespace-nowrap"
-                            title={r2Data[book.book_id].error}>上次失败</span
-                          >
-                        {:else}
-                          <button
-                            onclick={(e) => {
-                              e.stopPropagation();
-                              loadR2(book.book_id);
-                            }}
-                            class="px-2 py-0.5 rounded text-xs font-medium border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition150 whitespace-nowrap"
-                          >
-                            预览R2
-                          </button>
-                          {#if r2Data[book.book_id] && !r2Data[book.book_id].error}
-                            <div
-                              class="font-medium text-gray-500 whitespace-nowrap"
-                            >
-                              R2:{r2Data[book.book_id].chapters}章/{r2Data[
-                                book.book_id
-                              ].paragraphs}段
-                            </div>
-                          {/if}
-                        {/if}
-                      </div>
-                    {/if}
+                        {previewBook === book.book_id ? "收起" : "预览R2"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
+
+                <!-- R2 预览面板 -->
+                {#if previewBook === book.book_id}
+                  <tr>
+                    <td colspan="4" class="p-0">
+                      <R2Preview
+                        {cid}
+                        {lang}
+                        bookId={book.book_id}
+                        bookName={book.name}
+                        onclose={() => (previewBook = null)}
+                      />
+                    </td>
+                  </tr>
+                {/if}
 
                 <!-- 章节/段落下钻（独立组件） -->
                 {#if expandedBook === book.book_id}
