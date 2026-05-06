@@ -1,7 +1,6 @@
 import { PUBLIC_R2 } from "$env/static/public";
 import { dev } from "$app/environment";
-import { CID } from "$lib/config";
-import { tableFromIPC, tableFromArrays, tableToIPC } from "apache-arrow";
+import { tableFromArrays, tableToIPC } from "apache-arrow";
 import initZstd, { decompress, compress } from "@dweb-browser/zstd-wasm";
 import initWasm, {
   readParquet,
@@ -9,6 +8,8 @@ import initWasm, {
   WriterPropertiesBuilder,
   writeParquet,
 } from "parquet-wasm/esm";
+
+import { readRows, groupRows } from "$lib/parquet-common";
 
 let wasmInitialized = false;
 let zstdInitialized = false;
@@ -24,33 +25,6 @@ async function ensureWasm() {
   }
 }
 
-function groupRows(rows, numCid, isChapter = false) {
-  const fn = (r) => {
-    const rz = { c: r.c || r.o };
-    if (["sda", CID.SDA].includes(String(numCid))) {
-      rz.t = r.t;
-      rz.p = r.p;
-    }
-    return rz;
-  };
-
-  if (isChapter) {
-    return rows.map(fn);
-  }
-  const chapters = [];
-  let cur = null;
-  for (const row of rows) {
-    // console.log({ row });
-    if (!cur || cur.n !== row.n) {
-      cur = { n: row.n, ps: [] };
-      chapters.push(cur);
-    }
-    cur.ps.push(fn(row));
-  }
-
-  return chapters;
-}
-
 export async function loadR2Parquet(path) {
   console.log("[Parquet] Loading from R2:", path);
   await ensureWasm();
@@ -62,79 +36,33 @@ export async function loadR2Parquet(path) {
     const resp = await fetch(url);
 
     const buffer = await resp.arrayBuffer();
-    const [numCid, lang, bookId, chapterIdStr = "."] = path.split("/");
-    const [chapterId] = chapterIdStr.split(".");
-    const resultData = await loadParquetContent(buffer, numCid, !!chapterId);
-
-    return resultData;
+    return await loadParquetContent(buffer);
   } catch (e) {
     console.error("[Parquet] Failed to load:", e);
     return [];
   }
 }
 
-export async function loadParquetContent(buffer, numCid, isChapter = false) {
-  const uint8 = new Uint8Array(buffer);
-  const parquetBuffer = decompress(uint8);
-
-  const wasmTable = readParquet(parquetBuffer);
-  const arrowTable = tableFromIPC(wasmTable.intoIPCStream());
-  const rows = arrowTable.toArray();
-
-  const decompressedRows = rows.map((row) => {
-    const o = row?.o;
-    if (o && typeof o === "string" && o.startsWith("0")) {
-      try {
-        const compressed = Uint8Array.from(atob(o), (c) => c.charCodeAt(0));
-        const decResult = decompress(compressed);
-        return { ...row, o: new TextDecoder().decode(decResult) };
-      } catch {
-        return row;
-      }
-    }
-    return row;
-  });
-
-  const resultData = groupRows(decompressedRows, numCid, isChapter);
-
-  console.log({ resultData });
-
-  return resultData;
+export async function loadParquetContent(buffer) {
+  await ensureWasm();
+  const rows = readRows(buffer, decompress, readParquet);
+  return groupRows(rows);
 }
 
 // =========================================================================
 // Write — build .parquet.zst bytes from rows
 // =========================================================================
-export async function writeChapterParquet(rows, type = "sda") {
-  await ensureWasm();
-  // console.log({ rows, type });
-  const arrays = {
-    c: rows.map((r) => r.c),
-  };
-  // t: rows[0]?.t ? new Int32Array(rows.map((r) => r.t)) : undefined,
-  // p: rows[0]?.p ? new Int32Array(rows.map((r) => r.p)) : undefined,
-
-  if (["sda", CID.SDA].includes(String(type))) {
-    arrays.t = new Int32Array(rows.map((r) => r.t));
-    arrays.p = new Int32Array(rows.map((r) => r.p));
-  }
-
-  const at = tableFromArrays(arrays);
-  const wt = Table.fromIPCStream(tableToIPC(at, "stream"));
-  return compress(writeParquet(wt, new WriterPropertiesBuilder().build()), 19);
-}
-
-export async function writeBookParquet(rows, type = "sda") {
+export async function writeBookParquet(rows) {
   await ensureWasm();
   const arrays = {
     n: rows.map((r) => r.n),
     c: rows.map((r) => r.c),
   };
 
-  if (["sda", CID.SDA].includes(String(type))) {
-    arrays.t = new Int32Array(rows.map((r) => r.t));
-    arrays.p = new Int32Array(rows.map((r) => r.p));
-  }
+  const hasT = rows.some((r) => r.t != null);
+  const hasP = rows.some((r) => r.p != null);
+  if (hasT) arrays.t = new Int32Array(rows.map((r) => r.t ?? 0));
+  if (hasP) arrays.p = new Int32Array(rows.map((r) => r.p ?? 0));
 
   const at = tableFromArrays(arrays);
   const wt = Table.fromIPCStream(tableToIPC(at, "stream"));
