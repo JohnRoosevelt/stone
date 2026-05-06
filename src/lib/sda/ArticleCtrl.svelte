@@ -30,7 +30,7 @@
       text-green
       px-2
       py-4
-      onclick={() => safeGoBack()}
+      onclick={() => safeGoBack("/" + page.params.cid)}
     >
       <span i-carbon-chevron-left></span>
     </button>
