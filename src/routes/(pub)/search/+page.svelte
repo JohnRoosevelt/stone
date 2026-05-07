@@ -173,7 +173,7 @@
         text-gray-400
         flex-shrink-0
       >
-        <span i-carbon-history mr-1.5></span>
+        <span i-streamline-flex-search-history-browser mr-1.5></span>
         <span flex-1>搜索历史</span>
         <button
           class="hover:text-red transition-colors"
@@ -199,7 +199,12 @@
             class="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600 transition-colors"
             onclick={() => searchKeyword(keyword)}
           >
-            <span i-carbon-history text-gray-400 text-3 flex-shrink-0></span>
+            <span
+              i-streamline-flex-search-history-browser
+              text-gray-400
+              text-3
+              flex-shrink-0
+            ></span>
             <span class="text-gray-700 dark:text-gray-200" truncate>
               {keyword}
             </span>

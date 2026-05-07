@@ -44,11 +44,11 @@
   <title>我的 - 脚前的灯</title>
 </svelte:head>
 
-<article w-full h-full overflow-y-auto px-4 py-4 space-y-5>
+<article class="w-full h-full overflow-y-auto px-4 py-4 space-y-5">
   <!-- ─── 设置 ─── -->
-  <section space-y-3>
-    <h2 text-lg font-semibold flex-cc gap-2>
-      <span i-carbon-settings></span>
+  <section class="space-y-3">
+    <h2 class="text-lg font-semibold flex-cc gap-2">
+      <span class="i-carbon-settings"></span>
       设置
     </h2>
 
@@ -56,33 +56,26 @@
     <div
       class="flex items-center justify-between p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
     >
-      <div flex-cc gap-3>
-        <span i-carbon-sun text-xl></span>
+      <div class="flex-cc gap-3">
+        <span class="i-carbon-sun text-xl"></span>
         <div>
-          <div font-medium>深色模式</div>
-          <div text-sm text-gray-500>切换界面明暗主题</div>
+          <div class="font-medium">深色模式</div>
+          <div class="text-sm text-gray-500">切换界面明暗主题</div>
         </div>
       </div>
       <button
-        w-12
-        h-7
-        rounded-full
-        transition300
-        relative
-        class={DATAS.isDarkMode ? "bg-green" : "bg-gray-300 dark:bg-gray-600"}
+        class={[
+          DATAS.isDarkMode ? "bg-green" : "bg-gray-300 dark:bg-gray-600",
+          "w-12 h-7 rounded-full transition300 relative",
+        ]}
         onclick={() => (DATAS.isDarkMode = !DATAS.isDarkMode)}
         aria-label="切换深色模式"
       >
         <span
-          absolute
-          top-0.5
-          w-6
-          h-6
-          rounded-full
-          bg-white
-          shadow
-          transition300
-          class={DATAS.isDarkMode ? "left-5" : "left-0.5"}
+          class={[
+            DATAS.isDarkMode ? "left-5" : "left-0.5",
+            "absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition300",
+          ]}
         ></span>
       </button>
     </div>
@@ -91,28 +84,23 @@
     <div
       class="p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
     >
-      <div flex-cc gap-3 mb-3>
-        <span i-carbon-text-size text-xl></span>
-        <div>
-          <div font-medium>字体大小</div>
-          <div text-sm text-gray-500>{DATAS.fontSize}px</div>
+      <div class="flex-cc gap-3 mb-3">
+        <div class="flex-cc gap-1">
+          <div class="font-medium">字体大小</div>
+          <div class="text-sm text-gray-500">{DATAS.fontSize}px</div>
         </div>
       </div>
-      <div flex-cc gap-3>
+      <div class="flex-cc gap-3">
         <button
-          w-8
-          h-8
-          rounded-full
-          bg-gray-100
-          dark:bg-gray-700
-          flex-cc
-          flex-shrink-0
-          class={DATAS.fontSize <= 12 ? "opacity-30" : ""}
+          class={[
+            DATAS.fontSize <= 12 ? "opacity-30" : "",
+            "w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex-cc flex-shrink-0",
+          ]}
           disabled={DATAS.fontSize <= 12}
           onclick={() => (DATAS.fontSize = Math.max(12, DATAS.fontSize - 2))}
           aria-label="减小字号"
         >
-          <span i-carbon-subtract text-lg></span>
+          <span class="i-carbon-subtract text-lg"></span>
         </button>
         <input
           type="range"
@@ -124,44 +112,31 @@
           aria-label="字体大小"
         />
         <button
-          w-8
-          h-8
-          rounded-full
-          bg-gray-100
-          dark:bg-gray-700
-          flex-cc
-          flex-shrink-0
-          class={DATAS.fontSize >= 28 ? "opacity-30" : ""}
+          class={[
+            DATAS.fontSize >= 28 ? "opacity-30" : "",
+            "w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex-cc flex-shrink-0",
+          ]}
           disabled={DATAS.fontSize >= 28}
           onclick={() => (DATAS.fontSize = Math.min(28, DATAS.fontSize + 2))}
           aria-label="增大字号"
         >
-          <span i-carbon-add text-lg></span>
+          <span class="i-carbon-add text-lg"></span>
         </button>
       </div>
     </div>
   </section>
 
-  <!-- ─── 折叠区块通用样式 ─── -->
-  {#snippet foldBtn(icon, label, expanded, toggle, loading)}
-    <button
-      class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300"
-      onclick={toggle}
-    >
-      <span flex-cc gap-2>
-        {#if loading}
-          <span i-carbon-loading text-4 animate-spin></span>
-        {:else}
-          <span {icon} text-green></span>
-        {/if}
-        {label}
-      </span>
-      <span
-        class="transition300 text-gray-400 {expanded ? 'rotate-180' : ''}"
-        i-carbon-chevron-down
-      ></span>
-    </button>
-  {/snippet}
+  <!-- ─── 关于 ─── -->
+  <a
+    href="/my/about"
+    class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 no-underline"
+  >
+    <span class="flex-cc gap-2">
+      <span class="i-carbon-information text-green"></span>
+      关于
+    </span>
+    <span class="i-carbon-chevron-right text-gray-400"></span>
+  </a>
 
   <!-- ─── 开发规划 ─── -->
   <div
@@ -220,27 +195,28 @@
     {/if}
   </div>
 
-  <!-- ─── 关于 ─── -->
-  <a
-    href="/my/about"
-    class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 no-underline"
-  >
-    <span flex-cc gap-2>
-      <span i-carbon-information text-green></span>
-      关于
-    </span>
-    <span i-carbon-chevron-right text-gray-400></span>
-  </a>
-
   <!-- ─── 调试信息 ─── -->
   <section space-y-2>
-    {@render foldBtn(
-      "i-carbon-debug",
-      "调试信息",
-      showDebug,
-      toggleDebug,
-      loadingUa,
-    )}
+    <button
+      class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300"
+      onclick={toggleDebug}
+    >
+      <span class="flex-cc gap-2">
+        {#if loadingUa}
+          <span class="i-line-md-loading-twotone-loop text-4 animate-spin"
+          ></span>
+        {:else}
+          <span class={["i-carbon-debug", "text-green"]}></span>
+        {/if}
+        调试信息
+      </span>
+      <span
+        class={[
+          "transition300 text-gray-400 i-carbon-chevron-down",
+          showDebug && "rotate-180",
+        ]}
+      ></span>
+    </button>
 
     {#if showDebug}
       <div
@@ -285,14 +261,17 @@
           {DATAS.uaInfo?.engine?.name || "-"}
           {DATAS.uaInfo?.engine?.version || ""}
         </div>
-        <div>
-          <span text-gray-400>database: </span>
-          （待迁移至 Tauri 原生 SQL）
-        </div>
+
         <div>
           <span text-gray-400>version: </span>
           {__GIT_COMMIT__}
-          <span text-gray-400> ({__BUILD_TIME__})</span>
+          <span text-gray-400>
+            ({(() => {
+              const d = new Date(__BUILD_TIME__ + "Z");
+              const pad = (n) => String(n).padStart(2, "0");
+              return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+            })()})
+          </span>
         </div>
       </div>
     {/if}

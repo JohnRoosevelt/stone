@@ -190,24 +190,17 @@
   </title>
 </svelte:head>
 
-<article w-full flex-1 flex flex-col min-h-0>
+<article class="w-full flex-1 flex flex-col min-h-0">
   <!-- 顶栏 -->
   <section
-    w-full
-    flex-shrink-0
-    flex-cc
-    gap-2
-    px-3
-    py-2
-    class="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-700"
+    class="bg-white dark:(bg-black border-gray-700) border-b border-gray-200 w-full flex-shrink-0 flex-cc gap-2 px-3 py-2"
   >
     <button
-      text-5
-      text-gray-500
+      class="text-5 text-gray-500"
       aria-label="返回"
       onclick={() => safeGoBack("/search")}
     >
-      <span i-carbon-arrow-left></span>
+      <span class="i-carbon-arrow-left"></span>
     </button>
     <div flex-1 text-sm class="text-gray-500 dark:text-gray-400" truncate>
       {#if searchState.query}
@@ -215,9 +208,9 @@
           {searchState.query}
         </span>
         {#if searchState.total > 0}
-          <span ml-1>
-            <span text-gray-400>{searchState.total}</span>
-            <span text-gray-400> 条</span>
+          <span class="ml-1">
+            <span class="text-gray-400">{searchState.total}</span>
+            <span class="text-gray-400"> 条</span>
           </span>
         {/if}
       {:else}
@@ -229,33 +222,20 @@
 
   <!-- 分类标签栏 -->
   <section
-    w-full
-    flex-shrink-0
-    flex
-    gap-1
-    px-3
-    py-2
-    class="border-b border-gray-100 dark:border-gray-800 scrollbar-hide"
-    overflow-x-auto
+    class="w-full flex-shrink-0 flex gap-1 px-3 py-2 border-b border-gray-100 dark:border-gray-800 scrollbar-hide overflow-x-auto"
   >
     {#each TABS as { cid, label } (cid)}
       <button
-        px-3
-        py-1.5
-        text-sm
-        font-500
-        rounded-2
-        whitespace-nowrap
+        class="px-3 py-1.5 text-sm font-500 rounded-2 whitespace-nowrap dark:text-gray-400 dark:bg-gray-800"
         class:bg-green={activeCid === cid}
         class:text-white={activeCid === cid}
         class:text-gray-500={activeCid !== cid}
-        class="dark:text-gray-400 dark:bg-gray-800"
         class:bg-gray-100={activeCid !== cid}
         onclick={() => switchTab(cid)}
       >
         {label}
         {#if activeCid === cid && searchState.total > 0}
-          <span text-xs ml-1 class:opacity-80={activeCid === cid}>
+          <span class="text-xs ml-1" class:opacity-80={activeCid === cid}>
             {searchState.total}
           </span>
         {/if}
@@ -266,34 +246,26 @@
   <!-- 折叠全部/展开全部（在滚动容器外，始终可见） -->
   {#if searchState.searched && grouped.length > 0}
     <div
-      w-full
-      flex-shrink-0
-      flex-cc
-      gap-2
-      px-3
-      py-1.5
-      b-b="1px solid gray-200 dark:gray-700"
-      class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm"
+      class="w-full flex-shrink-0 flex-cc gap-2 px-3 py-1.5
+        border-b border-gray-200 dark:border-gray-700
+        bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm"
     >
       <button
-        text-sm
-        text-gray-400
-        hover="text-green"
-        flex-cc
-        gap-1
-        transition-colors
+        class="text-sm text-gray-400 hover:text-green flex-cc gap-1 transition-colors"
         onclick={toggleAll}
       >
         <span
-          transition-transform
-          class={allExpanded ? "rotate-90" : "rotate-0"}
+          class={[
+            allExpanded ? "rotate-90" : "rotate-0",
+            "transition-transform",
+          ]}
         >
-          <span i-carbon-chevron-right></span>
+          <span class="i-carbon-chevron-right"></span>
         </span>
         {allExpanded ? "折叠全部已加载" : "展开全部已加载"}
       </button>
-      <span flex-1></span>
-      <span text-xs text-gray-400>
+      <span class="flex-1"></span>
+      <span class="text-xs text-gray-400">
         {grouped.length} 本书
       </span>
     </div>
@@ -302,27 +274,26 @@
   <!-- 搜索结果区 -->
   <section
     bind:this={scrollContainer}
-    w-full
+    onscroll={onScroll}
+    class="bg-gray-50 dark:bg-gray-950 w-full
     flex-1
     overflow-y-auto
-    pb-3
-    onscroll={onScroll}
-    class="bg-gray-50 dark:bg-gray-950"
+    pb-3"
   >
     {#if searchState.loading}
-      <div w-full h-40 flex-cc flex-col text-gray-400 gap-2>
-        <span i-carbon-loading text-8 animate-spin></span>
-        <span text-sm>搜索中…</span>
+      <div class="w-full h-40 flex-cc flex-col text-gray-400 gap-2">
+        <span class="i-line-md-loading-twotone-loop text-8 animate-spin"></span>
+        <span class="text-sm">搜索中…</span>
       </div>
     {:else if searchState.error}
-      <div w-full h-40 flex-cc flex-col text-red gap-2>
-        <span i-carbon-warning text-8></span>
-        <span text-sm>{searchState.error}</span>
+      <div class="w-full h-40 flex-cc flex-col text-red gap-2">
+        <span class="i-carbon-warning text-8"></span>
+        <span class="text-sm">{searchState.error}</span>
       </div>
     {:else if searchState.searched && searchState.results.length === 0}
-      <div w-full h-40 flex-cc flex-col text-gray-400 gap-2>
-        <span i-carbon-search text-10></span>
-        <span text-sm>
+      <div class="w-full h-40 flex-cc flex-col text-gray-400 gap-2">
+        <span class="i-carbon-search text-10"></span>
+        <span class="text-sm">
           未找到与 "<strong class="text-gray-600 dark:text-gray-300"
             >{searchState.query}</strong
           >" 相关的内容
@@ -333,36 +304,26 @@
       <!-- ====== 按书分组 ====== -->
       {#each grouped as book (book.bookId)}
         <section
-          class="bg-white dark:bg-gray-900 border-t border-b border-gray-200 dark:border-gray-700"
+          class="bg-white dark:bg-gray-900 border-t border-b border-gray-200 dark:border-gray-700
           shadow-sm
-          mb-3
+          mb-3"
         >
           <!-- 书籍标题（sticky，滚动时固定在顶部） -->
           <button
-            w-full
-            flex
-            items-center
-            gap-1
-            px-3
-            py-2.5
-            text-sm
-            font-600
-            text-green
-            sticky
+            class="w-full flex items-center gap-1 px-3 py-2.5 text-sm font-600 text-green sticky
             top-0
             z-1
-            class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm hover:bg-green/10 dark:hover:bg-green/15"
+            bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm hover:bg-green/10 dark:hover:bg-green/15"
             onclick={() => toggleBook(book.bookId)}
           >
             <span
-              text-xs
-              transition-transform
+              class="text-xs transition-transform"
               class:rotate-90={bookExpanded[book.bookId]}
             >
-              <span i-carbon-chevron-right></span>
+              <span class="i-carbon-chevron-right"></span>
             </span>
             {book.bookName}
-            <span text-xs text-gray-400 ml-1>
+            <span class="text-xs text-gray-400 ml-1">
               ({book.chapters.length} 条)
             </span>
           </button>
@@ -371,31 +332,20 @@
             {#each book.chapters as r (r.rowid)}
               <a
                 href="/{r.cid}/{r.book_id}/{r.chapter_id}#zh-{r.id}"
-                w-full
-                text-left
-                px-3
-                py-2.5
-                flex
-                flex-col
-                gap-1.5
-                class="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-850 active:bg-gray-100 no-underline"
+                class="w-full text-left px-3 py-2.5 flex flex-col gap-1.5
+                border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-850 active:bg-gray-100 no-underline"
                 onclick={saveState}
               >
                 <!-- 序号 + 书籍信息 → 同一行 -->
-                <div flex items-center gap-2>
+                <div class="flex items-center gap-2">
                   <span
-                    font-mono
-                    text-red
-                    font-600
-                    flex-shrink-0
-                    w-7
-                    text-right
+                    class="font-mono text-red font-600 text-right"
                     style:font-size="{DATAS.fontSize}px"
                   >
                     {r._seq}
                   </span>
                   <div
-                    text-gray-400
+                    class="text-gray-400"
                     style:font-size="{Math.max(DATAS.fontSize - 4, 12)}px"
                   >
                     第 {r.chapter_id} 章
@@ -425,28 +375,29 @@
 
       <!-- 加载更多 -->
       {#if searchState.loadingMore}
-        <div w-full py-4 flex-cc text-gray-400 gap-2>
-          <span i-carbon-loading text-5 animate-spin></span>
-          <span text-sm>加载中…</span>
+        <div class="w-full py-4 flex-cc text-gray-400 gap-2">
+          <span class="i-line-md-loading-twotone-loop text-5 animate-spin"
+          ></span>
+          <span class="text-sm">加载中…</span>
         </div>
       {:else if searchState.hasMore}
-        <div w-full py-4 flex-cc text-gray-400 text-sm gap-1.5>
-          <span i-carbon-arrow-down></span>
+        <div class="w-full py-4 flex-cc text-gray-400 text-sm gap-1.5">
+          <span class="i-carbon-arrow-down"></span>
           <span>向下滚动加载更多</span>
-          <span text-xs opacity-60>
+          <span class="text-xs opacity-60">
             ({searchState.results.length}/{searchState.total})
           </span>
         </div>
       {:else if searchState.searched && searchState.results.length > 0}
-        <div w-full py-4 flex-cc text-gray-400 text-sm gap-1.5>
-          <span i-carbon-checkmark></span>
+        <div class="w-full py-4 flex-cc text-gray-400 text-sm gap-1.5">
+          <span class="i-carbon-checkmark"></span>
           <span>已加载全部 {searchState.total} 条结果</span>
         </div>
       {/if}
     {:else}
-      <div w-full h-48 flex-cc flex-col text-gray-400 gap-3>
-        <span i-carbon-search text-12></span>
-        <span text-sm>暂无搜索结果</span>
+      <div class="w-full h-48 flex-cc flex-col text-gray-400 gap-3">
+        <span class="i-carbon-search text-12"></span>
+        <span class="text-sm">暂无搜索结果</span>
       </div>
     {/if}
   </section>

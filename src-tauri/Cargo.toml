@@ -1,0 +1,42 @@
+[package]
+name = "app"
+version = "0.1.0"
+description = "A Tauri App"
+authors = ["you"]
+license = ""
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.0", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.11.0", features = [] }
+tauri-plugin-log = "2"
+
+# SQLite (bundled = 内嵌 SQLite，无需系统安装)
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# HTTP 客户端（从 R2 拉取 parquet 用）
+reqwest = { version = "0.12", features = ["stream"] }
+
+# 压缩/解压（处理 .zst）
+zstd = { version = "0.13", features = ["wasm"] }
+
+# Parquet 解析
+parquet = { version = "54", features = ["arrow"] }
+# Arrow 数据格式
+arrow = { version = "54", features = ["prettyprint"] }
+
+# 异步运行时（reqwest 需要）
+tokio = { version = "1", features = ["full"] }

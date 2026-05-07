@@ -1,6 +1,5 @@
 import {
   defineConfig,
-  presetAttributify,
   presetIcons,
   presetMini,
   presetWind4,
@@ -9,17 +8,14 @@ import {
   toEscapedSelector,
   transformerDirectives,
 } from "unocss";
-import extractorSvelte from "@unocss/extractor-svelte";
 import { FileSystemIconLoader } from "@iconify/utils/lib/loader/node-loaders";
 import path from "path";
 import { readdir } from "fs/promises";
 
 export default defineConfig({
-  extractors: [extractorSvelte()],
   presets: [
     presetMini(),
     presetWind4(),
-    presetAttributify(),
     presetIcons({
       extraProperties: {
         display: "inline-block",
@@ -94,7 +90,7 @@ export default defineConfig({
     ],
   ],
   safelist: [
-    ...Array.from("text-3 text-4 text-5 text-6 text-7".split(" ")),
+    ...Array.from("text-3 text-4 text-5 text-6 text-7 rounded-xl".split(" ")),
     ...Array.from("text-white/100 text-white/45".split(" ")),
     ...Array.from(
       "bg-white/100 bg-white/50 bg-[#1B2120]/100 bg-[#1B2120]/50".split(" "),
@@ -116,7 +112,7 @@ export default defineConfig({
     ),
     /* 导航和首页图标（动态 class 绑定，需显式声明） */
     ...Array.from(
-      "i-carbon-home i-icons-sda i-icons-bible i-carbon-user-settings i-carbon-user-avatar i-carbon-education".split(
+      "i-carbon-home i-icons-sda i-icons-bible i-carbon-user-settings i-carbon-user-avatar i-carbon-education i-carbon-debug i-carbon-screen i-carbon-fit-to-screen".split(
         " ",
       ),
     ),

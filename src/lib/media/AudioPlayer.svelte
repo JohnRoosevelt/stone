@@ -1,63 +1,63 @@
 <script>
-	import { showId } from "$lib";
-	import { linear } from "svelte/easing";
+  import { showId } from "$lib";
+  import { linear } from "svelte/easing";
 
-	let { src, title, lyricsDataSrc, onended } = $props();
+  let { src, title, lyricsDataSrc, onended } = $props();
 
-	let clientHeight = $state(0);
+  let clientHeight = $state(0);
 
-	let time = $state(0);
-	let duration = $state(0);
-	let paused = $state(true);
+  let time = $state(0);
+  let duration = $state(0);
+  let paused = $state(true);
 
-	function format(time) {
-		if (isNaN(time)) return "...";
+  function format(time) {
+    if (isNaN(time)) return "...";
 
-		const hours = Math.floor(time / 3600);
-		const minutes = Math.floor(time / 60);
-		const seconds = Math.floor(time % 60);
+    const hours = Math.floor(time / 3600);
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
 
-		return `${hours > 0 ? `${hours}:` : ``}${minutes}:${seconds < 10 ? `0${seconds}` : seconds}`;
-	}
+    return `${hours > 0 ? `${hours}:` : ``}${minutes}:${seconds < 10 ? `0${seconds}` : seconds}`;
+  }
 
-	let lyricsData = $state([]);
-	let hasLyrics = $state(true);
-	$effect(async () => {
-		try {
-			const res = await fetch(lyricsDataSrc);
-			lyricsData = await res.json();
-		} catch (error) {
-			hasLyrics = false;
-		}
-	});
+  let lyricsData = $state([]);
+  let hasLyrics = $state(true);
+  $effect(async () => {
+    try {
+      const res = await fetch(lyricsDataSrc);
+      lyricsData = await res.json();
+    } catch (error) {
+      hasLyrics = false;
+    }
+  });
 
-	let activeLine = $state();
-	$effect(() => {
-		activeLine = lyricsData.findIndex((line, i) => {
-			if (time >= line.t) {
-				if (i === lyricsData.length - 1) {
-					return true;
-				}
+  let activeLine = $state();
+  $effect(() => {
+    activeLine = lyricsData.findIndex((line, i) => {
+      if (time >= line.t) {
+        if (i === lyricsData.length - 1) {
+          return true;
+        }
 
-				if (time < lyricsData[i + 1].t) {
-					return true;
-				}
-			}
-		});
-	});
+        if (time < lyricsData[i + 1].t) {
+          return true;
+        }
+      }
+    });
+  });
 
-	$effect(() => {
-		showId(`line${activeLine}`);
-	});
+  $effect(() => {
+    showId(`line${activeLine}`);
+  });
 </script>
 
 <audio
-	autoplay="false"
-	{src}
-	bind:currentTime={time}
-	bind:duration
-	bind:paused
-	{onended}
+  autoplay="false"
+  {src}
+  bind:currentTime={time}
+  bind:duration
+  bind:paused
+  {onended}
 ></audio>
 
 <article w-full h-full bind:clientHeight>
@@ -103,19 +103,19 @@
 			onpointerdown={(e) => {
 				const div = e.currentTarget;
 
-				function seek(e) {
-					const { left, width } = div.getBoundingClientRect();
+        function seek(e) {
+          const { left, width } = div.getBoundingClientRect();
 
-					let p = (e.clientX - left) / width;
-					if (p < 0) p = 0;
-					if (p > 1) p = 1;
+          let p = (e.clientX - left) / width;
+          if (p < 0) p = 0;
+          if (p > 1) p = 1;
 
-					time = p * duration;
-				}
+          time = p * duration;
+        }
 
-				seek(e);
+        seek(e);
 
-				window.addEventListener("pointermove", seek);
+        window.addEventListener("pointermove", seek);
 
 				window.addEventListener(
 					"pointerup",
@@ -141,12 +141,12 @@
 					{title}
 				</span>
 
-				<span>
-					<span>{format(time)}</span>
-					<span>{duration ? format(duration) : "--:--"}</span>
-				</span>
-			</p>
-		</div>
+        <span>
+          <span>{format(time)}</span>
+          <span>{duration ? format(duration) : "--:--"}</span>
+        </span>
+      </p>
+    </div>
 
 		<button
 			class="play"
@@ -164,13 +164,13 @@
 </section>
 
 <style>
-	.player {
-		background: var(--bg-1, black);
-		color: var(--fg-3, gray);
-	}
+  .player {
+    background: var(--bg-1, black);
+    color: var(--fg-3, gray);
+  }
 
-	.player:not(.paused) {
-		color: var(--fg-1, white);
-		filter: drop-shadow(0.5em 0.5em 1em rgba(0, 0, 0, 1));
-	}
+  .player:not(.paused) {
+    color: var(--fg-1, white);
+    filter: drop-shadow(0.5em 0.5em 1em rgba(0, 0, 0, 1));
+  }
 </style>

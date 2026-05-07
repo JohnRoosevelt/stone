@@ -60,15 +60,16 @@
 {#snippet RX()}
   {#if C}
     <article
+      class="
       fixed
       inset-0
-      bg="white"
-      w="70vw"
+      bg-white dark:bg-black
+      w-70vw
       h-dvh
+      overflow-hidden"
       class:rounded-r-4={DATAS.dialog.p === "l"}
       class:rounded-l-4={DATAS.dialog.p === "r"}
       class:ml-30vw={DATAS.dialog.p === "r"}
-      overflow-hidden
     >
       <C />
     </article>
@@ -78,19 +79,20 @@
 {#snippet RY()}
   {#if C}
     <article
-      bg="white dark:black"
+      class="
+      bg-white dark:bg-black
       fixed
+      left-0
+      w-screen
+      min-h-30
+      max-h-[calc(100vh-120px)]
+      scroll-y
+      p-4
+      flex-cc"
       class:bottom-0={DATAS.dialog.p === "b"}
       class:rounded-t-4={DATAS.dialog.p === "b"}
       class:top-0={DATAS.dialog.p === "t"}
       class:rounded-b-4={DATAS.dialog.p === "t"}
-      left-0
-      w-screen
-      min-h-30
-      max-h="[calc(100vh-120px)]"
-      scroll-y
-      p-4
-      flex-cc
     >
       <C />
     </article>

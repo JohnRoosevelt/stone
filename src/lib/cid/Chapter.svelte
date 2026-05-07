@@ -13,15 +13,11 @@
   });
 </script>
 
-<article w-full h-full overflow-hidden relative bind:clientHeight>
+<article class="w-full h-full overflow-hidden relative" bind:clientHeight>
   <section
     id="chapterContainer"
     style:height="{clientHeight}px"
-    relative
-    space-y-px
-    scroll-y
-    pt-12
-    sm="pt-0"
+    class="relative space-y-px scroll-y pt-12 sm:pt-0"
     onscroll={(event) => {
       const { scrollTop, scrollHeight, clientHeight } = event.target;
       scrollPercentage =
@@ -30,7 +26,7 @@
           : Math.round((scrollTop / (scrollHeight - clientHeight)) * 100);
     }}
   >
-    <div h-1px id="chapter-top"></div>
+    <div class="h-1px" id="chapter-top"></div>
     {#each page.data?.chapters as { n }, i}
       {@const id = i + 1}
       <a
@@ -42,86 +38,78 @@
         id="chapter-{id}"
         data-sveltekit-replacestate
         href="/{page.params.cid}/{page.params.bookId}/{id}"
-        flex
-        p-2
-        items-center
-        bg-gray-100
-        dark="bg-gray-700"
-        relative
+        class="flex p-2 items-center bg-gray-100 dark:bg-gray-700 relative"
         class:text-green={page.params.chapterId == id}
       >
         {n}
       </a>
     {/each}
-    <div h-1px id="chapter-bottom"></div>
+    <div class="h-1px" id="chapter-bottom"></div>
   </section>
 
   <div
+    class="
     absolute
     top-0
     w-full
     h-12
     flex-bc
     px-3
-    bg="white dark:black"
-    sm="hidden"
+    bg-white dark:bg-black
+    sm:hidden"
   >
-    <button font-500>
+    <button class="font-500">
       {page.data.book?.name} 目录
     </button>
   </div>
 
   <div
+    class="
     absolute
     z-3
     bottom-4
     right-1
     text-7
-    grid="~ cols-1"
-    bg="gray-200"
-    divide="y-2 gray-100"
+    grid grid-cols-1
+    bg-gray-200
+    divide-y-2 divide-gray-100
     rounded-4
-    text-gray
+    text-gray dark:bg-gray-900 dark:divide-gray-800"
   >
     <button
       aria-label="back"
-      flex-cc
-      text-green
-      px-2
-      py-4
+      class="flex-cc text-green px-2 py-4"
       onclick={() => safeGoBack("/" + page.params.cid)}
     >
-      <span i-carbon-chevron-left></span>
+      <span class="i-carbon-chevron-left"></span>
     </button>
 
     <button
       aria-label="scroll-to-top"
-      flex-cc
-      px-2
-      py-4
+      class="flex-cc text-green px-2 py-4"
       class:text-green={scrollPercentage !== 0}
+      class:cursor-not-allowed={scrollPercentage === 0}
       onclick={() => {
         showId("chapter-top", "end");
       }}
     >
-      <span i-carbon-up-to-top></span>
+      <span class="i-carbon-up-to-top"></span>
     </button>
 
-    <div size-auto overflow-visible flex-cc py-2>
-      <span text-3> {scrollPercentage}% </span>
+    <div class="size-auto overflow-visible flex-cc py-2">
+      <span class="text-3"> {scrollPercentage}% </span>
     </div>
 
     <button
       aria-label="scroll-to-bottom"
-      flex-cc
-      px-2
-      py-4
+      class="flex-cc text-green px-2 py-4"
       class:text-green={scrollPercentage !== 100}
+      class:cursor-not-allowed={scrollPercentage === 100}
       onclick={() => {
         showId("chapter-bottom");
       }}
     >
-      <span i-carbon-down-to-bottom></span>
+      <span class="i-carbon-down-to-bottom"></span>
     </button>
   </div>
 </article>

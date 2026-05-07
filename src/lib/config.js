@@ -26,6 +26,12 @@ export function isValidCid(cid) {
   return cid in CID_MAP;
 }
 
+/** 验证数字 CID（0=bible, 1=sda, 2=book），无效返回 undefined */
+export function validateCid(cid) {
+  const n = Number(cid);
+  return Number.isInteger(n) && n >= 0 && n <= 2 ? n : undefined;
+}
+
 /** 获取 CID 元数据，未知 CID 返回 null */
 export function getCidInfo(cid) {
   return CID_MAP[cid] ?? null;

@@ -1,11 +1,11 @@
-import { validateCid } from "$lib/server/db";
+import { validateCid } from "$lib/config";
 export const prerender = false;
 
-export async function load({ params: { cid }, platform: { env } }) {
+export async function load({ params: { cid }, platform }) {
   const numericCid = validateCid(cid);
   if (numericCid === undefined) return { books: [] };
 
-  const db = env?.DB;
+  const db = platform?.env?.DB;
   if (db) {
     try {
       const sql = `

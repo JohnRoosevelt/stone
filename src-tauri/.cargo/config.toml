@@ -1,0 +1,23 @@
+# Rust 编译优化 — 加快开发迭代速度
+[target.x86_64-apple-darwin]
+# 使用系统默认链接器（macOS 上已够快）
+# 如需更快可安装 lld: brew install llvm
+# 然后取消下行注释:
+# rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+[profile.dev]
+# 增加 codegen-units 让编译器用更多并行单元（编译更快，运行时稍慢）
+codegen-units = 256
+# 增量编译
+incremental = true
+# 优化等级设为 0（最快编译）
+opt-level = 0
+# 不进行 LTO
+lto = false
+
+[profile.release]
+# 发布版用最大优化
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

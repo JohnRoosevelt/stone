@@ -39,12 +39,12 @@
   });
 </script>
 
-<article data-layout="bookId" w-full h-full flex-bc>
+<article data-layout="bookId" class="w-full h-full flex-bc">
   <section
-    w={DATAS.isFullScreen || DATAS.isMobile ? 0 : 60}
-    transition300
-    h-full
-    flex-shrink-0
+    class={[
+      DATAS.isFullScreen || DATAS.isMobile ? "w-0" : "w-60",
+      "transition300 h-full flex-shrink-0",
+    ]}
   >
     <Chapter />
   </section>

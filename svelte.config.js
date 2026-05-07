@@ -1,15 +1,32 @@
-// import adapter from "@sveltejs/adapter-auto";
 import adapter from "@sveltejs/adapter-cloudflare";
-// import adapter from '@sveltejs/adapter-static';
+import staticAdapter from "@sveltejs/adapter-static";
+import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
+import UnoCSS from "@unocss/svelte-scoped/preprocess";
 
-/** @type {import('@sveltejs/kit').Config} */
+const combine = process.env.NODE_ENV !== "development";
+
 const config = {
+  preprocess: [
+    vitePreprocess(),
+    UnoCSS({
+      combine,
+    }),
+  ],
   kit: {
-    // adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
-    // If your environment is not supported, or you settled on a specific environment, switch out the adapter.
-    // See https://svelte.dev/docs/kit/adapters for more information about adapters.
-    adapter: adapter(),
-    // SSR is enabled by default for fast initial page loads
+    // Cloudflare 部署用 adapter-cloudflare
+    // Tauri 构建用 adapter-static
+    adapter: process.env.TAURI
+      ? staticAdapter({
+          pages: "build",
+          assets: "build",
+          fallback: "index.html",
+        })
+      : adapter(),
+  },
+  vitePlugin: {
+    inspector: {
+      showToggleButton: "always",
+    },
   },
 };
 

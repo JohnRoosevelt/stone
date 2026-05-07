@@ -88,9 +88,7 @@
 </script>
 
 <article
-  w-full
-  space-y-2
-  leading="170%"
+  class="w-full space-y-2 leading-(170%)"
   style:font-size="{DATAS.fontSize}px"
   style:background={!DATAS.isDarkMode ? DATAS.bg : ""}
 >
@@ -110,7 +108,13 @@
         ? `calc(var(--spacing) * -${parseInt(DATAS.fontSize / 2)})`
         : ""}
       id="zh-{id}"
-      px-5
+      class={[
+        "px-5",
+        t == 4 && "bg-white dark:bg-black",
+        (t == 7 && i > 0) || (page.params.cid === CID.BIBLE && i === 0)
+          ? "before:(content-[attr(data-p)] absolute text-green)"
+          : "",
+      ]}
       data-lang="zh"
       data-pp={p}
       data-p={(page.params.cid !== CID.BOOKS ? p : p - 1) + "˼"}
@@ -120,17 +124,17 @@
       class:font-500={t == 4}
       class:sticky={t == 4}
       class:top-0={t == 4}
-      bg={t == 4 ? "white dark:black" : ""}
       class:relative={t == 7}
       class:z-2={t == 4}
-      before={(t == 7 && i > 0) || (page.params.cid === CID.BIBLE && i === 0)
-        ? `content-[attr(data-p)] absolute text-green`
-        : ""}
     >
       {@html c}
     </p>
   {/each}
 </article>
+
+<!-- before={(t == 7 && i > 0) || (page.params.cid === CID.BIBLE && i === 0)
+  ? `content-[attr(data-p)] absolute text-green`
+  : ""} -->
 
 <style>
   p {

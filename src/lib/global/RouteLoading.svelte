@@ -20,13 +20,16 @@
 </script>
 
 {#if navigating.to}
-  <section class="fade" flex-col flex-bc>
-    <div justify="self-start" w-full h-1>
-      <div h-full bg="#5cb85c" style="width: {p * 100}%"></div>
+  <section class="fade flex-col flex-bc">
+    <div class="justify-self-start w-full h-1">
+      <div class="h-full bg-[#5cb85c]" style="width: {p * 100}%"></div>
     </div>
-    <div flex-1 flex-cc>
-      <div bg="white dark:black" size="20" border="1 green/20" inset-shadow="sm green/40" rounded="full" flex-cc>
-          <Diamonds size="32" color="green" unit="px" duration="1s" />
+    <div class="flex-1 flex-cc">
+      <div
+        class="bg-white dark:black size-20 border-1 border-green/20 rounded-full flex-cc
+        inset-shadow-sm inset-shadow-green/40"
+      >
+        <Diamonds size="32" color="green" unit="px" duration="1s" />
       </div>
     </div>
   </section>

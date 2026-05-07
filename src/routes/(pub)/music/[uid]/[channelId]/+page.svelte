@@ -1,7 +1,6 @@
 <script>
-    import { page } from "$app/state";
-    const { data } = $props();
-
+  import { page } from "$app/state";
+  const { data } = $props();
 </script>
 
 <ul px-5 space-y-2>

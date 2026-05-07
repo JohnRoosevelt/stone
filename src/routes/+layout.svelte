@@ -11,28 +11,44 @@
   const { children } = $props();
   let innerWidth = $state(0);
 
+  // ── 网络信息管理 ────────────────────────────────────────────
+  /** NetworkInformation 对象（可能为 null） */
+  let connection = $state(null);
+
+  /** 更新网络状态到全局 store */
+  function updateNetworkInfo(netInfo) {
+    if (!netInfo) return;
+    DATAS.networkType = netInfo.effectiveType || netInfo.type || "unknown";
+    DATAS.connectionType = netInfo.type || "unknown";
+  }
+
   // Client-side initialization (runs only in browser, not during SSR)
   onMount(async () => {
     // Theme from localStorage
     DATAS.isDarkMode = localStorage.getItem("theme") == "dark";
 
+    // ── Wake Lock ──
+    // 初始加载时没有用户手势，wakeLock() 会静默失败
+    // 用户点开文章阅读时才会真正生效（在读者页面会主动调用）
     wakeLock();
 
-    // Network type detection
-    const connection = navigator.connection ||
+    // ── Network Information ──
+    connection =
+      navigator.connection ||
       navigator.mozConnection ||
-      navigator.webkitConnection || { type: "unknown", effectiveType: "" };
-    DATAS.networkType =
-      connection.effectiveType || connection.type || "unknown";
-    DATAS.connectionType = connection.type || "unknown";
-    connection.addEventListener("change", () => {
-      DATAS.networkType =
-        connection.effectiveType || connection.type || "unknown";
-      DATAS.connectionType = connection.type || "unknown";
-    });
+      navigator.webkitConnection ||
+      null;
 
-    // 后续 Tauri 版本将使用 Rust SQLite 替代
-    console.log("[App] SQLite Worker removed, Tauri native SQL pending");
+    if (connection) {
+      updateNetworkInfo(connection);
+      // 监听网络变化
+      connection.addEventListener("change", () => {
+        updateNetworkInfo(connection);
+      });
+    } else {
+      DATAS.networkType = "unknown";
+      DATAS.connectionType = "unknown";
+    }
   });
 
   $effect(() => {
@@ -53,15 +69,7 @@
 <svelte:document onvisibilitychange={handleVisibilityChange} />
 
 <main
-  w-screen
-  h-svh
-  overflow-hidden
-  flex-col
-  flex-bc
-  z-0
-  bg="#EDF1F0"
-  text="black/85"
-  dark="bg-[#111615] text-white"
+  class="w-screen h-svh overflow-hidden flex-col flex-bc z-0 bg-[#EDF1F0] text-black/85 dark:(bg-[#111615] text-white)"
 >
   {@render children()}
 </main>
