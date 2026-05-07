@@ -277,3 +277,5 @@
     {/if}
   </section>
 </article>
+
+<style uno-safelist="rounded-xl space-y-5"></style>

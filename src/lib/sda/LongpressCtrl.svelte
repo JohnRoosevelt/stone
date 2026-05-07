@@ -185,21 +185,11 @@
   {#if isShowColor}
     <section
       transition:slide
-      absolute
-      z-9
-      grid="~ cols-3"
-      gap-px
-      bg="gray-200"
-      divide="1 gray-100"
-      rounded-4
-      overflow-hidden
+      class="absolute z-9 grid grid-cols-3 gap-px bg-gray-200 divide-1 divide-gray-100 rounded-4 overflow-hidden dark:bg-gray-800"
     >
       {#each colors as { name }}
         <input
-          cursor-pointer
-          w-24
-          h-24
-          relative
+          class="cursor-pointer w-24 h-24 relative"
           style:background={name}
           type="radio"
           name="colors"
@@ -212,25 +202,16 @@
 
   <section
     transition:slide
-    absolute
-    z-9
-    bottom-14
-    right-2
-    text-7
-    grid="~ cols-1"
-    bg="gray-200"
-    divide="y-2 gray-100"
-    rounded-4
-    overflow-hidden
+    class="absolute z-9 bottom-14 right-2 text-7 grid grid-cols-1 bg-gray-200 divide-y-2 divide-gray-100 rounded-4 overflow-hidden dark:bg-gray-800"
     style="--color: {color}"
   >
     <button
       data-type="underline-wavy"
       aria-label="select-edit"
-      flex-cc
-      w-10
-      h={type === "underline-wavy" ? 24 : 14}
-      class="underline underline-offset-4 decoration-2 decoration-wavy"
+      class={[
+        "underline underline-offset-4 decoration-2 decoration-wavy w-10 flex-cc",
+        type === "underline-wavy" ? "h-24" : "h-14",
+      ]}
       style="text-decoration-color: var(--color);"
       onclick={selectionEdit}
     >
@@ -240,10 +221,10 @@
     <button
       data-type="underline"
       aria-label="select-edit"
-      flex-cc
-      w-10
-      h={type === "underline" ? 24 : 14}
-      class="underline underline-offset-4 decoration-2"
+      class={[
+        "underline underline-offset-4 decoration-2 w-10 flex-cc",
+        type === "underline" ? "h-24" : "h-14",
+      ]}
       style="text-decoration-color: var(--color);"
       onclick={selectionEdit}
     >
@@ -253,9 +234,7 @@
     <button
       data-type="bg"
       aria-label="select-edit"
-      flex-cc
-      w-10
-      h={type === "bg" ? 24 : 14}
+      class={["bg w-10 flex-cc", type === "bg" ? "h-24" : "h-14"]}
       style="background-color: var(--color);"
       onclick={selectionEdit}
     >
@@ -265,9 +244,7 @@
     <button
       data-type="text"
       aria-label="select-edit"
-      flex-cc
-      w-10
-      h={type === "text" ? 24 : 14}
+      class={["text w-10 flex-cc", type === "text" ? "h-24" : "h-14"]}
       style="color: var(--color);"
       onclick={selectionEdit}
     >
@@ -276,6 +253,7 @@
   </section>
 
   <section
+    class="
     absolute
     z-9
     bottom-0
@@ -284,15 +262,14 @@
     h-12
     flex-bc
     px-0
-    text="7 green"
+    text-7 text-green
+    bg-gray-100 dark:bg-gray-900"
     transition:slide
-    bg="gray-100 dark:gray-900"
     style="--color: {color}"
   >
     <button
       aria-label="select"
-      flex-1
-      h-full
+      class="flex-1 h-full"
       onclick={(event) => {
         const selection = window.getSelection();
         const selectedText = selection.toString();
@@ -316,13 +293,12 @@
         selection.addRange(newRange);
       }}
     >
-      <span i-carbon-select-window></span>
+      <span class="i-carbon-select-window"></span>
     </button>
 
     <button
       aria-label="copy"
-      flex-1
-      h-full
+      class="flex-1 h-full"
       onclick={async () => {
         try {
           const selection = window.getSelection();
@@ -375,19 +351,20 @@
         isShowLongpressCtrl = false;
       }}
     >
-      <span i-carbon-copy></span>
+      <span class="i-carbon-copy"></span>
     </button>
 
     <button
       aria-label="edit"
-      flex-1
-      h-full
+      class="flex-1 h-full"
       onclick={() => {
         isShowColor = !isShowColor;
         console.log("show color select");
       }}
     >
-      <span i-carbon-circle-filled style="background-color: var(--color);"
+      <span
+        class="i-carbon-circle-filled"
+        style="background-color: var(--color);"
       ></span>
     </button>
   </section>

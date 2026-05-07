@@ -74,7 +74,7 @@
   {@render children()}
 </main>
 
-<style>
+<style uno-preflights>
   :global(body) {
     margin: 0;
     padding: 0;
