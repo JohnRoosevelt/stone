@@ -17,7 +17,9 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file(System.getenv("KEYSTORE_PATH") ?: "../keystore.jks")
+            // Using absolute path from environment or default
+            val path = System.getenv("KEYSTORE_PATH") ?: "../keystore.jks"
+            storeFile = file(path)
             storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "stone123"
             keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
             keyPassword = System.getenv("KEY_PASSWORD") ?: "stone123"
@@ -61,7 +63,9 @@ android {
         }
     }
 
-    buildDir = "${rootProject.layout.buildDirectory.get()}/app/${projectDir.relativeTo(rootProject.projectDir)}/build"
+    // FIXED: Corrected syntax for Gradle 8.13+ to avoid Type Mismatch
+    val customBuildPath = "${rootProject.layout.buildDirectory.get()}/app/${projectDir.relativeTo(rootProject.projectDir)}/build"
+    layout.buildDirectory.set(file(customBuildPath))
 }
 
 dependencies {
@@ -80,4 +84,5 @@ dependencies {
     implementation("app.tauri:tauri-android:0.2.3")
 }
 
+// Ensure tauri script is applied after the android block
 apply(from = "${rootProject.projectDir}/tauri-android/tauri.android.kts")
