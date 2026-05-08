@@ -12,42 +12,34 @@
 
 <!-- only show on desktop -->
 <footer
-  class="w-full h-6 bg-white text-3 px-3 hidden flex-bc hidden"
-  dark="bg-gray-900"
-  sm="flex"
+  class="w-full h-6 bg-white text-3 px-3 flex-bc max-sm:hidden sm:flex dark:bg-gray-900"
 >
-  <div flex-cc gap-4>
-    <div flex-cc gap-1>
+  <div class="flex-cc gap-4">
+    <div class="flex-cc gap-1">
       {#if DATAS.online}
         {#if DATAS.connectionType === "wifi"}
-          <span i-carbon-wifi text-green></span>
+          <span class="i-carbon-wifi text-green"></span>
           <span>WiFi</span>
         {:else if DATAS.connectionType === "cellular"}
-          <span i-carbon-radio></span>
+          <span class="i-carbon-radio"></span>
           <span>{DATAS.networkType}</span>
         {:else}
-          <span i-carbon-network-3 text-green></span>
+          <span class="i-carbon-network-3 text-green"></span>
           <span>{DATAS.networkType}</span>
         {/if}
       {:else}
-        <span i-carbon-wifi-off text-gray-400></span>
+        <span class="i-carbon-wifi-off text-gray-400"></span>
         <span>离线</span>
       {/if}
     </div>
 
     <button
-      flex-cc
-      gap-x-2
-      bg-gray-200
-      px-1
-      py-px
-      rounded-1
+      class="flex-cc gap-x-2 bg-gray-200 px-1 py-px rounded-1 dark:bg-gray-700"
       aria-label="theme"
-      dark="bg-gray-700"
       onclick={() => (DATAS.isDarkMode = !DATAS.isDarkMode)}
     >
-      <span i-carbon-sun class:text-green={!DATAS.isDarkMode}></span>
-      <span i-carbon-moon class:text-green={DATAS.isDarkMode}></span>
+      <span class="i-carbon-sun" class:text-green={!DATAS.isDarkMode}></span>
+      <span class="i-carbon-moon" class:text-green={DATAS.isDarkMode}></span>
     </button>
   </div>
 </footer>

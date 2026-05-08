@@ -3,7 +3,7 @@
   import { NAV_ITEMS } from "$lib/config";
 
   /**
-   * 判断导航项是否应高亮
+   * Determine whether a nav item should be highlighted
    */
   function isActive(item) {
     if (item.matchExact) {
@@ -37,15 +37,15 @@
 <!-- only show on mobile home page -->
 <footer
   data-device="mobile"
-  class="w-full h-12 text-3 px-8 flex-bc bg-white dark:(bg-black border-gray-700) max-sm:flex sm:hidden"
-  class:hidden={!page.route.id?.includes("(home)")}
+  class={[
+    "w-full text-3 px-8 flex-bc bg-white dark:(bg-black border-gray-700) sm:hidden transition300 overflow-hidden",
+    page.route.id?.includes("(home)") ? "h-12" : "h-0",
+  ]}
 >
   {@render nav()}
 </footer>
 
 <!-- only show on desktop -->
-<aside
-  class="max-sm:hidden w-12 bg-white flex-col flex-ac sm:flex dark:(bg-gray-900)"
->
+<aside class="hidden w-12 bg-white flex-col sm:flex-ac dark:(bg-gray-900)">
   {@render nav()}
 </aside>
