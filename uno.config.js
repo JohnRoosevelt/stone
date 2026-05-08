@@ -93,6 +93,10 @@ export default defineConfig({
     /* 各页面高频通用 class（避免 SSR 首次渲染时缺失） */
     "rounded-xl",
     "space-y-5",
+    "sm:hidden",
+    "max-sm:hidden",
+    "sm:flex",
+    "max-sm:flex",
     ...Array.from("text-3 text-4 text-5 text-6 text-7".split(" ")),
     ...Array.from("text-white/100 text-white/45".split(" ")),
     ...Array.from(

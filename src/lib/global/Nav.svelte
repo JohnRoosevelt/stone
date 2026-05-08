@@ -34,16 +34,18 @@
   {/each}
 {/snippet}
 
-<!-- only show on mobile -->
+<!-- only show on mobile home page -->
 <footer
   data-device="mobile"
-  class="w-full h-12 text-3 px-8 flex-bc bg-white dark:(bg-black border-gray-700) sm:hidden"
+  class="w-full h-12 text-3 px-8 flex-bc bg-white dark:(bg-black border-gray-700) max-sm:flex sm:hidden"
   class:hidden={!page.route.id?.includes("(home)")}
 >
   {@render nav()}
 </footer>
 
 <!-- only show on desktop -->
-<aside class="hidden w-12 bg-white flex-col flex-ac sm:flex dark:(bg-gray-900)">
+<aside
+  class="max-sm:hidden w-12 bg-white flex-col flex-ac sm:flex dark:(bg-gray-900)"
+>
   {@render nav()}
 </aside>

@@ -4,7 +4,7 @@
 
 <!-- only show on desktop -->
 <header
-  class="w-full h-12 px-3 hidden flex-bc hidden bg-white dark:bg-gray-900 sm:flex"
+  class="w-full h-12 px-3 max-sm:hidden flex-bc bg-white dark:bg-gray-900 sm:flex"
 >
   <a href="/" data-sveltekit-replacestate class="flex-cc flex-row gap-2 text-6">
     <span class="i-icons-logo text-6"></span>
