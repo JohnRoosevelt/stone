@@ -30,7 +30,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-          cache: "gradle" # Enables caching for faster subsequent builds
+          cache: "gradle" # Cache Gradle dependencies for faster builds
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -60,30 +60,25 @@ jobs:
 
       - name: Build Android APK
         env:
-          # Explicitly pass the public URL to the build process
-          # Use VITE_ prefix if your frontend (Svelte/Nuxt) needs it
+          # Injected for frontend frameworks (Svelte/Nuxt)
           PUBLIC_R2: ${{ env.R2_PUBLIC }}
           VITE_PUBLIC_R2: ${{ env.R2_PUBLIC }}
-          # Absolute path for keystore to avoid Gradle path resolution issues
+          # Absolute path ensures Gradle finds the keystore regardless of working directory
           KEYSTORE_PATH: ${{ github.workspace }}/src-tauri/gen/android/keystore.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: upload
           KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           VERSION_CODE: ${{ github.run_number }}
           VERSION_NAME: 0.1.${{ github.run_number }}
-        # Using 'bun x tauri' avoids the 'command not found' error for cargo-tauri
-        run: bun x tauri android build --target aarch64 --release
+        # Removed --release flag (Tauri Android builds are release by default)
+        run: bun x tauri android build --target aarch64
 
       - name: Locate and prepare APK
         run: |
           mkdir -p dist
-          # Prioritize searching for the release-signed APK
-          APK=$(find src-tauri/gen/android -name "*release.apk" -type f | head -1)
-
-          # Fallback to any APK if release-signed is not found (though release is expected)
-          if [ -z "$APK" ]; then
-            APK=$(find src-tauri/gen/android -name "*.apk" -type f | grep -v "unaligned" | head -1)
-          fi
+          # Look for the generated APK file
+          # Tauri usually outputs to src-tauri/gen/android/app/build/outputs/apk/
+          APK=$(find src-tauri/gen/android -name "*.apk" -type f | grep -v "unaligned" | head -1)
 
           if [ -z "$APK" ]; then
             echo "Error: No APK found after build."
@@ -102,22 +97,22 @@ jobs:
           SHORT_SHA=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
 
-          # Upload versioned APK
+          # Upload unique versioned APK
           aws s3 cp dist/stone.apk "s3://${{ env.R2_BUCKET }}/apk/stone-${SHORT_SHA}-${TIMESTAMP}.apk" \
             --endpoint-url "${{ env.R2_ENDPOINT }}" \
             --region auto
 
-          # Update the 'latest' APK link
+          # Update the latest pointer
           aws s3 cp dist/stone.apk "s3://${{ env.R2_BUCKET }}/apk/stone-latest.apk" \
             --endpoint-url "${{ env.R2_ENDPOINT }}" \
             --region auto
 
-          echo "Public Download URL: ${{ env.R2_PUBLIC }}/apk/stone-latest.apk"
+          echo "Public Link: ${{ env.R2_PUBLIC }}/apk/stone-latest.apk"
 
       - name: Upload artifact fallback
-        # Always upload to GitHub Actions if the file exists, regardless of R2 status
+        # Always run if the file exists to help debugging if R2 upload fails
         if: always() && hashFiles('dist/stone.apk') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: stone-apk-build-${{ github.run_number }}
+          name: stone-apk-${{ github.run_number }}
           path: dist/stone.apk
