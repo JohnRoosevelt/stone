@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 
 env:
+  # Global environment variables for R2 storage
   R2_ENDPOINT: https://76f91d4a19eb310b8a1eee846a8d807b.r2.cloudflarestorage.com
   R2_BUCKET: holy
   R2_PUBLIC: https://r2.lelexue.cn
@@ -16,72 +17,107 @@ jobs:
     timeout-minutes: 40
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
+          cache: "gradle" # Enables caching for faster subsequent builds
 
-      - uses: android-actions/setup-android@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Add Android Rust targets
-        run: rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+        run: rustup target add aarch64-linux-android
 
-      - name: Install system deps
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y webkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev
 
-      - name: Restore keystore
+      - name: Restore keystore from secrets
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
         run: |
           if [ -n "$KEYSTORE_B64" ]; then
+            mkdir -p src-tauri/gen/android
             echo "$KEYSTORE_B64" | base64 -d > src-tauri/gen/android/keystore.jks
           fi
 
-      - run: bun install --frozen-lockfile
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
 
-      - name: Build APK
+      - name: Build Android APK
         env:
-          PUBLIC_R2: https://r2.lelexue.cn
-          KEYSTORE_PATH: ../keystore.jks
+          # Explicitly pass the public URL to the build process
+          # Use VITE_ prefix if your frontend (Svelte/Nuxt) needs it
+          PUBLIC_R2: ${{ env.R2_PUBLIC }}
+          VITE_PUBLIC_R2: ${{ env.R2_PUBLIC }}
+          # Absolute path for keystore to avoid Gradle path resolution issues
+          KEYSTORE_PATH: ${{ github.workspace }}/src-tauri/gen/android/keystore.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: upload
           KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           VERSION_CODE: ${{ github.run_number }}
           VERSION_NAME: 0.1.${{ github.run_number }}
-        run: cargo tauri android build --target aarch64
+        # Using 'bun x tauri' avoids the 'command not found' error for cargo-tauri
+        run: bun x tauri android build --target aarch64 --release
 
-      - name: Locate APK
+      - name: Locate and prepare APK
         run: |
           mkdir -p dist
-          APK=$(find src-tauri/gen/android -name "*.apk" -type f | grep -v "unaligned" | head -1)
-          ls -lh "$APK"
+          # Prioritize searching for the release-signed APK
+          APK=$(find src-tauri/gen/android -name "*release.apk" -type f | head -1)
+
+          # Fallback to any APK if release-signed is not found (though release is expected)
+          if [ -z "$APK" ]; then
+            APK=$(find src-tauri/gen/android -name "*.apk" -type f | grep -v "unaligned" | head -1)
+          fi
+
+          if [ -z "$APK" ]; then
+            echo "Error: No APK found after build."
+            exit 1
+          fi
+
+          echo "Found APK at: $APK"
           cp "$APK" dist/stone.apk
 
-      - name: Upload to R2
+      - name: Upload to Cloudflare R2
         if: success()
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_KEY }}
         run: |
-          V=$(git rev-parse --short HEAD)
-          TS=$(date -u +%Y%m%d-%H%M%S)
-          aws s3 cp dist/stone.apk "s3://${R2_BUCKET}/apk/stone-${V}-${TS}.apk" --endpoint-url "$R2_ENDPOINT" --region auto --acl public-read
-          aws s3 cp dist/stone.apk "s3://${R2_BUCKET}/apk/stone-latest.apk" --endpoint-url "$R2_ENDPOINT" --region auto --acl public-read
-          echo "Download: ${R2_PUBLIC}/apk/stone-latest.apk"
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
 
-      - name: Upload artifact (fallback)
-        if: failure()
+          # Upload versioned APK
+          aws s3 cp dist/stone.apk "s3://${{ env.R2_BUCKET }}/apk/stone-${SHORT_SHA}-${TIMESTAMP}.apk" \
+            --endpoint-url "${{ env.R2_ENDPOINT }}" \
+            --region auto
+
+          # Update the 'latest' APK link
+          aws s3 cp dist/stone.apk "s3://${{ env.R2_BUCKET }}/apk/stone-latest.apk" \
+            --endpoint-url "${{ env.R2_ENDPOINT }}" \
+            --region auto
+
+          echo "Public Download URL: ${{ env.R2_PUBLIC }}/apk/stone-latest.apk"
+
+      - name: Upload artifact fallback
+        # Always upload to GitHub Actions if the file exists, regardless of R2 status
+        if: always() && hashFiles('dist/stone.apk') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: stone-apk
+          name: stone-apk-build-${{ github.run_number }}
           path: dist/stone.apk
