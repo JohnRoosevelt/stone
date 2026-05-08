@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 
 env:
+          TAURI: "true"
   R2_ENDPOINT: https://76f91d4a19eb310b8a1eee846a8d807b.r2.cloudflarestorage.com
   R2_BUCKET: holy
   R2_PUBLIC: https://r2.lelexue.cn
@@ -45,6 +46,7 @@ jobs:
 
       - name: Restore keystore
         env:
+          TAURI: "true"
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
         run: |
           if [ -n "$KEYSTORE_B64" ]; then
@@ -56,6 +58,9 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build frontend (SvelteKit static)
+        env:
+          TAURI: "true"
+          PUBLIC_R2: https://r2.lelexue.cn
         run: |
           cp svelte.config.js svelte.config.cloudflare.js
           cat > svelte.config.js << 'ENDOFFILE'
@@ -68,6 +73,7 @@ jobs:
 
       - name: Build signed APK
         env:
+          TAURI: "true"
           KEYSTORE_PATH: ../keystore.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: upload
@@ -97,6 +103,7 @@ jobs:
       - name: Upload to R2
         if: success()
         env:
+          TAURI: "true"
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_KEY }}
         run: |
