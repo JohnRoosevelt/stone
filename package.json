@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "tauri:dev": "TAURI=true tauri dev",
     "tauri:build": "tauri build",
+    "tauri:android": "tauri android dev",
     "prepare": "svelte-kit sync || echo ''",
     "db:init": "wrangler d1 execute stone-db --local --command 'DROP TABLE IF EXISTS d1_migrations;' && wrangler d1 execute stone-db --local --file schemas/init.sql",
     "db:seed": "wrangler d1 execute stone-db --local --file schemas/books.sql && wrangler d1 execute stone-db --local --file schemas/books.zh.sql && wrangler d1 execute stone-db --local --file schemas/books.en.sql",

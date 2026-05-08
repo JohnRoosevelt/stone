@@ -1,0 +1,129 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  R2_ENDPOINT: https://76f91d4a19eb310b8a1eee846a8d807b.r2.cloudflarestorage.com
+  R2_BUCKET: holy
+  R2_PUBLIC: https://r2.lelexue.cn
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y webkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev
+
+      - name: Restore keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > src-tauri/gen/android/keystore.jks
+            echo "Keystore restored"
+          fi
+
+      - name: Install JS deps
+        run: bun install --frozen-lockfile
+
+      - name: Build frontend (SvelteKit static)
+        run: |
+          cp svelte.config.js svelte.config.cloudflare.js
+          cat > svelte.config.js << 'ENDOFFILE'
+          import adapter from "@sveltejs/adapter-static";
+          import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
+          export default { preprocess: vitePreprocess(), kit: { adapter: adapter({ pages: "build", assets: "build", fallback: "index.html" }) } };
+          ENDOFFILE
+          TAURI=true bun run build
+          mv svelte.config.cloudflare.js svelte.config.js
+
+      - name: Build signed APK
+        env:
+          KEYSTORE_PATH: ../keystore.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: upload
+          KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 0.1.${{ github.run_number }}
+        run: |
+          cargo install tauri-cli --version "^2.0" 2>/dev/null || true
+          TAURI=true cargo tauri android build --target aarch64-linux-android
+
+      - name: Locate APK
+        run: |
+          mkdir -p dist
+          find src-tauri/gen/android -name "*.apk" -type f 2>/dev/null | head -10
+          APK=$(find src-tauri/gen/android -name "*-release.apk" -not -name "*-unsigned*" -type f 2>/dev/null | head -1)
+          if [ -z "$APK" ]; then
+            APK=$(find src-tauri/gen/android -name "*-release-unsigned.apk" -type f 2>/dev/null | head -1)
+          fi
+          if [ -n "$APK" ]; then
+            cp "$APK" dist/stone.apk
+            ls -lh dist/stone.apk
+          else
+            echo "No APK found!"
+            exit 1
+          fi
+
+      - name: Upload to R2
+        if: success()
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_KEY }}
+        run: |
+          VERSION=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
+          COMMIT_MSG=$(git log -1 --pretty=%s | tr -d '"' | tr -d "'" | head -c 40)
+
+          aws s3 cp dist/stone.apk \
+            "s3://${R2_BUCKET}/apk/stone-${VERSION}-${TIMESTAMP}.apk" \
+            --endpoint-url "${R2_ENDPOINT}" \
+            --region auto \
+            --acl public-read \
+            --content-type "application/vnd.android.package-archive" \
+            --metadata "commit=${VERSION},commit_msg=${COMMIT_MSG}"
+
+          aws s3 cp dist/stone.apk \
+            "s3://${R2_BUCKET}/apk/stone-latest.apk" \
+            --endpoint-url "${R2_ENDPOINT}" \
+            --region auto \
+            --acl public-read \
+            --content-type "application/vnd.android.package-archive"
+
+          echo "✅ Download: ${R2_PUBLIC}/apk/stone-latest.apk"
+
+      - name: Upload artifact (fallback)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stone-apk
+          path: dist/stone.apk
