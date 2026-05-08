@@ -84,12 +84,10 @@ dependencies {
     implementation("app.tauri:tauri-android:0.2.3")
 }
 
-// Use project.file to ensure the path is resolved relative to the current project
-val tauriScript = project.file("../tauri-android/tauri.android.kts")
+val tauriScript = rootProject.projectDir.resolve("tauri-android/tauri.android.kts")
 
 if (tauriScript.exists()) {
     apply(from = tauriScript)
 } else {
-    // This error will now be more visible in the logs
-    throw GradleException("CRITICAL ERROR: Tauri Android script NOT found at: ${tauriScript.absolutePath}. Build cannot continue.")
+    logger.warn("Warning: Tauri Android script not yet found at: ${tauriScript.absolutePath}")
 }
