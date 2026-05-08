@@ -1,7 +1,7 @@
 <script>
   import { DATAS } from "$lib/data.svelte";
-  import { isTauri } from "$lib/tauri";
-  import { getDbSize } from "$lib/tauri";
+  import { isTauri, getDbSize } from "$lib/tauri";
+  import { formatBuildTime } from "$lib/format.js";
 
   let dbSize = $state("");
   $effect(async () => {
@@ -156,7 +156,7 @@
       class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 no-underline"
     >
       <span class="flex-cc gap-2">
-        <span class="i-carbon-phone text-green"></span>
+        <span class="i-carbon-download text-green"></span>
         下载 App
       </span>
       <span class="text-xs text-gray-400">Android/iOS/Mac/Windows</span>
@@ -320,11 +320,7 @@
           <span text-gray-400>version: </span>
           {__GIT_COMMIT__}
           <span text-gray-400>
-            ({(() => {
-              const d = new Date(__BUILD_TIME__ + "Z");
-              const pad = (n) => String(n).padStart(2, "0");
-              return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-            })()})
+            ({formatBuildTime(__BUILD_TIME__)})
           </span>
         </div>
       </div>
