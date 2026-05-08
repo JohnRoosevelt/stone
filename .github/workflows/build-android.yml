@@ -70,11 +70,12 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           VERSION_CODE: ${{ github.run_number }}
           VERSION_NAME: 0.1.${{ github.run_number }}
+          GRADLE_OPTS: "-Dorg.gradle.configuration-cache=false"
         # Removed --release flag (Tauri Android builds are release by default)
         # Ensure the android project is fully initialized and scripts are generated
         run: |
           bunx tauri android init
-          bunx tauri android build --target aarch64 -- -- --no-configuration-cache --stacktrace
+          bunx tauri android build --target aarch64
 
       - name: Locate and prepare APK
         run: |
