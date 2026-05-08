@@ -149,6 +149,21 @@
     <span class="i-carbon-chevron-right text-gray-400"></span>
   </a>
 
+  <!-- Download App (Web only) -->
+  {#if !isTauri()}
+    <a
+      href="/download"
+      class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 no-underline"
+    >
+      <span class="flex-cc gap-2">
+        <span class="i-carbon-phone text-green"></span>
+        下载 App
+      </span>
+      <span class="text-xs text-gray-400">Android/iOS/Mac/Windows</span>
+      <span class="i-carbon-chevron-right text-gray-400"></span>
+    </a>
+  {/if}
+
   <!-- Book import (Tauri only) -->
   {#if isTauri()}
     <a
