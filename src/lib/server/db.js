@@ -1,4 +1,4 @@
-/** 验证数字 CID（0=bible, 1=sda, 2=book），无效返回 undefined */
+/** Validate numeric CID (0=bible, 1=sda, 2=book), returns undefined if invalid */
 export function validateCid(cid) {
   const n = Number(cid);
   return Number.isInteger(n) && n >= 0 && n <= 2 ? n : undefined;

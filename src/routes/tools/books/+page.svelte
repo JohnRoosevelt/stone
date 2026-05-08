@@ -18,7 +18,7 @@
     { value: "en", label: "English" },
   ];
 
-  // CID 选项（按原顺序）
+  // CID options (in original order)
   const CID_OPTIONS = CID_LIST.map(({ id, name }) => ({
     value: Number(id),
     label: name,
@@ -73,7 +73,7 @@
 </svelte:head>
 
 <div class="w-full px-3 py-4 sm:px-6 sm:py-6 space-y-4 h-full overflow-y-auto">
-  <!-- 标题 + CID 切换 + 语言 -->
+  <!-- Title + CID switch + Language -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <div class="flex items-center gap-3">
       <h1 class="text-lg sm:text-xl font-bold">书籍数据</h1>
@@ -118,7 +118,7 @@
     </div>
   </div>
 
-  <!-- 汇总条 + 批量操作 -->
+  <!-- Summary bar + batch operations -->
   <div class="flex items-center gap-2 sm:gap-3 text-xs text-gray-500 flex-wrap">
     <span class="bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 rounded-lg">
       书 <strong class="text-gray-700 dark:text-gray-200 ml-1"
@@ -158,7 +158,7 @@
     </div>
   {/if}
 
-  <!-- 表格 -->
+  <!-- Table -->
   <div
     class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden"
   >
@@ -250,7 +250,7 @@
                   </td>
                 </tr>
 
-                <!-- R2 预览面板 -->
+                <!-- R2 Preview Panel -->
                 {#if previewBook === book.book_id}
                   <tr>
                     <td colspan="4" class="p-0">
@@ -265,7 +265,7 @@
                   </tr>
                 {/if}
 
-                <!-- 章节/段落下钻（独立组件） -->
+                <!-- Chapter/Paragraph drilldown (standalone component) -->
                 {#if expandedBook === book.book_id}
                   <tr>
                     <td colspan="4" class="p-0 bg-gray-50/50">

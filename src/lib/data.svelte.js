@@ -1,7 +1,7 @@
 /**
- * 全局状态
+ * Global state
  *
- * 按功能分区组织，新代码可直接从细分 store 文件导入：
+ * Organized by functional areas; new code can import directly from sub-store files:
  *   import { networkStore } from "$lib/stores/network.svelte";
  *   import { themeStore }   from "$lib/stores/theme.svelte";
  *   import { readerStore }  from "$lib/stores/reader.svelte";
@@ -12,28 +12,28 @@
  */
 
 export const DATAS = $state({
-  // ── 网络 ──
+  // ── Network ──
   online: false,
   networkType: "unknown",
   connectionType: "unknown",
 
-  // ── 主题 ──
+  // ── Theme ──
   isDarkMode: false,
 
-  // ── 设备 ──
+  // ── Device ──
   uaInfo: {},
   dbInfo: {},
 
-  // ── 阅读器 ──
+  // ── Reader ──
   fontSize: 16,
   isFullScreen: false,
   bg: "#F8F9FA",
   showSdaEnglish: false,
 
-  // ── UI 布局 ──
+  // ── UI Layout ──
   isMobile: false,
 
-  // ── 对话框 ──
+  // ── Dialog ──
   dialog: {
     show: false,
     animate: {},
@@ -41,7 +41,7 @@ export const DATAS = $state({
     c: null,
   },
 
-  // ── 触摸 ──
+  // ── Touch ──
   touchInfo: {},
 });
 

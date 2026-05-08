@@ -1,7 +1,7 @@
 import { json } from "@sveltejs/kit";
 import { getDB } from "$lib/server/db";
 
-// 查询书籍列表
+// Query book list
 async function listBooks(db, { cid, lang, q }) {
   let sql, params;
 
@@ -34,7 +34,7 @@ async function listBooks(db, { cid, lang, q }) {
   return results;
 }
 
-// 添加书籍
+// Add book
 async function addBook(
   db,
   { cid, book_id, section, featured, lang_code, name, title },
@@ -64,12 +64,12 @@ async function addBook(
   return { success: true };
 }
 
-// 更新书籍
+// Update book
 async function updateBook(
   db,
   { cid, book_id, section, featured, lang_code, name, title },
 ) {
-  // 更新基础信息
+  // Update basic info
   await db
     .prepare(
       `
@@ -79,7 +79,7 @@ async function updateBook(
     .bind(section || null, featured ?? null, cid, book_id)
     .run();
 
-  // 更新多语言信息（如果提供）
+  // Update i18n info (if provided)
   if (lang_code && name) {
     await db
       .prepare(
@@ -98,7 +98,7 @@ async function updateBook(
   return { success: true };
 }
 
-// 删除书籍（级联删除关联的书籍多语言、章节、段落）
+// Delete book (cascading delete related book i18n, chapters, paragraphs)
 async function deleteBook(db, { cid, book_id }) {
   await db
     .prepare(

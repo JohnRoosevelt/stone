@@ -1,7 +1,7 @@
 import { json } from "@sveltejs/kit";
 import { getDB } from "$lib/server/db";
 
-// 添加章节
+// Add chapter
 async function addChapter(db, { cid, book_id, chapter_id, lang_code, title }) {
   await db
     .prepare(
@@ -17,7 +17,7 @@ async function addChapter(db, { cid, book_id, chapter_id, lang_code, title }) {
   return { success: true };
 }
 
-// 更新章节标题（通过复合主键）
+// Update chapter title (via composite primary key)
 async function updateChapter(
   db,
   { cid, book_id, chapter_id, lang_code, title },
@@ -43,7 +43,7 @@ async function updateChapter(
   return { success: true };
 }
 
-// 删除章节（级联删除段落，由 ON DELETE CASCADE 自动处理）
+// Delete chapter (cascading delete paragraphs, handled automatically by ON DELETE CASCADE)
 async function deleteChapter(db, { cid, book_id, chapter_id, lang_code }) {
   if (
     cid !== undefined &&
@@ -66,7 +66,7 @@ async function deleteChapter(db, { cid, book_id, chapter_id, lang_code }) {
   return { success: true };
 }
 
-// 查询章节列表
+// Query chapter list
 async function listChapters(db, { cid, book_id, lang_code }) {
   const conditions = [];
   const params = [];

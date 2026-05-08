@@ -39,7 +39,7 @@
   let importCid = $state(1);
   let importText = $state("");
 
-  /** 从 CID_LIST 派生数值键映射和选项列表 */
+  /** Derive numeric key map and option list from CID_LIST */
   const CID_MAP = Object.fromEntries(
     CID_LIST.map(({ id, name }) => [Number(id), name]),
   );
@@ -192,7 +192,7 @@
 
     if (cid === null || cid === undefined) return;
 
-    // 条件变化自动查询（300ms 防抖，避免搜索词打字时频繁请求）
+    // Auto-query on condition change (300ms debounce, avoid frequent requests while typing search terms)
     const timer = setTimeout(() => loadBooks(cid), 300);
     return () => clearTimeout(timer);
   });
@@ -207,7 +207,7 @@
   </div>
 {/if}
 
-<!-- 工具栏 -->
+<!-- Toolbar -->
 <svelte:head>
   <title>书籍管理 - 脚前的灯</title>
 </svelte:head>
@@ -247,7 +247,7 @@
   {/if}
 </div>
 
-<!-- 数据表格 -->
+<!-- Data table -->
 {#if selectedCid !== null}
   <div class="w-full flex-1 overflow-auto border rounded">
     <table class="w-full text-xs border-collapse">
@@ -328,7 +328,7 @@
 {/if}
 
 <!-- ════════════════════════════════════════════════════════════ -->
-<!-- 弹窗: 书籍编辑/新增 -->
+<!-- Modal: Book Edit/Add -->
 <!-- ════════════════════════════════════════════════════════════ -->
 {#if showEdit}
   <div
@@ -455,7 +455,7 @@
 {/if}
 
 <!-- ════════════════════════════════════════════════════════════ -->
-<!-- 弹窗: 删除确认 -->
+<!-- Modal: Delete Confirmation -->
 <!-- ════════════════════════════════════════════════════════════ -->
 {#if showDelete && deleteTarget}
   <div
@@ -509,7 +509,7 @@
 {/if}
 
 <!-- ════════════════════════════════════════════════════════════ -->
-<!-- 弹窗: 批量导入 -->
+<!-- Modal: Batch Import -->
 <!-- ════════════════════════════════════════════════════════════ -->
 {#if showImport}
   <div

@@ -1,7 +1,7 @@
 <article
   class="space-y-6 text-base leading-relaxed text-gray-700 dark:text-gray-300"
 >
-  <!-- 缘起 -->
+  <!-- Origin -->
   <section space-y-3>
     <blockquote class="border-l-3 border-green pl-3 text-green italic text-xs">
       "我比我的师傅更通达。因我思想你的法度。"
@@ -43,7 +43,7 @@
     </p>
   </section>
 
-  <!-- 生死 -->
+  <!-- Life and Death -->
   <section space-y-3>
     <h3 class="text-base font-semibold text-green">未知死，焉知生</h3>
 
@@ -83,7 +83,7 @@
     </blockquote>
   </section>
 
-  <!-- 思考 -->
+  <!-- Reflection -->
   <section space-y-3>
     <h3 class="text-base font-semibold text-green">思考</h3>
 
@@ -103,7 +103,7 @@
       我们为肉体准备食物，也储备粮食避免肉体的缺乏。同样我们的思想意识也是从我们所看到所阅读的信息而来的，这是我们的精神食粮，我们同样也需要预备和储存。我们并不知道将来具体发生什么，但尽自己力所能及的预备是人的本分。
     </p>
 
-    <!-- 需要帮助 -->
+    <!-- Need Help -->
     <section space-y-2 class="bg-green/5 rounded-xl p-4 border border-green/20">
       <p class="font-medium text-green">
         在阅读本文的读者，你是一个灵感话语的爱好者吗？你认为我的想法是真实的需求吗？请反馈告诉我，避免我在做自以为正确但其实是错误的事情，我需要你的帮助和反馈。

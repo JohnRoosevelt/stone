@@ -1,4 +1,4 @@
 import { DATAS } from "$lib/data.svelte";
 
-/** 网络状态（与 DATAS 共享同一 reactive 对象） */
+/** Network status (shares the same reactive object with DATAS) */
 export const networkStore = DATAS;

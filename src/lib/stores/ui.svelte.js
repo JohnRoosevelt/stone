@@ -1,4 +1,4 @@
 import { DATAS } from "$lib/data.svelte";
 
-/** UI 布局状态（与 DATAS 共享同一 reactive 对象） */
+/** UI layout state (shares the same reactive object with DATAS) */
 export const uiStore = DATAS;

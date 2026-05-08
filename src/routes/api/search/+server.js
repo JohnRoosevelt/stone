@@ -1,37 +1,40 @@
 import { json } from "@sveltejs/kit";
 import { getDB } from "$lib/server/db";
 
-/** 判断是否包含 CJK 中文 */
+/** Check if text contains CJK Chinese characters */
 function hasCJK(str) {
   return /[\u4e00-\u9fff\u3400-\u4dbf]/.test(str);
 }
 
 /**
- * rowid 范围裁剪优化
+ * rowid range pruning optimization
  *
- * 背景：FTS5 外部内容表只索引了 text_content，没有 lang_code / cid / book_id。
- * 按范围搜索时，FTS 先查出所有语言的所有匹配行，再 JOIN 回主表过滤范围。
- * 高频词（如"耶稣"）可命中数万行，若搜索范围只限某个分类/书，绝大部分回表是浪费的。
+ * Background: FTS5 external content table only indexes text_content, not lang_code / cid / book_id.
+ * When searching with scoping, FTS first finds all matching rows across all languages,
+ * then JOINs back to the main table for filtering. High-frequency words (e.g. "Jesus")
+ * can match tens of thousands of rows; if the scope is limited to a specific category/book,
+ * most of the back-joins are wasteful.
  *
- * 优化：提前算出目标范围的 rowid [min, max] 传给 FTS JOIN，让 SQLite 在回表时
- * 直接跳过范围外的行。
+ * Optimization: Pre-calculate the target scope's rowid [min, max] and pass it to the FTS JOIN,
+ * allowing SQLite to skip out-of-range rows during back-join.
  *
- * 优化效果（假设高频词 FTS 命中 8000 行）：
+ * Effect (assuming a high-frequency word matches 8000 FTS rows):
  *   ┌────────────────────────────────┬──────┬──────────┬────────┐
- *   │ 搜索范围                       │ 命中 │ 实际回表 │ 提速   │
+ *   │ Search Scope                   │ Hits │ Back-join│ Speedup│
  *   ├────────────────────────────────┼──────┼──────────┼────────┤
- *   │ lang=zh                        │ 8000 │ 8000     │ 不变   │
+ *   │ lang=zh                        │ 8000 │ 8000     │ none   │
  *   │ lang=zh&cid=0                  │ 8000 │ ~4000    │ 2x     │
  *   │ lang=zh&cid=0&bookId=1        │ 8000 │ ~200     │ 40x    │
  *   │ lang=zh&cid=0&bookId=1&chapter=3 │ 8000 │ ~5    │ 1600x  │
  *   └────────────────────────────────┴──────┴──────────┴────────┘
- *   低频词（如"以利沙"）命中仅几十行，优化效果不明显，但也没有额外开销。
+ *   Low-frequency words (e.g. "Elisha") only hit dozens of rows,
+ *   so the optimization is less noticeable but has no extra overhead.
  *
- * @param db    - D1 数据库实例
- * @param lang  - 语言代码（必填）
- * @param cid   - 分类（可选）
- * @param bookId - 书 ID（可选）
- * @returns { minRowid, maxRowid } | null（范围无效时返回 null）
+ * @param db    - D1 database instance
+ * @param lang  - Language code (required)
+ * @param cid   - Category ID (optional)
+ * @param bookId - Book ID (optional)
+ * @returns { minRowid, maxRowid } | null (null if scope is invalid)
  */
 async function getRowidRange(db, { lang, cid, bookId }) {
   const conditions = ["lang_code = ?"];
@@ -63,7 +66,7 @@ async function getRowidRange(db, { lang, cid, bookId }) {
 }
 
 /**
- * 构建 FTS5 MATCH 查询（仅用于非中文）
+ * Build FTS5 MATCH query (for non-Chinese only)
  */
 function buildFtsMatch(raw) {
   const words = raw
@@ -99,19 +102,20 @@ export async function GET({ url, platform }) {
     const joins = [];
     const whereConditions = [];
 
-    // 语言过滤（总是有）
+    // Language filtering (always present)
     whereConditions.push("cp.lang_code = ?");
     params.push(lang);
 
     if (isCJKQuery) {
-      // ── 中文搜索：用 LIKE 替代 FTS5 ──
-      // FTS5 的 unicode61 分词器无法正确拆分中文，连续汉字被当成一个 token，
-      // 导致短语匹配大量遗漏。LIKE 虽无索引加速，但配合 rowid 范围裁剪 + 其他索引，
-      // 对中文场景更准确。
+      // ── Chinese search: use LIKE instead of FTS5 ──
+      // FTS5's unicode61 tokenizer cannot correctly split Chinese text;
+      // consecutive Chinese characters are treated as a single token,
+      // causing significant phrase matching misses. While LIKE lacks index acceleration,
+      // combined with rowid range pruning + other indexes, it's more accurate for Chinese.
       whereConditions.push("cp.text_content LIKE ?");
       params.push(`%${q}%`);
     } else {
-      // ── 非中文（英文等）：用 FTS5 ──
+      // ── Non-Chinese (English etc.): use FTS5 ──
       const matchStr = buildFtsMatch(q);
       if (!matchStr) {
         return json({ error: "Invalid search terms" }, { status: 400 });
@@ -121,7 +125,7 @@ export async function GET({ url, platform }) {
       params.push(matchStr);
     }
 
-    // ── rowid 范围裁剪（可选） ──
+    // ── rowid range pruning (optional) ──
     if (cid !== undefined || bookId !== undefined) {
       const range = await getRowidRange(db, { lang, cid, bookId });
       if (range) {
@@ -130,7 +134,7 @@ export async function GET({ url, platform }) {
       }
     }
 
-    // ── 额外的过滤条件 ──
+    // ── Additional filter conditions ──
     if (cid !== undefined) {
       whereConditions.push("cp.cid = ?");
       params.push(cid);
@@ -145,7 +149,7 @@ export async function GET({ url, platform }) {
       ? "WHERE " + whereConditions.join(" AND ")
       : "";
 
-    // ORDER BY：中文用 rowid（按原文顺序），非中文用 fts.rank（按相关度）
+    // ORDER BY: Chinese uses rowid (original order), non-Chinese uses fts.rank (relevance)
     const orderBy = isCJKQuery ? "cp.cid, cp.rowid" : "cp.cid, fts.rank";
 
     const sql = `
@@ -187,7 +191,7 @@ export async function GET({ url, platform }) {
       .all();
     const total = results.length > 0 ? results[0]._total : 0;
     const hasMore = offset + limit < total;
-    // 移除每行多余的 _total 字段
+    // Remove redundant _total field from each row
     for (const r of results) delete r._total;
     return json({ total, results, hasMore });
   } catch (e) {

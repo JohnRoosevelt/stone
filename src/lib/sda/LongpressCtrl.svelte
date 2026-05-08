@@ -6,17 +6,17 @@
 
   let { isShowLongpressCtrl = $bindable(false) } = $props();
   let colors2 = $state({
-    OrangeRed: false, // 	橙红色
-    Tomato: false, // 	番茄
-    Magenta: false, // 洋红
+    OrangeRed: false, // 	Orange Red
+    Tomato: false, // 	Tomato
+    Magenta: false, // Magenta
 
-    Lime: false, // 	酸橙色
-    LawnGreen: false, // 		草坪绿
-    MediumSpringGreen: false, // 	春绿
+    Lime: false, // 	Lime
+    LawnGreen: false, // 		Lawn Green
+    MediumSpringGreen: false, // 	Medium Spring Green
 
-    MediumBlue: false, // 适中的蓝色
-    RoyalBlue: false, // 皇家蓝
-    MediumSlateBlue: false, // 暗蓝灰色
+    MediumBlue: false, // Medium Blue
+    RoyalBlue: false, // Royal Blue
+    MediumSlateBlue: false, // Medium Slate Blue
   });
 
   let colors = $state([
@@ -174,7 +174,7 @@
 
     console.log({ highlight });
 
-    // 从 localStorage 获取现有高亮或初始化空数组
+    // Get existing highlights from localStorage or initialize empty array
     // let highlights = JSON.parse(localStorage.getItem("highlights") || "[]");
     // highlights.push(highlight);
     // localStorage.setItem("highlights", JSON.stringify(highlights));
@@ -372,7 +372,7 @@
 
 <style>
   input[type="radio"] {
-    -webkit-appearance: none; /* 覆盖浏览器默认样式 */
+    -webkit-appearance: none; /* Override browser default style */
     -moz-appearance: none;
     appearance: none;
   }

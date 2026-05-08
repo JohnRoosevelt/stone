@@ -1,116 +1,261 @@
 /**
- * svelte-attributify-to-class — Vite 插件
+ * svelte-attributify-to-class — Vite plugin
  * =========================================
  *
- * 在 Svelte 编译前，将 attributify 风格的独立属性自动转换为 class="..."，
- * 同时移除已转换的原始属性，避免 Svelte 因 ":" 字符报错。
+ * Before Svelte compilation, automatically converts attributify-style standalone attributes
+ * to class="...", while removing the converted original attributes to avoid Svelte errors
+ * caused by the ":" character.
  *
- * ── 支持的输入语法 ──────────────────────────────────────────
+ * ── Supported Input Syntax ──────────────────────────────────────────
  *
- *   1. 无值属性（valueless）
+ *   1. Valueless attributes
  *      <div w-full h-12 flex-cc />
  *      → <div class="w-full h-12 flex-cc" />
  *
- *   2. 带冒号的变体无值属性
+ *   2. Variant valueless attributes with colon
  *      <div hover:bg-purple-700 hover:scale-105 />
  *      → <div class="hover:bg-purple-700 hover:scale-105" />
  *
- *   3. 变体前缀有值属性（variant valued）
+ *   3. Variant prefix valued attributes
  *      <div dark="bg-gray-800" sm="w-80" />
  *      → <div class="dark:bg-gray-800 sm:w-80" />
  *
- *   4. 通用有值 attributify（common valued）
+ *   4. Common valued attributify
  *      <div bg="white dark:black" text="sm white" />
  *      → <div class="bg-white dark:bg-black text-sm text-white" />
  *
- *   5. 自引用语法 "~"（self-reference）
+ *   5. Self-reference syntax "~"
  *      <div grid="~ cols-3" divide-y="1 gray-300" />
  *      → <div class="grid grid-cols-3 divide-y-1 divide-gray-300" />
  *
- *   6. 已有 class 合并
+ *   6. Merge with existing class
  *      <div flex-cc class="text-sm" />
  *      → <div class="flex-cc text-sm" />
  *
- *   7. class 为模板字面量（template literal）
+ *   7. Class as template literal
  *      <div class={`text-sm ${cond ? "active" : ""}`} flex-cc />
  *      → <div class={`flex-cc text-sm ${cond ? "active" : ""}`} />
  *
- *   8. class 为表达式（expression）
+ *   8. Class as expression
  *      <div class={cond ? "active" : ""} flex-cc />
  *      → <div class={"flex-cc " + (cond ? "active" : "")} />
  *
- * ── 不会被处理的属性 ─────────────────────────────────────────
+ * ── Attributes That Will NOT Be Processed ─────────────────────────────────────────
  *
- *   - 标准 HTML 属性:  id, style, href, src, alt, title, type, …
- *   - Svelte 指令:     on:click, bind:value, use:action, class:name, …
- *   - 事件处理器:      onclick, onchange, oninput, …
+ *   - Standard HTML attributes:  id, style, href, src, alt, title, type, …
+ *   - Svelte directives:     on:click, bind:value, use:action, class:name, …
+ *   - Event handlers:      onclick, onchange, oninput, …
  *   - data-* / aria-*
- *   - Svelte 5 简写:   {variable}
- *   - <script> / <style> / <svelte:*> 标签内的内容
+ *   - Svelte 5 shorthand:   {variable}
+ *   - Content inside <script> / <style> / <svelte:*> tags
  *
- * ── 处理顺序（enforce: "pre"）────────────────────────────────
+ * ── Processing Order (enforce: "pre") ────────────────────────────────
  *
- *   Vite 插件的 "pre" 阶段运行，在 Svelte 编译器看到文件之前
- *   完成转换，因此 Svelte 不会对原始 attributify 属性产生警告。
+ *   Runs in the "pre" phase of the Vite plugin, completing the transformation
+ *   before the Svelte compiler sees the file, so Svelte won't warn about
+ *   the original attributify attributes.
  */
 
 /**
  * @returns {import("vite").Plugin}
  */
 export default function svelteAttributifyToClass() {
-  // 不是 UnoCSS 工具类的 HTML 保留属性
+  // HTML reserved attributes that are not UnoCSS utility classes
   const skipSet = new Set([
-    "class","id","style","href","src","alt","title","type","value",
-    "name","for","role","rel","target","lang","dir","disabled",
-    "readonly","required","autofocus","placeholder","hidden","download",
-    "draggable","tabindex","accesskey","contenteditable","spellcheck",
-    "translate","width","height","viewBox","fill","xmlns","d",
-    "clip-path","clipPath","stroke","stroke-width","stroke-linecap",
-    "stroke-linejoin","cx","cy","r","rx","ry","x","y","dx","dy",
-    "points","stdDeviation","mode","values","min","max","step",
-    "accept","action","autocomplete","enctype","method","novalidate",
-    "cols","rows","span","colspan","rowspan","headers","scope",
-    "media","sizes","srcset","poster","preload","autoplay","controls",
-    "loop","muted","playsinline","crossorigin","integrity",
-    "referrerpolicy","loading","decoding","ismap","usemap","coords",
-    "shape","ping","charset","http-equiv","itemprop","itemscope",
-    "itemtype","itemid","itemref","slot","part","exportparts",
-    "open","selected","checked","multiple","wrap","nowrap",
-    "reversed","start","compact","declare","standby","codebase",
-    "codetype","archive","classid","code","data","hspace","vspace",
-    "marginheight","marginwidth","longdesc","frameborder",
-    "allowfullscreen","sandbox","srcdoc","let","this",
+    "class",
+    "id",
+    "style",
+    "href",
+    "src",
+    "alt",
+    "title",
+    "type",
+    "value",
+    "name",
+    "for",
+    "role",
+    "rel",
+    "target",
+    "lang",
+    "dir",
+    "disabled",
+    "readonly",
+    "required",
+    "autofocus",
+    "placeholder",
+    "hidden",
+    "download",
+    "draggable",
+    "tabindex",
+    "accesskey",
+    "contenteditable",
+    "spellcheck",
+    "translate",
+    "width",
+    "height",
+    "viewBox",
+    "fill",
+    "xmlns",
+    "d",
+    "clip-path",
+    "clipPath",
+    "stroke",
+    "stroke-width",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "cx",
+    "cy",
+    "r",
+    "rx",
+    "ry",
+    "x",
+    "y",
+    "dx",
+    "dy",
+    "points",
+    "stdDeviation",
+    "mode",
+    "values",
+    "min",
+    "max",
+    "step",
+    "accept",
+    "action",
+    "autocomplete",
+    "enctype",
+    "method",
+    "novalidate",
+    "cols",
+    "rows",
+    "span",
+    "colspan",
+    "rowspan",
+    "headers",
+    "scope",
+    "media",
+    "sizes",
+    "srcset",
+    "poster",
+    "preload",
+    "autoplay",
+    "controls",
+    "loop",
+    "muted",
+    "playsinline",
+    "crossorigin",
+    "integrity",
+    "referrerpolicy",
+    "loading",
+    "decoding",
+    "ismap",
+    "usemap",
+    "coords",
+    "shape",
+    "ping",
+    "charset",
+    "http-equiv",
+    "itemprop",
+    "itemscope",
+    "itemtype",
+    "itemid",
+    "itemref",
+    "slot",
+    "part",
+    "exportparts",
+    "open",
+    "selected",
+    "checked",
+    "multiple",
+    "wrap",
+    "nowrap",
+    "reversed",
+    "start",
+    "compact",
+    "declare",
+    "standby",
+    "codebase",
+    "codetype",
+    "archive",
+    "classid",
+    "code",
+    "data",
+    "hspace",
+    "vspace",
+    "marginheight",
+    "marginwidth",
+    "longdesc",
+    "frameborder",
+    "allowfullscreen",
+    "sandbox",
+    "srcdoc",
+    "let",
+    "this",
   ]);
 
-  // UnoCSS attributify 变体前缀
+  // UnoCSS attributify variant prefixes
   const variantNames = new Set([
-    "dark","light","sm","md","lg","xl","xxl","rtl","ltr",
-    "portrait","landscape","motion-safe","motion-reduce",
-    "contrast-more","contrast-less","print",
+    "dark",
+    "light",
+    "sm",
+    "md",
+    "lg",
+    "xl",
+    "xxl",
+    "rtl",
+    "ltr",
+    "portrait",
+    "landscape",
+    "motion-safe",
+    "motion-reduce",
+    "contrast-more",
+    "contrast-less",
+    "print",
   ]);
 
-  // 常见的有值 attributify 属性（值会被拆分为多个 class）
+  // Common valued attributify attributes (values will be split into multiple classes)
   const valuedAttrs = new Set([
-    "bg","grid","divide","divide-x","divide-y",
-    "text","border","m","p","gap","font",
-    "rounded","shadow","ring","inset-shadow",
+    "bg",
+    "grid",
+    "divide",
+    "divide-x",
+    "divide-y",
+    "text",
+    "border",
+    "m",
+    "p",
+    "gap",
+    "font",
+    "rounded",
+    "shadow",
+    "ring",
+    "inset-shadow",
   ]);
 
   function isSkippable(name) {
     if (skipSet.has(name)) return true;
     if (name.startsWith("data-") || name.startsWith("aria-")) return true;
-    if (name.startsWith("on") && name.length > 2 && name[2] === name[2].toLowerCase()) return true;
-    if (/^(on:|bind:|use:|class:|transition:|animate:|in:|out:|let:)/.test(name)) return true;
+    if (
+      name.startsWith("on") &&
+      name.length > 2 &&
+      name[2] === name[2].toLowerCase()
+    )
+      return true;
+    if (
+      /^(on:|bind:|use:|class:|transition:|animate:|in:|out:|let:)/.test(name)
+    )
+      return true;
     return false;
   }
 
   /**
-   * 逐字符扫描找出标签真正的闭合 `>`。
-   * 正确处理引号、反引号、花括号嵌套，避免 `${...}` 内的 `>` 被误认。
+   * Scan character by character to find the actual closing `>` of a tag.
+   * Correctly handle quotes, backticks, and brace nesting to avoid misidentifying `>` inside `${...}`.
    */
   function findTagEnd(str, start) {
     let i = start;
-    let inDQ = false, inSQ = false, inBT = false;
+    let inDQ = false,
+      inSQ = false,
+      inBT = false;
     let braceDepth = 0;
     while (i < str.length) {
       const ch = str[i];
@@ -142,11 +287,14 @@ export default function svelteAttributifyToClass() {
       let i = 0;
       while (i < code.length) {
         const tagStart = code.indexOf("<", i);
-        if (tagStart === -1) { result += code.slice(i); break; }
+        if (tagStart === -1) {
+          result += code.slice(i);
+          break;
+        }
 
         result += code.slice(i, tagStart);
 
-        // 闭合标签 </xxx>
+        // Closing tag </xxx>
         if (code[tagStart + 1] === "/") {
           const end = code.indexOf(">", tagStart + 2);
           result += code.slice(tagStart, end + 1);
@@ -154,11 +302,14 @@ export default function svelteAttributifyToClass() {
           continue;
         }
 
-        // 提取标签名（含冒号以支持 svelte:head 等）
+        // Extract tag name (including colon to support svelte:head, etc.)
         let j = tagStart + 1;
         while (j < code.length && /[\w:-]/.test(code[j])) j++;
         const tagName = code.slice(tagStart + 1, j);
-        if (["script","style","template"].includes(tagName) || tagName.startsWith("svelte:")) {
+        if (
+          ["script", "style", "template"].includes(tagName) ||
+          tagName.startsWith("svelte:")
+        ) {
           const end = findTagEnd(code, tagStart + 1);
           result += code.slice(tagStart, end + 1);
           i = end + 1;
@@ -171,16 +322,23 @@ export default function svelteAttributifyToClass() {
         }
 
         const tagEnd = findTagEnd(code, tagStart + 1);
-        if (tagEnd === -1) { result += code.slice(tagStart); break; }
+        if (tagEnd === -1) {
+          result += code.slice(tagStart);
+          break;
+        }
 
         const fullTag = code.slice(tagStart, tagEnd + 1);
         const attrPart = fullTag
           .slice(tagName.length + 1, -1)
           .replace(/\/\s*$/, "")
           .trim();
-        if (!attrPart) { result += fullTag; i = tagEnd + 1; continue; }
+        if (!attrPart) {
+          result += fullTag;
+          i = tagEnd + 1;
+          continue;
+        }
 
-        // ── 解析属性 ──
+        // ── Parse attributes ──
         const kept = [];
         const classParts = [];
         let existingClass = null;
@@ -192,7 +350,7 @@ export default function svelteAttributifyToClass() {
           if (pos >= attrPart.length) break;
           const nameStart = pos;
 
-          // Svelte 5 简写属性 {name}
+          // Svelte 5 shorthand attribute {name}
           if (attrPart[pos] === "{") {
             const closeBrace = attrPart.indexOf("}", pos + 1);
             if (closeBrace !== -1) {
@@ -205,14 +363,17 @@ export default function svelteAttributifyToClass() {
             }
           }
 
-          // 读取属性名
+          // Read attribute name
           while (pos < attrPart.length && /[\w:-]/.test(attrPart[pos])) pos++;
           const name = attrPart.slice(nameStart, pos);
-          if (!name) { pos++; continue; }
+          if (!name) {
+            pos++;
+            continue;
+          }
 
           const rawStart = attrStart;
 
-          // 检查后面有没有 =
+          // Check if there's a = after
           while (pos < attrPart.length && /\s/.test(attrPart[pos])) pos++;
           if (pos < attrPart.length && attrPart[pos] === "=") {
             pos++; // skip =
@@ -255,7 +416,7 @@ export default function svelteAttributifyToClass() {
               if (name === "class") {
                 const quoteMap = { '"': '"', "'": "'", "`": "`", "{": "{" };
                 existingClass = { value, quote: quoteMap[ch] || '"', raw };
-                // 不保留原始 class，后面重新拼接
+                // Don't keep the original class, will be reconstructed later
               } else if (variantNames.has(name)) {
                 for (const v of value.split(/\s+/).filter(Boolean)) {
                   if (v === "~") classParts.push(name);
@@ -277,7 +438,7 @@ export default function svelteAttributifyToClass() {
               kept.push(attrPart.slice(rawStart, pos));
             }
           } else {
-            // 无值属性
+            // Valueless attribute
             const raw = attrPart.slice(rawStart, pos);
             if (name === "class" || isSkippable(name)) {
               kept.push(raw);
@@ -287,7 +448,7 @@ export default function svelteAttributifyToClass() {
           }
         }
 
-        // ── 重新构建标签 ──
+        // ── Rebuild tag ──
         let newTag;
         if (classParts.length > 0) {
           const close = fullTag.endsWith("/>") ? " />" : "";
@@ -299,8 +460,7 @@ export default function svelteAttributifyToClass() {
               classAttr = ` class="${classParts.join(" ")} ${value}"`;
             else if (quote === "{")
               classAttr = ` class={"${classParts.join(" ") + " "}" + (${value})}`;
-            else
-              classAttr = ` class="${classParts.join(" ")} ${value}"`;
+            else classAttr = ` class="${classParts.join(" ")} ${value}"`;
           } else {
             classAttr = ` class="${classParts.join(" ")}"`;
           }

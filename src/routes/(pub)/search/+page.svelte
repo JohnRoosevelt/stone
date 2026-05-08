@@ -9,50 +9,50 @@
     SCOPES,
   } from "$lib/bible/searchStore.svelte.js";
 
-  /** 范围选择选项 */
+  /** Scope selection options */
   const SCOPE_OPTIONS = SCOPES;
 
-  /** 本地引用以确保响应性 */
+  /** Local reference to ensure reactivity */
   let historyItems = $state(searchHistory);
 
-  /** 监听 searchHistory 变化同步到本地 */
+  /** Watch searchHistory changes and sync locally */
   $effect(() => {
     historyItems = searchHistory;
   });
 
-  /** 从 URL 读取初始搜索词和范围 */
+  /** Read initial search query and scope from URL */
   let query = $state(page.url.searchParams.get("q") || "");
   let scopeCid = $state(
     page.url.searchParams.get("cid") || (searchState.scopeCid ?? 0),
   );
 
-  /** 输入框引用（自动 focus） */
+  /** Input element reference (auto focus) */
   let inputEl = $state(null);
 
-  /** 提交搜索 */
+  /** Submit search */
   function submitSearch() {
     const trimmed = query.trim();
     if (!trimmed) return;
-    // 保存到 store，导航到结果页
+    // Save to store, navigate to results page
     searchState.query = trimmed;
     searchState.scopeCid = scopeCid;
     const cidParam = scopeCid !== undefined ? `&cid=${scopeCid}` : "";
     goto(`/search/results?q=${encodeURIComponent(trimmed)}${cidParam}`);
   }
 
-  /** 清除输入 */
+  /** Clear input */
   function clearQuery() {
     query = "";
     inputEl?.focus();
   }
 
-  /** 点击历史标签快速搜索 */
+  /** Click history tag to quickly search */
   function searchKeyword(keyword) {
     query = keyword;
     submitSearch();
   }
 
-  // 挂载后自动聚焦
+  // Auto focus after mount
   onMount(() => {
     requestAnimationFrame(() => {
       inputEl?.focus();
@@ -65,7 +65,7 @@
 </svelte:head>
 
 <article w-full flex-1 flex flex-col min-h-0 overflow-hidden>
-  <!-- 搜索输入区 -->
+  <!-- Search input area -->
   <section
     w-full
     flex-shrink-0
@@ -74,7 +74,7 @@
     bg="white dark:black"
     b-b="1px solid gray-200 dark:gray-700"
   >
-    <!-- 搜索条 + 返回 -->
+    <!-- Search bar + back -->
     <div flex-cc gap-2>
       <button
         text-5
@@ -135,7 +135,7 @@
       </button>
     </div>
 
-    <!-- 范围选择标签 -->
+    <!-- Scope selection tabs -->
     <div flex-cc gap-1.5 mt-2 ml-9>
       {#each SCOPE_OPTIONS as { cid, label }}
         <button
@@ -159,10 +159,10 @@
     </div>
   </section>
 
-  <!-- 内容区 -->
+  <!-- Content area -->
   <section w-full flex-1 h-full flex-col overflow-y-auto>
     {#if historyItems.length > 0}
-      <!-- 搜索历史 -->
+      <!-- Search history -->
       <div
         w-full
         flex
@@ -212,7 +212,7 @@
         {/each}
       </div>
     {:else}
-      <!-- 空状态提示 -->
+      <!-- Empty state hint -->
       <div w-full h-full flex-cc flex-col text-gray-400 gap-4 px-6>
         <span i-carbon-search text-10></span>
         <div text-center leading-relaxed>

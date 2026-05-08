@@ -12,7 +12,7 @@
 </svelte:head>
 
 <article w-full h-full flex flex-col>
-  <!-- 顶栏 -->
+  <!-- Top bar -->
   <section
     class="flex items-center gap-2 px-4 py-3 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-700 flex-shrink-0"
   >
@@ -22,7 +22,7 @@
     <span text-sm font-medium>关于</span>
   </section>
 
-  <!-- 内容 -->
+  <!-- Content -->
   <section class="flex-1 overflow-y-auto px-4 py-5 leading-relaxed">
     <AboutApp />
   </section>

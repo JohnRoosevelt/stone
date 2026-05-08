@@ -28,8 +28,8 @@
     showId("article-top", "end");
   });
 
-  // 手机端：从书籍目录进来时弹出章节列表方便选章
-  // 从搜索结果（URL 带锚点）进来时不弹，直接定位到段落
+  // Mobile: show chapter list when coming from book directory for easy chapter selection
+  // Don't show dialog when coming from search results (URL with hash), jump directly to paragraph
   afterNavigate(({ from, to }) => {
     if (!from) return;
     if (from.route.id === to.route.id) return;

@@ -1,18 +1,23 @@
 <script>
   import { page } from "$app/state";
+  import { onMount } from "svelte";
   import { showId } from "$lib";
+
+  let { bookList = page.data.books || [] } = $props();
 
   let clientHeight = $state(0);
   let activeId = $state("");
   let selectId = $state("");
 
-  const groupByTag = page.data.books.reduce((pre, cur) => {
-    if (!pre[cur.title]) {
-      pre[cur.title] = [];
-    }
-    pre[cur.title].push(cur);
-    return pre;
-  }, {});
+  const groupByTag = $derived(
+    bookList.reduce((pre, cur) => {
+      if (!pre[cur.title]) {
+        pre[cur.title] = [];
+      }
+      pre[cur.title].push(cur);
+      return pre;
+    }, {}),
+  );
 
   // console.log({ bible, groupByTag });
 
@@ -38,7 +43,7 @@
     const ids = [...Object.keys(groupByTag)];
     ids.forEach((id) => observer.observe(document.getElementById(id)));
   }
-  $effect(() => {
+  onMount(() => {
     observeHeaders();
   });
 </script>

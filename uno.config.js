@@ -90,6 +90,9 @@ export default defineConfig({
     ],
   ],
   safelist: [
+    /* 各页面高频通用 class（避免 SSR 首次渲染时缺失） */
+    "rounded-xl",
+    "space-y-5",
     ...Array.from("text-3 text-4 text-5 text-6 text-7".split(" ")),
     ...Array.from("text-white/100 text-white/45".split(" ")),
     ...Array.from(
@@ -110,6 +113,18 @@ export default defineConfig({
         " ",
       ),
     ),
+    /* 圣经新旧约分类标签（Dir.svelte 动态绑定） */
+    ...Array.from(
+      "bg-white dark:bg-black bg-gray-200 dark:bg-gray-600 bg-gray-300 dark:bg-gray-800 bg-gray-100 dark:bg-gray-700".split(
+        " ",
+      ),
+    ),
+    ...Array.from(
+      "px-3 sticky top-0 z-3 flex-cc flex-1 h-full rounded-1 flex-bc h-12".split(
+        " ",
+      ),
+    ),
+    ...Array.from("text-green text-red font-700".split(" ")),
     /* 导航和首页图标（动态 class 绑定，需显式声明） */
     ...Array.from(
       "i-carbon-home i-icons-sda i-icons-bible i-carbon-user-settings i-carbon-user-avatar i-carbon-education i-carbon-debug i-carbon-screen i-carbon-fit-to-screen".split(

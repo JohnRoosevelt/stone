@@ -1,4 +1,4 @@
 import { DATAS } from "$lib/data.svelte";
 
-/** 设备信息（与 DATAS 共享同一 reactive 对象） */
+/** Device information (shares the same reactive object with DATAS) */
 export const deviceStore = DATAS;

@@ -4,10 +4,10 @@ import { getDB } from "$lib/server/db";
 /**
  * GET /api/admin/import
  *
- * 多级查询：
- *   ?cid=0&lang=zh                   → 书籍列表（含章节/段落计数）
- *   ?cid=0&lang=zh&bookId=1          → 该书的章节列表
- *   ?cid=0&lang=zh&bookId=1&chapterId=1 → 该章的段落列表
+ * Multi-level query:
+ *   ?cid=0&lang=zh                   → Book list (with chapter/paragraph counts)
+ *   ?cid=0&lang=zh&bookId=1          → Chapter list for that book
+ *   ?cid=0&lang=zh&bookId=1&chapterId=1 → Paragraph list for that chapter
  */
 export async function GET({ url, platform }) {
   try {
@@ -22,7 +22,7 @@ export async function GET({ url, platform }) {
     const bookId = url.searchParams.get("bookId");
     const chapterId = url.searchParams.get("chapterId");
 
-    // ── 查询段落 ───────────────────────────────────────
+    // ── Query paragraphs ───────────────────────────────────────
     if (bookId != null && chapterId != null) {
       const { results } = await db
         .prepare(
@@ -50,7 +50,7 @@ export async function GET({ url, platform }) {
       });
     }
 
-    // ── 查询章节 ───────────────────────────────────────
+    // ── Query chapters ───────────────────────────────────────
     if (bookId != null) {
       const { results } = await db
         .prepare(
@@ -62,7 +62,7 @@ export async function GET({ url, platform }) {
         .bind(cid, parseInt(bookId), lang)
         .all();
 
-      // 同时统计段数
+      // Also count paragraphs
       const cpRows = await db
         .prepare(
           `SELECT chapter_id, COUNT(*) AS cnt
@@ -92,7 +92,7 @@ export async function GET({ url, platform }) {
       });
     }
 
-    // ── 书籍列表 ───────────────────────────────────────
+    // ── Book list ───────────────────────────────────────
     const { results } = await db
       .prepare(
         `SELECT
@@ -142,8 +142,8 @@ export async function GET({ url, platform }) {
  * POST /api/admin/import
  * Body: { cid, bookId, lang }
  *
- * 服务端从 R2 读取 parquet 数据，校验后写入 D1。
- * 不再依赖客户端传输整本书的章节/段落数据，避免请求体过大。
+ * Server reads parquet data from R2, validates it, then writes to D1.
+ * No longer relies on the client to transfer entire book chapter/paragraph data, avoiding oversized request bodies.
  */
 export async function POST({ request, platform }) {
   try {
@@ -154,7 +154,7 @@ export async function POST({ request, platform }) {
 
     const db = getDB(platform);
 
-    // ── 1. 校验：该书在 book_base / book_i18n 中存在 ──────────
+    // ── 1. Verify the book exists in book_base / book_i18n ──────
     const book = await db
       .prepare(
         `SELECT bb.cid, bb.book_id, bi.name
@@ -172,7 +172,7 @@ export async function POST({ request, platform }) {
       );
     }
 
-    // ── 2. 从 R2 读取 .parquet.zst 并解析 ────────────────────
+    // ── 2. Read .parquet.zst from R2 and parse ─────────────────
     const { loadBookFromR2 } = await import("$lib/server/r2-parquet.js");
     const { chapters, chapterCount, paragraphCount } = await loadBookFromR2(
       platform,
@@ -208,7 +208,7 @@ export async function POST({ request, platform }) {
       return json({ error: "No chapters found in R2 data" }, { status: 400 });
     }
 
-    // ── 3. 校验 & 清理数据 ──────────────────────────────────
+    // ── 3. Validate & clean data ─────────────────────────────
     const cleanChapters = [];
     let skippedParagraphs = 0;
 
@@ -218,10 +218,10 @@ export async function POST({ request, platform }) {
         continue;
       }
 
-      // chapterId 兜底（parquet n 可能为 null/0）
+      // Fallback chapterId (parquet n may be null/0)
       const chapterId = Number(ch.chapterId) > 0 ? Number(ch.chapterId) : 1;
 
-      // 过滤空段落
+      // Filter out empty paragraphs
       const cleanParagraphs = ch.paragraphs.filter((p) => {
         if (!p.textContent || p.textContent.trim() === "") {
           skippedParagraphs++;
@@ -260,7 +260,7 @@ export async function POST({ request, platform }) {
       );
     }
 
-    // ── 4. 清空旧数据（事务级） ──────────────────────────────
+    // ── 4. Clear old data (transaction-level) ─────────────────
     await db
       .prepare(
         "DELETE FROM chapter_paragraphs WHERE cid = ? AND book_id = ? AND lang_code = ?",
@@ -274,7 +274,7 @@ export async function POST({ request, platform }) {
       .bind(cid, bookId, lang)
       .run();
 
-    // ── 5. 批量写入（使用 cleanChapters） ──────────────────
+    // ── 5. Batch insert (using cleanChapters) ─────────────────
     const stmts = [];
     let insertedChapters = 0;
     let insertedParagraphs = 0;

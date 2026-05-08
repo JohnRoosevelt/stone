@@ -10,13 +10,13 @@
     if (!hash.startsWith("#zh-")) return;
     const id = hash.slice(1);
 
-    // 等两帧确保 SvelteKit hash 定位和渲染都已完成
+    // Wait two frames to ensure SvelteKit hash navigation and rendering are complete
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const el = document.getElementById(id);
         if (!el) return;
 
-        // 找可滚动的父容器，手动滚动到居中位置
+        // Find scrollable parent container, manually scroll to center
         const scrollParent =
           el.closest("[scroll-y]") || el.closest(".scroll-y");
         if (scrollParent) {
@@ -32,11 +32,11 @@
           el.scrollIntoView({ block: "center", behavior: "smooth" });
         }
 
-        // 整段高亮动画
+        // Full paragraph highlight animation
         el.classList.add("search-highlight");
         setTimeout(() => el.classList.remove("search-highlight"), 3000);
 
-        // 关键字加红色虚线边框（不消失，支持多词）
+        // Add red dashed border to keywords (persistent, supports multiple words)
         const keyword = searchState.query?.trim();
         if (!keyword) return;
 
@@ -94,7 +94,7 @@
 >
   {#each page.data.sections as sec, i}
     {@const id = i + 1}
-    <!-- { t, p, c } -->
+    <!-- { t, p, c } (type, paragraph, content) -->
     {@const t = sec.t || 7}
     {@const p = sec.p || id}
     {@const c = sec.c || ""}
@@ -143,7 +143,7 @@
     }
   }
 
-  /* 整段高亮（绿底 + 红虚线框，3 秒脉动后消失） */
+  /* Full paragraph highlight (green background + red dashed border, fades after 3s pulse) */
   :global(p.search-highlight) {
     animation: highlight-pulse 3s ease-out forwards;
     border-radius: 4px;
@@ -172,7 +172,7 @@
     }
   }
 
-  /* 关键字红色虚线边框（不消失，outline 不占布局空间） */
+  /* Keyword red dashed border (persistent, outline doesn't affect layout) */
   :global(mark.keyword-mark) {
     outline: 1.5px dashed rgba(239, 68, 68, 0.7);
     outline-offset: -0.5px;

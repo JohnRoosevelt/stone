@@ -1,7 +1,7 @@
 import { json } from "@sveltejs/kit";
 import { getDB } from "$lib/server/db";
 
-// 添加段落（需提供 book_id, cid, lang_code 冗余列）
+// Add paragraph (requires book_id, cid, lang_code redundant columns)
 async function addParagraph(
   db,
   { chapter_id, id, num, book_id, cid, lang_code, text_content, format },
@@ -31,7 +31,7 @@ async function addParagraph(
   return { success: true };
 }
 
-// 更新段落（通过复合主键）
+// Update paragraph (via composite primary key)
 async function updateParagraph(
   db,
   { cid, book_id, chapter_id, id, num, lang_code, text_content, format },
@@ -71,7 +71,7 @@ async function updateParagraph(
   return { success: true };
 }
 
-// 删除段落
+// Delete paragraph
 async function deleteParagraph(
   db,
   { cid, book_id, chapter_id, id, lang_code },
@@ -117,7 +117,7 @@ async function deleteParagraph(
   return { success: true };
 }
 
-// 查询段落列表
+// Query paragraph list
 async function listParagraphs(db, { chapter_id, book_id, cid, lang_code }) {
   const conditions = [];
   const params = [];

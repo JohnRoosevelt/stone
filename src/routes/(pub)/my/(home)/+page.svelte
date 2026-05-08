@@ -1,5 +1,16 @@
 <script>
   import { DATAS } from "$lib/data.svelte";
+  import { isTauri } from "$lib/tauri";
+  import { getDbSize } from "$lib/tauri";
+
+  let dbSize = $state("");
+  $effect(async () => {
+    if (isTauri()) {
+      try {
+        dbSize = await getDbSize();
+      } catch (_) {}
+    }
+  });
 
   const roadmap = [
     {
@@ -15,7 +26,7 @@
     {
       title: "App 发布",
       desc: "打包为 Tauri 桌面/移动应用，支持离线存储",
-      done: false,
+      done: true,
     },
   ];
 
@@ -45,14 +56,14 @@
 </svelte:head>
 
 <article class="w-full h-full overflow-y-auto px-4 py-4 space-y-5">
-  <!-- ─── 设置 ─── -->
+  <!-- ─── Settings ─── -->
   <section class="space-y-3">
     <h2 class="text-lg font-semibold flex-cc gap-2">
       <span class="i-carbon-settings"></span>
       设置
     </h2>
 
-    <!-- 深色模式 -->
+    <!-- Dark mode -->
     <div
       class="flex items-center justify-between p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
     >
@@ -80,7 +91,7 @@
       </button>
     </div>
 
-    <!-- 字体大小 -->
+    <!-- Font size -->
     <div
       class="p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
     >
@@ -126,7 +137,7 @@
     </div>
   </section>
 
-  <!-- ─── 关于 ─── -->
+  <!-- ─── About ─── -->
   <a
     href="/my/about"
     class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 no-underline"
@@ -138,7 +149,22 @@
     <span class="i-carbon-chevron-right text-gray-400"></span>
   </a>
 
-  <!-- ─── 开发规划 ─── -->
+  <!-- Book import (Tauri only) -->
+  {#if isTauri()}
+    <a
+      href="/tools/import"
+      class="w-full flex items-center justify-between px-4 py-3.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
+    >
+      <span class="flex-cc gap-2">
+        <span class="i-carbon-download text-green"></span>
+        书籍导入
+      </span>
+      <span class="text-xs text-gray-400">未导入的内容从 R2 加载</span>
+      <span class="i-carbon-chevron-right text-gray-400"></span>
+    </a>
+  {/if}
+
+  <!-- ─── Development Roadmap ─── -->
   <div
     class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
   >
@@ -195,10 +221,12 @@
     {/if}
   </div>
 
-  <!-- ─── 调试信息 ─── -->
-  <section space-y-2>
+  <!-- ─── Debug Info ─── -->
+  <div
+    class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+  >
     <button
-      class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300"
+      class="w-full flex items-center justify-between px-4 py-3.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300"
       onclick={toggleDebug}
     >
       <span class="flex-cc gap-2">
@@ -220,7 +248,7 @@
 
     {#if showDebug}
       <div
-        class="px-4 py-3 space-y-1.5 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-mono text-gray-500"
+        class="px-4 py-3 space-y-1.5 border-t border-gray-100 dark:border-gray-800 text-xs font-mono text-gray-500"
       >
         <div class="flex items-center gap-1">
           <span text-gray-400>network: </span>
@@ -263,6 +291,17 @@
         </div>
 
         <div>
+          <span text-gray-400>mode: </span>
+          <span class:text-green={isTauri()} class:text-blue={!isTauri()}>
+            {isTauri() ? "🧊 Tauri" : "🌐 Web"}
+          </span>
+        </div>
+
+        <div>
+          <span text-gray-400>DB: </span>{dbSize || "..."}
+        </div>
+
+        <div>
           <span text-gray-400>version: </span>
           {__GIT_COMMIT__}
           <span text-gray-400>
@@ -275,7 +314,5 @@
         </div>
       </div>
     {/if}
-  </section>
+  </div>
 </article>
-
-<style uno-safelist="rounded-xl space-y-5"></style>

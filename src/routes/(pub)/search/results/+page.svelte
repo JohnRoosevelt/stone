@@ -11,13 +11,13 @@
     getSnippet,
   } from "$lib/bible/searchStore.svelte.js";
 
-  // ── 分类标签 ──
+  // ── Category tabs ──
   const TABS = SCOPES;
 
-  /** 当前选中的标签 cid（默认圣经 0） */
+  /** Currently selected tab cid (default Bible 0) */
   let activeCid = $state(0);
 
-  /** 按当前标签 → 直接按书分组 */
+  /** Group by book under the current tab */
   let grouped = $derived.by(() => {
     const results = searchState.results;
     if (results.length === 0) return [];
@@ -42,36 +42,36 @@
     return Object.values(bookMap);
   });
 
-  /** 滚动容器引用 */
+  /** Scroll container reference */
   let scrollContainer = $state(null);
 
-  /** 各书籍折叠状态（按 bookId） */
+  /** Per-book collapse state (by bookId) */
   let bookExpanded = $state({});
 
-  /** 切换标签 */
+  /** Switch tab */
   async function switchTab(cid) {
     if (cid === activeCid) return;
     activeCid = cid;
     searchState.scopeCid = cid;
     bookExpanded = {};
 
-    // URL 同步 cid 参数（仅更新地址栏，不触发 SvelteKit 导航生命周期）
-    // 避免 afterNavigate → recordNavigation 将当前 URL 误入历史栈
+    // Sync cid param to URL (only update address bar, don't trigger SvelteKit navigation lifecycle)
+    // Prevent afterNavigate → recordNavigation from pushing current URL into history stack
     const url = new URL(page.url);
     url.searchParams.set("cid", String(cid));
     history.replaceState(history.state, "", url.toString());
 
-    // 切换分类时始终重新搜索（store 不按 cid 分别缓存结果）
+    // Always re-search when switching categories (store doesn't cache results per cid)
     await doSearch(searchState.query, cid);
 
-    // 展开所有书
+    // Expand all books
     requestAnimationFrame(() => {
       if (scrollContainer) scrollContainer.scrollTop = 0;
     });
   }
 
   /**
-   * 内容未填满时自动加载更多
+   * Auto-load more when content doesn't fill the viewport
    */
   async function autoLoadIfNeeded() {
     if (
@@ -84,37 +84,59 @@
     const el = scrollContainer;
     if (el.scrollHeight - el.clientHeight < 200) {
       await loadMore();
-      // DOM 更新后再次检查（递归直到填满或无更多数据）
+      // Check again after DOM update (recurse until filled or no more data)
       requestAnimationFrame(() => autoLoadIfNeeded());
     }
   }
 
-  /** 切换书籍折叠 */
+  /** Toggle book collapse */
   function toggleBook(bookId) {
     bookExpanded[bookId] = !bookExpanded[bookId];
-    // 折叠后内容变短可能导致无滚动条，检查自动加载更多
+    // Content may become shorter after collapsing, check auto-load
     requestAnimationFrame(() => autoLoadIfNeeded());
   }
 
-  /** 一键折叠/展开所有 */
+  /** Whether all results have been loaded */
+  let isFullyLoaded = $derived(
+    searchState.searched && searchState.results.length === searchState.total,
+  );
+
+  /** Collapse/expand all with one click */
   let allExpanded = $derived(
     grouped.length > 0 && grouped.every((b) => bookExpanded[b.bookId]),
   );
   function toggleAll() {
-    const expand = !allExpanded;
-    for (const book of grouped) {
-      bookExpanded[book.bookId] = expand;
+    if (isFullyLoaded) {
+      // All loaded: toggle collapse/expand
+      const expand = !allExpanded;
+      for (const book of grouped) {
+        bookExpanded[book.bookId] = expand;
+      }
+    } else {
+      // Not all loaded: collapse all
+      for (const book of grouped) {
+        bookExpanded[book.bookId] = false;
+      }
     }
-    requestAnimationFrame(() => autoLoadIfNeeded());
+    requestAnimationFrame(() => {
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        // Auto-trigger load more after scrolling to bottom
+        if (!isFullyLoaded && searchState.hasMore && !searchState.loadingMore) {
+          loadMore();
+        }
+      }
+      autoLoadIfNeeded();
+    });
   }
 
-  /** 加载更多 */
+  /** Load more */
   async function loadMore() {
     if (searchState.loadingMore || !searchState.hasMore) return;
     await doSearch(searchState.query, searchState.scopeCid, true);
   }
 
-  /** 滚动检测 */
+  /** Scroll detection */
   function onScroll(e) {
     if (!searchState.hasMore || searchState.loadingMore) return;
     const el = e.target;
@@ -123,14 +145,14 @@
     }
   }
 
-  /** 回输入页 */
+  /** Back to input page */
   function backToInput() {
     const cidParam =
       searchState.scopeCid !== undefined ? `&cid=${searchState.scopeCid}` : "";
     goto(`/search?q=${encodeURIComponent(searchState.query)}${cidParam}`);
   }
 
-  // ── 保存当前状态（供返回时恢复）──
+  // ── Save current state (for restoration when returning) ──
   function saveState() {
     if (scrollContainer) {
       searchState.scrollTop = scrollContainer.scrollTop;
@@ -138,47 +160,47 @@
     searchState.expanded = { ...bookExpanded };
   }
 
-  // ── 页面初始化 ──
+  // ── Page initialization ──
   onMount(() => {
     const urlQuery = page.url.searchParams.get("q") || "";
     const urlCidParam = page.url.searchParams.get("cid");
     const urlCid = urlCidParam ? parseInt(urlCidParam) : undefined;
 
-    // 默认：URL 有 cid 就用它，否则用圣经 0
+    // Default: use URL's cid if present, otherwise use Bible 0
     const initCid = urlCid !== undefined ? urlCid : 0;
     activeCid = initCid;
 
-    // 恢复上次的折叠状态
+    // Restore previous collapse state
     if (Object.keys(searchState.expanded).length > 0) {
       bookExpanded = { ...searchState.expanded };
     }
 
     if (urlQuery.trim()) {
-      // doSearch 内部会先查缓存，有缓存直接返回不调 API
+      // doSearch checks cache first, returns cached results without API call
       searchState.query = urlQuery;
       searchState.scopeCid = initCid;
       doSearch(urlQuery, initCid);
     }
   });
 
-  // 搜索完成后：恢复滚动位置 → 展开新书 → 自动加载
+  // After search completes: restore scroll position → expand books → auto-load
   $effect(() => {
     if (searchState.searched && !searchState.loading) {
-      // 先恢复滚动位置（等 DOM 渲染完）
+      // Restore scroll position first (wait for DOM to render)
       requestAnimationFrame(() => {
         if (scrollContainer && searchState.scrollTop > 0) {
           scrollContainer.scrollTop = searchState.scrollTop;
         }
       });
 
-      // 展开未设置折叠状态的书（已从 searchState.expanded 恢复的跳过）
+      // Expand books without saved collapse state (skip those restored from searchState.expanded)
       for (const item of searchState.results) {
         if (bookExpanded[item.book_id] === undefined) {
           bookExpanded[item.book_id] = true;
         }
       }
 
-      // 等 DOM 更新后检查内容高度，未填满时自动加载更多
+      // Check content height after DOM update, auto-load more if not filled
       requestAnimationFrame(() => autoLoadIfNeeded());
     }
   });
@@ -191,7 +213,7 @@
 </svelte:head>
 
 <article class="w-full flex-1 flex flex-col min-h-0">
-  <!-- 顶栏 -->
+  <!-- Top bar -->
   <section
     class="bg-white dark:(bg-black border-gray-700) border-b border-gray-200 w-full flex-shrink-0 flex-cc gap-2 px-3 py-2"
   >
@@ -220,7 +242,7 @@
     <button text-sm text-green font-500 onclick={backToInput}>修改</button>
   </section>
 
-  <!-- 分类标签栏 -->
+  <!-- Category tabs bar -->
   <section
     class="w-full flex-shrink-0 flex gap-1 px-3 py-2 border-b border-gray-100 dark:border-gray-800 scrollbar-hide overflow-x-auto"
   >
@@ -243,7 +265,7 @@
     {/each}
   </section>
 
-  <!-- 折叠全部/展开全部（在滚动容器外，始终可见） -->
+  <!-- Collapse all / Expand all (outside scroll container, always visible) -->
   {#if searchState.searched && grouped.length > 0}
     <div
       class="w-full flex-shrink-0 flex-cc gap-2 px-3 py-1.5
@@ -256,13 +278,13 @@
       >
         <span
           class={[
-            allExpanded ? "rotate-90" : "rotate-0",
+            isFullyLoaded && allExpanded ? "rotate-90" : "rotate-0",
             "transition-transform",
           ]}
         >
           <span class="i-carbon-chevron-right"></span>
         </span>
-        {allExpanded ? "折叠全部已加载" : "展开全部已加载"}
+        {isFullyLoaded ? "全部已加载" : "折叠全部"}
       </button>
       <span class="flex-1"></span>
       <span class="text-xs text-gray-400">
@@ -271,7 +293,7 @@
     </div>
   {/if}
 
-  <!-- 搜索结果区 -->
+  <!-- Search results area -->
   <section
     bind:this={scrollContainer}
     onscroll={onScroll}
@@ -301,14 +323,14 @@
       </div>
     {:else if searchState.searched && grouped.length > 0}
       <div class="h-3"></div>
-      <!-- ====== 按书分组 ====== -->
+      <!-- ====== Grouped by book ====== -->
       {#each grouped as book (book.bookId)}
         <section
           class="bg-white dark:bg-gray-900 border-t border-b border-gray-200 dark:border-gray-700
           shadow-sm
           mb-3"
         >
-          <!-- 书籍标题（sticky，滚动时固定在顶部） -->
+          <!-- Book title (sticky, fixed at top while scrolling) -->
           <button
             class="w-full flex items-center gap-1 px-3 py-2.5 text-sm font-600 text-green sticky
             top-0
@@ -336,7 +358,7 @@
                 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-850 active:bg-gray-100 no-underline"
                 onclick={saveState}
               >
-                <!-- 序号 + 书籍信息 → 同一行 -->
+                <!-- Sequence number + book info → same line -->
                 <div class="flex items-center gap-2">
                   <span
                     class="font-mono text-red font-600 text-right"
@@ -357,7 +379,7 @@
                     {/if}
                   </div>
                 </div>
-                <!-- 查出来的内容 → 单独一行 -->
+                <!-- Search result content → separate line -->
                 <div
                   class="text-black/85 dark:text-white/85"
                   leading="170%"
@@ -368,12 +390,12 @@
               </a>
             {/each}
           {/if}
-          <!-- 占位 spacer：折叠时让 section 高于标题，sticky 才能固定 -->
+          <!-- Placeholder spacer: keep section taller than title when collapsed, so sticky works -->
           <div class="h-1"></div>
         </section>
       {/each}
 
-      <!-- 加载更多 -->
+      <!-- Load more -->
       {#if searchState.loadingMore}
         <div class="w-full py-4 flex-cc text-gray-400 gap-2">
           <span class="i-line-md-loading-twotone-loop text-5 animate-spin"

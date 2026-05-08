@@ -1,7 +1,7 @@
 import { DATAS, TOUCHP as _TOUCHP } from "$lib/data.svelte";
 
-/** 触摸交互信息（与 DATAS 共享同一 reactive 对象） */
+/** Touch interaction information (shares the same reactive object with DATAS) */
 export const touchStore = DATAS.touchInfo;
 
-/** 触摸位置 */
+/** Touch position */
 export const touchP = _TOUCHP;

@@ -4,7 +4,8 @@ import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import UnoCSS from "@unocss/svelte-scoped/preprocess";
 
 const combine = process.env.NODE_ENV !== "development";
-
+const isTauri = process.env.TAURI === "true";
+console.log(`[config] isTauri: ${isTauri}`);
 const config = {
   preprocess: [
     vitePreprocess(),
@@ -15,7 +16,7 @@ const config = {
   kit: {
     // Cloudflare 部署用 adapter-cloudflare
     // Tauri 构建用 adapter-static
-    adapter: process.env.TAURI
+    adapter: isTauri
       ? staticAdapter({
           pages: "build",
           assets: "build",

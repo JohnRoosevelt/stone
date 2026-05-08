@@ -2,8 +2,8 @@
 import { goto } from "$app/navigation";
 
 export function showId(id, block = "center", inline = "center") {
-  // 'start'（顶部）、'center'（居中）、'end'（底部）、'nearest'（最近）,
-  //  block -> y,   inline -> x
+  // 'start' (top), 'center' (center), 'end' (bottom), 'nearest' (nearest),
+  //  block -> y, inline -> x
 
   setTimeout(() => {
     const element = document.getElementById(id);
@@ -23,14 +23,14 @@ export async function delay(ms) {
 }
 
 /**
- * 安全返回：当浏览器历史栈足够深时用 history.back()，
- * 否则 fallback 到指定路由，避免因 replaceState 链导致直接退出应用。
+ * Safe back navigation: uses history.back() when the browser history stack is deep enough,
+ * otherwise falls back to the specified route to prevent the app from exiting due to replaceState chain.
  *
- * @param {string} fallback - 没有历史记录时的目标路由（默认 '/'）
+ * @param {string} fallback - Target route when there is no history (default '/')
  */
 export function safeGoBack(fallback = "/") {
   if (window.history.length <= 2) {
-    // 用 replaceState 模拟 history.back() 的语义：丢弃当前页，不新增历史
+    // Use replaceState to simulate history.back() semantics: discard current page without adding history
     goto(fallback, { replaceState: true });
   } else {
     history.back();

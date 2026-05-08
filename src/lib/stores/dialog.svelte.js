@@ -1,4 +1,4 @@
 import { DATAS } from "$lib/data.svelte";
 
-/** 对话框状态（与 DATAS.dialog 共享同一 reactive 对象） */
+/** Dialog state (shares the same reactive object with DATAS.dialog) */
 export const dialogStore = DATAS.dialog;

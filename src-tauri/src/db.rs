@@ -1,11 +1,12 @@
 use rusqlite::{params, Connection, Result};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 /// 包装 Connection 以便在线程间共享
 pub struct DbState {
-    pub conn: Mutex<Connection>,
+    pub conn: Arc<Mutex<Connection>>,
+    pub db_path: PathBuf,
 }
 
 // ── 数据模型 ────────────────────────────────────────────────
@@ -266,6 +267,130 @@ fn build_fts_match(raw: &str) -> String {
         .join(" AND ")
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FullParagraph {
+    pub c: String,
+    pub p: Option<i64>,
+    pub t: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FullChapter {
+    pub n: String,
+    pub ps: Vec<FullParagraph>,
+}
+
+/// 获取整本书（章节+段落），返回格式与 R2 parquet 一致
+pub fn get_full_book(
+    conn: &Connection,
+    cid: i64,
+    book_id: i64,
+    lang: &str,
+) -> Result<Vec<FullChapter>> {
+    let mut ch_stmt = conn.prepare(
+        "SELECT chapter_id, title FROM chapters WHERE cid=?1 AND book_id=?2 AND lang_code=?3 ORDER BY chapter_id"
+    )?;
+    let ch_rows = ch_stmt.query_map(params![cid, book_id, lang], |row| {
+        Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+    })?;
+
+    let mut chapters = Vec::new();
+    for ch in ch_rows {
+        let (ch_id, title) = ch?;
+        let mut p_stmt = conn.prepare(
+            "SELECT id, num, text_content, format FROM chapter_paragraphs WHERE cid=?1 AND book_id=?2 AND chapter_id=?3 AND lang_code=?4 ORDER BY id"
+        )?;
+        let p_rows = p_stmt.query_map(params![cid, book_id, ch_id, lang], |row| {
+            Ok(FullParagraph {
+                c: row.get::<_, String>(2)?,
+                p: row.get::<_, Option<i64>>(1)?,
+                t: row.get::<_, Option<i64>>(3)?,
+            })
+        })?;
+        let mut ps = Vec::new();
+        for p in p_rows {
+            ps.push(p?);
+        }
+        chapters.push(FullChapter { n: title, ps });
+    }
+    Ok(chapters)
+}
+
+/// 保存前端已解析的章节数据到 SQLite
+/// append=false 时先清空旧数据再写入
+/// start_chapter_id: 分块时第一章节的 ID 偏移
+pub fn save_book(
+    conn: &Connection,
+    cid: i64,
+    book_id: i64,
+    lang: &str,
+    chapters: Vec<FullChapter>,
+    append: bool,
+    start_chapter_id: i64,
+) -> Result<(i64, i64), String> {
+    if !append {
+        conn.execute(
+            "DELETE FROM chapter_paragraphs WHERE cid=?1 AND book_id=?2 AND lang_code=?3",
+            params![cid, book_id, lang],
+        )
+        .map_err(|e| format!("delete cp: {e}"))?;
+        conn.execute(
+            "DELETE FROM chapters WHERE cid=?1 AND book_id=?2 AND lang_code=?3",
+            params![cid, book_id, lang],
+        )
+        .map_err(|e| format!("delete ch: {e}"))?;
+    }
+
+    let mut ch_count = 0i64;
+    let mut p_count = 0i64;
+    for (idx, ch) in chapters.iter().enumerate() {
+        let chapter_id = start_chapter_id + idx as i64;
+        conn.execute(
+            "INSERT OR REPLACE INTO chapters (cid,book_id,chapter_id,lang_code,title) VALUES (?1,?2,?3,?4,?5)",
+            params![cid, book_id, chapter_id, lang, &ch.n],
+        ).map_err(|e| format!("insert ch: {e}"))?;
+        ch_count += 1;
+        for (i, p) in ch.ps.iter().enumerate() {
+            conn.execute(
+                "INSERT OR REPLACE INTO chapter_paragraphs (cid,book_id,chapter_id,id,num,lang_code,text_content,format) VALUES (?1,?2,?3,?4,?5,?6,?7,?8)",
+                params![cid, book_id, chapter_id, (i + 1) as i64, p.p, lang, &p.c, p.t],
+            ).map_err(|e| format!("insert cp: {e}"))?;
+            p_count += 1;
+        }
+    }
+    Ok((ch_count, p_count))
+}
+
+/// 检查某本书是否已导入本地
+pub fn has_book_data(conn: &Connection, cid: i64, book_id: i64, lang: &str) -> Result<bool> {
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM chapters WHERE cid=?1 AND book_id=?2 AND lang_code=?3",
+        params![cid, book_id, lang],
+        |row| row.get(0),
+    )?;
+    Ok(count > 0)
+}
+
+/// 删除一本书的本地数据
+pub fn delete_book_data(
+    conn: &Connection,
+    cid: i64,
+    book_id: i64,
+    lang: &str,
+) -> Result<(), String> {
+    conn.execute(
+        "DELETE FROM chapter_paragraphs WHERE cid=?1 AND book_id=?2 AND lang_code=?3",
+        params![cid, book_id, lang],
+    )
+    .map_err(|e| format!("e: {e}"))?;
+    conn.execute(
+        "DELETE FROM chapters WHERE cid=?1 AND book_id=?2 AND lang_code=?3",
+        params![cid, book_id, lang],
+    )
+    .map_err(|e| format!("e: {e}"))?;
+    Ok(())
+}
+
 /// 搜索
 pub fn search(
     conn: &Connection,
@@ -280,7 +405,7 @@ pub fn search(
 
     let (where_clause, from_clause, order_clause) = if is_cjk {
         // 中文用 LIKE
-        let where_sql = format!(
+        let mut where_sql = format!(
             "WHERE cp.lang_code = ?{} AND cp.text_content LIKE ?{}",
             params_vec.len() + 1,
             params_vec.len() + 2
@@ -288,15 +413,21 @@ pub fn search(
         params_vec.push(Box::new(lang.to_string()));
         params_vec.push(Box::new(format!("%{}%", q)));
 
+        // CID filtering
+        if let Some(c) = cid {
+            where_sql.push_str(&format!(" AND cp.cid = ?{}", params_vec.len() + 1));
+            params_vec.push(Box::new(c));
+        }
+
         (
             where_sql,
             "FROM chapter_paragraphs cp".to_string(),
-            "ORDER BY cp.cid, cp.rowid".to_string(),
+            "ORDER BY cp.cid, cp.book_id, cp.rowid".to_string(),
         )
     } else {
         // 非中文用 FTS5
         let match_str = build_fts_match(q);
-        let where_sql = format!(
+        let mut where_sql = format!(
             "WHERE cp.lang_code = ?{} AND chapter_paragraphs_fts MATCH ?{}",
             params_vec.len() + 1,
             params_vec.len() + 2
@@ -304,11 +435,17 @@ pub fn search(
         params_vec.push(Box::new(lang.to_string()));
         params_vec.push(Box::new(match_str));
 
+        // CID filtering
+        if let Some(c) = cid {
+            where_sql.push_str(&format!(" AND cp.cid = ?{}", params_vec.len() + 1));
+            params_vec.push(Box::new(c));
+        }
+
         (
             where_sql,
             "FROM chapter_paragraphs cp JOIN chapter_paragraphs_fts fts ON fts.rowid = cp.rowid"
                 .to_string(),
-            "ORDER BY cp.cid, fts.rank".to_string(),
+            "ORDER BY cp.cid, cp.book_id, fts.rank".to_string(),
         )
     };
 
@@ -382,4 +519,20 @@ pub fn search(
     }
 
     Ok((results, total))
+}
+
+/// 获取数据库文件大小（字节）
+pub fn get_db_size(db_path: &std::path::Path) -> Result<u64, String> {
+    std::fs::metadata(db_path)
+        .map(|m| m.len())
+        .map_err(|e| format!("{e}"))
+}
+
+/// 格式化文件大小
+pub fn format_size(bytes: u64) -> String {
+    if bytes < 1024 { return format!("{bytes} B"); }
+    let kb = bytes as f64 / 1024.0;
+    if kb < 1024.0 { return format!("{:.1} KB", kb); }
+    let mb = kb / 1024.0;
+    format!("{:.1} MB", mb)
 }

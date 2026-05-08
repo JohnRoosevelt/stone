@@ -7,7 +7,7 @@
 </h1>
 
 <section flex-cc flex-col gap-4 p-4>
-  <!-- class 合并测试 -->
+  <!-- Class merge test -->
   <div
     w-40 h-10 rounded-2
     bg-green text-white
@@ -18,13 +18,13 @@
     点击计数: {count}
   </div>
 
-  <!-- 纯 attributify 写法（无 class 属性） -->
+  <!-- Pure attributify syntax (no class attribute) -->
   <div w-60 h-12 rounded-3 bg-blue text-white flex-cc gap-2>
     <span i-carbon-star text-lg></span>
     <span>纯 attributify 按钮</span>
   </div>
 
-  <!-- variant 变体测试 -->
+  <!-- Variant test -->
   <div
     w-60 h-12 rounded-3
     bg-purple text-white flex-cc
@@ -34,14 +34,14 @@
     Hover 变体测试
   </div>
 
-  <!-- flex shortcuts 测试 -->
+  <!-- Flex shortcuts test -->
   <div w-80 h-20 rounded-4 bg-gray-200 dark="bg-gray-800" flex-cc>
     <span text-gray-600 dark="text-gray-300">
       flex-cc / dark 变体测试
     </span>
   </div>
 
-  <!-- 响应式测试 -->
+  <!-- Responsive test -->
   <div
     w-full sm="w-80" h-16
     rounded-2 bg-orange text-white flex-cc
@@ -50,7 +50,7 @@
     响应式: 手机 vs 桌面
   </div>
 
-  <!-- 密集工具类测试 -->
+  <!-- Dense utility class test -->
   <article
     w-full max-w-120
     p-4 space-y-3

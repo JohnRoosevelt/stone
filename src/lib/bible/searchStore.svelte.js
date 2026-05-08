@@ -1,13 +1,13 @@
 /**
- * 搜索状态共享存储（模块级）
+ * Search state shared storage (module-level)
  *
- * 跨页面（搜索输入页 ↔ 搜索结果页 ↔ 详情页）保持搜索结果和滚动位置。
- * 利用 .svelte.js 的模块级 $state 实现全局响应式状态。
+ * Cross-page (search input page ↔ search results page ↔ detail page) maintain search results and scroll position.
+ * Use .svelte.js module-level $state to implement global reactive state.
  *
- * 缓存策略：
- *   每次搜索取 200 条，按 `${lang}|${q}|${cid}` 缓存到 Map 中。
- *   相同搜索条件再次命中时直接返回缓存，不查数据库。
- *   缓存上限 50 条，超出时淘汰最旧的条目（FIFO）。
+ * Caching strategy:
+ *   Fetch 200 results per search, cache to Map by `${lang}|${q}|${cid}`.
+ *   When the same search criteria is hit again, return cache directly without querying the database.
+ *   Cache limit of 50 entries, evict the oldest when exceeded (FIFO).
  */
 
 /** @typedef {{ rowid: number, cid: number, book_id: number, chapter_id: number, id: string, num: number | null, text_content: string, format: string, lang_code: string, chapter_title: string, book_name: string }} SearchResult */
@@ -15,7 +15,7 @@
 /** @typedef {{ total: number, hasMore: boolean, results: SearchResult[] }} CacheEntry */
 
 /**
- * 搜索范围选项
+ * Search scope options
  */
 export const SCOPES = [
   { cid: 0, label: "圣经" },
@@ -23,7 +23,7 @@ export const SCOPES = [
   { cid: 2, label: "书籍" },
 ];
 
-/** 搜索历史（最多 20 条） */
+/** Search history (max 20 entries) */
 const HISTORY_MAX = 20;
 
 export const searchHistory = $state(/** @type {string[]} */ ([]));
@@ -32,15 +32,15 @@ const PAGE_SIZE = 200;
 const CACHE_MAX = 50;
 
 /**
- * 搜索缓存（模块级 Map）
+ * Search cache (module-level Map)
  * key = `${lang}|${q}|${cid}`   value = CacheEntry
  */
 const searchCache = new Map();
-/** FIFO 淘汰用的 key 队列 */
+/** FIFO eviction key queue */
 const cacheKeys = [];
 
 /**
- * 构建缓存 key
+ * Build cache key
  * @param {string} q
  * @param {number | undefined} cid
  * @param {string} [lang]
@@ -51,19 +51,19 @@ function cacheKey(q, cid, lang = "zh") {
 }
 
 /**
- * 写入缓存（超限时淘汰最旧）
+ * Write to cache (evict oldest when over limit)
  * @param {string} key
  * @param {CacheEntry} entry
  */
 function setCache(key, entry) {
   if (searchCache.has(key)) {
-    // 已存在，移到队列尾部
+    // Already exists, move to end of queue
     const idx = cacheKeys.indexOf(key);
     if (idx !== -1) cacheKeys.splice(idx, 1);
   }
   searchCache.set(key, entry);
   cacheKeys.push(key);
-  // FIFO 淘汰
+  // FIFO eviction
   while (cacheKeys.length > CACHE_MAX) {
     const oldest = cacheKeys.shift();
     searchCache.delete(oldest);
@@ -71,37 +71,37 @@ function setCache(key, entry) {
 }
 
 /**
- * 搜索状态
+ * Search state
  */
 export const searchState = $state({
-  /** 搜索词 */
+  /** Search query */
   query: "",
-  /** 范围筛选 cid */
+  /** Scope filter cid */
   scopeCid: /** @type {number | undefined} */ (undefined),
-  /** 搜索结果列表 */
+  /** Search results list */
   results: /** @type {SearchResult[]} */ ([]),
-  /** 匹配总数 */
+  /** Total matches */
   total: 0,
-  /** 是否还有更多 */
+  /** Whether there are more */
   hasMore: false,
-  /** 当前偏移量 */
+  /** Current offset */
   offset: 0,
-  /** 是否已执行过搜索 */
+  /** Whether search has been executed */
   searched: false,
-  /** 错误信息 */
+  /** Error message */
   error: "",
-  /** 正在加载 */
+  /** Loading */
   loading: false,
-  /** 正在加载更多 */
+  /** Loading more */
   loadingMore: false,
-  /** 分类折叠状态 */
+  /** Category collapse state */
   expanded: /** @type {Record<number, boolean>} */ ({}),
-  /** 搜索结果页的滚动位置 */
+  /** Scroll position of search results page */
   scrollTop: 0,
 });
 
 /**
- * 重置搜索结果（保留 query 和 scopeCid）
+ * Reset search results (keep query and scopeCid)
  */
 export function resetResults() {
   searchState.results = [];
@@ -117,10 +117,10 @@ export function resetResults() {
 }
 
 /**
- * 从缓存还原搜索结果
+ * Restore search results from cache
  * @param {string} q
  * @param {number | undefined} cid
- * @returns {boolean} 是否命中缓存
+ * @returns {boolean} Whether cache was hit
  */
 function restoreFromCache(q, cid) {
   const key = cacheKey(q, cid);
@@ -139,7 +139,7 @@ function restoreFromCache(q, cid) {
 }
 
 /**
- * 写入缓存（基于当前搜索结果）
+ * Write to cache (based on current search results)
  */
 function saveToCache() {
   const key = cacheKey(searchState.query, searchState.scopeCid);
@@ -151,7 +151,7 @@ function saveToCache() {
 }
 
 /**
- * 记录搜索历史（去重，新搜的放最前面）
+ * Record search history (dedup, newest goes first)
  * @param {string} q
  */
 function recordHistory(q) {
@@ -162,16 +162,16 @@ function recordHistory(q) {
 }
 
 /**
- * 执行搜索（追加或刷新）
- * @param {string} q - 搜索词
- * @param {number | undefined} cid - 范围分类
- * @param {boolean} [append] - 是否追加更多结果
+ * Execute search (append or refresh)
+ * @param {string} q - Search query
+ * @param {number | undefined} cid - Scope category
+ * @param {boolean} [append] - Whether to append more results
  */
 export async function doSearch(q, cid, append = false) {
   const trimmed = q.trim();
   if (!trimmed) return;
 
-  // ── 非追加模式：先尝试命中缓存 ──
+  // ── Non-append mode: try cache first ──
   if (!append) {
     if (restoreFromCache(trimmed, cid)) {
       searchState.loading = false;
@@ -191,6 +191,35 @@ export async function doSearch(q, cid, append = false) {
   }
 
   try {
+    // Tauri mode: use local SQLite search
+    if (typeof window !== "undefined" && window.__TAURI_INTERNALS__) {
+      const { searchAPI } = await import("$lib/tauri");
+      const data = await searchAPI(trimmed, {
+        lang: "zh",
+        cid: cid,
+        limit: PAGE_SIZE,
+        offset: searchState.offset,
+      });
+      if (!data || !data.results) {
+        throw new Error("搜索返回结果为空");
+      }
+      const newResults = data.results ?? [];
+      searchState.results = append
+        ? [...searchState.results, ...newResults]
+        : newResults;
+      searchState.total = data.total ?? 0;
+      searchState.hasMore = data.hasMore ?? false;
+      searchState.query = trimmed;
+      searchState.scopeCid = cid;
+      searchState.offset = searchState.results.length;
+      saveToCache();
+      if (!append) {
+        recordHistory(trimmed);
+      }
+      return;
+    }
+
+    // Web mode: original fetch logic
     const params = new URLSearchParams({
       q: trimmed,
       lang: "zh",
@@ -207,7 +236,7 @@ export async function doSearch(q, cid, append = false) {
         const err = await res.json();
         errMsg = err.error || err.details || errMsg;
       } catch (_) {
-        /* 忽略 JSON 解析错误 */
+        /* Ignore JSON parse error */
       }
       throw new Error(errMsg);
     }
@@ -220,10 +249,10 @@ export async function doSearch(q, cid, append = false) {
     searchState.hasMore = data.hasMore ?? false;
     searchState.query = trimmed;
     searchState.scopeCid = cid;
-    // 更新 offset 为当前结果总数，确保下次追加从正确位置开始
+    // Update offset to current total results, ensuring next append starts from correct position
     searchState.offset = searchState.results.length;
 
-    // ── 每次请求（首次 & 追加）都更新缓存 ──
+    // ── Update cache on every request (initial & append) ──
     saveToCache();
     if (!append) {
       recordHistory(trimmed);
@@ -242,13 +271,13 @@ export async function doSearch(q, cid, append = false) {
   }
 }
 
-/** 给匹配词高亮 */
+/** Highlight matched terms */
 export function highlightText(text, keyword) {
   if (!keyword || !text) return text;
   const words = keyword.trim().split(/\s+/).filter(Boolean);
-  // 词从长到短排序，长词优先避免嵌套
+  // Sort words longest to shortest, longer words first to avoid nesting
   const sorted = [...words].sort((a, b) => b.length - a.length);
-  // 收集所有匹配位置
+  // Collect all match positions
   const ranges = [];
   for (const w of sorted) {
     const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -258,12 +287,12 @@ export function highlightText(text, keyword) {
       ranges.push({ start: m.index, end: m.index + m[0].length });
     }
   }
-  // 去重并按位置排序
+  // Deduplicate and sort by position
   ranges.sort((a, b) => a.start - b.start);
   const unique = ranges.filter(
     (r, i) => i === 0 || r.start !== ranges[i - 1].start,
   );
-  // 从后往前替换
+  // Replace from back to front
   const mark =
     "<mark style='background:#b3e6b3;padding:0 2px;border-radius:2px'>";
   let result = text;
@@ -278,16 +307,16 @@ export function highlightText(text, keyword) {
 }
 
 /**
- * 取关键字附近的文本片段
+ * Get text snippet near keyword
  *
- * 当段落很长时，取第一个匹配位置前后各约 N 字作为预览片段，
- * 确保关键字始终可见，避免 line-clamp 截断后关键字被隐藏。
+ * When the paragraph is long, take about N characters before and after the first match position as a preview snippet,
+ * ensuring the keyword is always visible, preventing it from being hidden after line-clamp truncation.
  *
- * @param {string} text - 原始段落文本
- * @param {string} keyword - 搜索关键字
- * @param {number} [before=60] - 匹配位置前保留字数
- * @param {number} [after=80] - 匹配位置后保留字数
- * @returns {string} 带高亮 HTML 的片段
+ * @param {string} text - Original paragraph text
+ * @param {string} keyword - Search keyword
+ * @param {number} [before=60] - Characters to keep before match position
+ * @param {number} [after=80] - Characters to keep after match position
+ * @returns {string} Snippet with highlighted HTML
  */
 export function getSnippet(text, keyword, before = 60, after = 80) {
   if (!keyword || !text) return text ?? "";
@@ -297,10 +326,10 @@ export function getSnippet(text, keyword, before = 60, after = 80) {
 
   const words = trimmed.split(/\s+/).filter(Boolean);
 
-  // 找到第一个匹配位置（完整短语优先）
+  // Find first match position (full phrase preferred)
   let idx = text.toLowerCase().indexOf(trimmed.toLowerCase());
 
-  // 完整短语没找到，找第一个出现的单词
+  // Full phrase not found, search for first occurring word
   if (idx === -1) {
     for (const w of words) {
       const pos = text.toLowerCase().indexOf(w.toLowerCase());
@@ -311,19 +340,19 @@ export function getSnippet(text, keyword, before = 60, after = 80) {
     }
   }
 
-  // 仍然没找到，返回前 after*2 字（仍然尝试高亮每个单词）
+  // Still not found, return first after*2 characters (still try highlighting each word)
   if (idx === -1) {
     const short = text.slice(0, after * 2);
     return highlightText(short, keyword);
   }
 
-  // 计算片段范围
+  // Calculate snippet range
   const start = Math.max(0, idx - before);
   const end = Math.min(text.length, idx + trimmed.length + after);
 
   let snippet = text.slice(start, end);
 
-  // 边界加 ...
+  // Add ... at boundaries
   if (start > 0) snippet = "…" + snippet;
   if (end < text.length) snippet = snippet + "…";
 

@@ -1,4 +1,4 @@
 import { DATAS } from "$lib/data.svelte";
 
-/** 阅读器设置（与 DATAS 共享同一 reactive 对象） */
+/** Reader settings (shares the same reactive object with DATAS) */
 export const readerStore = DATAS;

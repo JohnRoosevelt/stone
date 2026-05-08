@@ -1,24 +1,24 @@
 /**
- * 屏幕常亮管理
+ * Screen wake lock management
  *
- * Wake Lock API 需要用户手势（transient activation）才能授权。
- * 初始页面加载时没有用户手势，调用 request() 会抛出 NotAllowedError。
- * 解决方案：在用户交互（点击、翻页）后调用，或重试。
+ * The Wake Lock API requires a user gesture (transient activation) to grant permission.
+ * On initial page load there is no user gesture, so calling request() will throw a NotAllowedError.
+ * Solution: call after user interaction (click, page turn), or retry.
  */
 
-/** 当前活动的 Wake Lock 实例 */
+/** Currently active Wake Lock instance */
 let activeLock = null;
 
 /**
- * 请求屏幕常亮（静默失败，不抛异常）
- * @returns {Promise<boolean>} 是否成功获取
+ * Request screen wake lock (silently fails, does not throw)
+ * @returns {Promise<boolean>} whether the lock was successfully acquired
  */
 export async function wakeLock() {
   try {
-    // API 不可用
+    // API not available
     if (!navigator.wakeLock) return false;
 
-    // 释放旧的锁
+    // Release old lock
     if (activeLock) {
       activeLock.release().catch(() => {});
       activeLock = null;
@@ -33,14 +33,14 @@ export async function wakeLock() {
 
     return true;
   } catch (error) {
-    // NotAllowedError: 缺少用户手势，下次交互后重试
+    // NotAllowedError: Missing user gesture, will retry on next interaction
     console.log("[wakeLock]", error?.name);
     return false;
   }
 }
 
 /**
- * 释放屏幕常亮
+ * Release screen wake lock
  */
 export async function releaseWakeLock() {
   if (activeLock) {
@@ -52,8 +52,9 @@ export async function releaseWakeLock() {
 }
 
 /**
- * 可见性变化处理
- * - 页面从后台切回前台时，重新请求常亮（可能因手势丢失而失败，后续交互会重试）
+ * Handle visibility change
+ * - When the page comes back to the foreground from the background, re-request the wake lock
+ *   (may fail due to lost gesture, subsequent interactions will retry)
  */
 export function handleVisibilityChange() {
   if (document.visibilityState === "visible") {

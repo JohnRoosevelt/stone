@@ -4,19 +4,23 @@
   import { DATAS } from "$lib/data.svelte";
   import { showId } from "$lib";
 
+  let { bookList = page.data.books || [] } = $props();
+
   let clientHeight = $state(0);
   let activeId = $state("");
   let selectId = $state("");
 
-  const fav = $derived(page.data.books.filter((b) => b.featured));
+  const fav = $derived(bookList.filter((b) => b.featured));
 
-  const groupByTag = page.data.books.reduce((pre, cur) => {
-    if (!pre[cur.title]) {
-      pre[cur.title] = [];
-    }
-    pre[cur.title].push(cur);
-    return pre;
-  }, {});
+  const groupByTag = $derived(
+    bookList.reduce((pre, cur) => {
+      if (!pre[cur.title]) {
+        pre[cur.title] = [];
+      }
+      pre[cur.title].push(cur);
+      return pre;
+    }, {}),
+  );
 
   const sortedTags = $derived(
     Object.entries(groupByTag).sort(([a], [b]) => a.localeCompare(b)),
@@ -49,7 +53,7 @@
   }
 
   $effect(() => {
-    if (page.data.books.length === 0) return;
+    if (bookList.length === 0) return;
     observeHeaders();
   });
 </script>

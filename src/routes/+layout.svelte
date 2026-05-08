@@ -11,11 +11,11 @@
   const { children } = $props();
   let innerWidth = $state(0);
 
-  // ── 网络信息管理 ────────────────────────────────────────────
-  /** NetworkInformation 对象（可能为 null） */
+  // ── Network information management ──────────────────────────
+  /** NetworkInformation object (may be null) */
   let connection = $state(null);
 
-  /** 更新网络状态到全局 store */
+  /** Update network status to global store */
   function updateNetworkInfo(netInfo) {
     if (!netInfo) return;
     DATAS.networkType = netInfo.effectiveType || netInfo.type || "unknown";
@@ -28,8 +28,8 @@
     DATAS.isDarkMode = localStorage.getItem("theme") == "dark";
 
     // ── Wake Lock ──
-    // 初始加载时没有用户手势，wakeLock() 会静默失败
-    // 用户点开文章阅读时才会真正生效（在读者页面会主动调用）
+    // wakeLock() silently fails on initial load without user gesture
+    // It only takes effect when the user opens an article to read (called actively on reader pages)
     wakeLock();
 
     // ── Network Information ──
@@ -41,7 +41,7 @@
 
     if (connection) {
       updateNetworkInfo(connection);
-      // 监听网络变化
+      // Listen for network changes
       connection.addEventListener("change", () => {
         updateNetworkInfo(connection);
       });
@@ -74,7 +74,7 @@
   {@render children()}
 </main>
 
-<style uno-preflights>
+<style uno-preflights uno-global uno-safelist="rounded-xl space-y-5">
   :global(body) {
     margin: 0;
     padding: 0;

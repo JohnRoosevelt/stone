@@ -1,50 +1,51 @@
 /**
- * 应用配置常量
+ * Application configuration constants
  *
- * 集中管理 CID 编号、导航项、首页卡片等元数据，消除散落在各文件中的硬编码。
+ * Centrally manage CID numbers, navigation items, home page cards, and other metadata,
+ * eliminating hardcoded values scattered across files.
  */
 
-// ─── CID 类别常量 ───────────────────────────────────────────
+// ─── CID Category Constants ───────────────────────────────────────────
 export const CID = {
   BIBLE: "0",
   SDA: "1",
   BOOKS: "2",
 };
 
-/** CID 元数据映射 — 集中管理名称、图标、路由等信息 */
+/** CID metadata map — centrally manage names, icons, routes, etc. */
 export const CID_MAP = {
   [CID.BIBLE]: { id: CID.BIBLE, name: "圣经", icon: "i-icons-bible" },
   [CID.SDA]: { id: CID.SDA, name: "怀著", icon: "i-icons-sda" },
   [CID.BOOKS]: { id: CID.BOOKS, name: "书籍", icon: "i-icons-logo" },
 };
 
-/** 所有有效 CID 列表 */
+/** List of all valid CIDs */
 export const CID_LIST = Object.values(CID_MAP);
 
-/** 是否为已知的 CID */
+/** Whether it is a known CID */
 export function isValidCid(cid) {
   return cid in CID_MAP;
 }
 
-/** 验证数字 CID（0=bible, 1=sda, 2=book），无效返回 undefined */
+/** Validate numeric CID (0=bible, 1=sda, 2=book), returns undefined if invalid */
 export function validateCid(cid) {
   const n = Number(cid);
   return Number.isInteger(n) && n >= 0 && n <= 2 ? n : undefined;
 }
 
-/** 获取 CID 元数据，未知 CID 返回 null */
+/** Get CID metadata, returns null for unknown CID */
 export function getCidInfo(cid) {
   return CID_MAP[cid] ?? null;
 }
 
-// ─── 导航栏配置 ─────────────────────────────────────────────
+// ─── Navigation Bar Configuration ─────────────────────────────────────────────
 /**
- * 导航项数组，用于 Nav 侧边栏/底部栏
- * - href: 链接地址
- * - icon: UnoCSS 图标类
- * - label: 显示文字
- * - matchCid: 若设置了该值，则当 page.params.cid === matchCid 时高亮
- * - matchExact: 若设置了该值，则当 page.url.pathname === matchExact 时高亮
+ * Navigation items array, used for Nav sidebar/bottom bar
+ * - href: link URL
+ * - icon: UnoCSS icon class
+ * - label: displayed text
+ * - matchCid: if set, highlights when page.params.cid === matchCid
+ * - matchExact: if set, highlights when page.url.pathname === matchExact
  */
 export const NAV_ITEMS = [
   {
@@ -73,9 +74,9 @@ export const NAV_ITEMS = [
   },
 ];
 
-// ─── 首页卡片配置 ───────────────────────────────────────────
+// ─── Home Page Card Configuration ───────────────────────────────────────────
 /**
- * 首页导航卡片数组
+ * Home page navigation card array
  */
 export const HOME_CARDS = [
   {
@@ -90,7 +91,7 @@ export const HOME_CARDS = [
     icon: "i-icons-sda",
     color: "green",
   },
-  // { href: "/music", label: "音乐", icon: "i-carbon-music", color: "purple" }, // 暂未开放
+  // { href: "/music", label: "音乐", icon: "i-carbon-music", color: "purple" }, // Not yet available
   {
     href: "/my",
     label: "用户中心",
