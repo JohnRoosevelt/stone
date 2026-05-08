@@ -85,4 +85,10 @@ dependencies {
 }
 
 // Ensure tauri script is applied after the android block
-apply(from = "${rootProject.projectDir}/tauri-android/tauri.android.kts")
+val tauriScript = file("../tauri-android/tauri.android.kts")
+if (tauriScript.exists()) {
+    apply(from = tauriScript)
+} else {
+    // This allows the sync to happen even if the script isn't generated yet
+    logger.warn("Tauri Android script not found at: ${tauriScript.absolutePath}")
+}

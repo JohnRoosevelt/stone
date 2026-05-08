@@ -71,7 +71,10 @@ jobs:
           VERSION_CODE: ${{ github.run_number }}
           VERSION_NAME: 0.1.${{ github.run_number }}
         # Removed --release flag (Tauri Android builds are release by default)
-        run: bun x tauri android build --target aarch64
+        # Ensure the android project is fully initialized and scripts are generated
+        run: |
+          bun x tauri android init
+          bun x tauri android build --target aarch64
 
       - name: Locate and prepare APK
         run: |
