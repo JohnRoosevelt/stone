@@ -74,7 +74,7 @@ jobs:
         # Ensure the android project is fully initialized and scripts are generated
         run: |
           bunx tauri android init
-          bunx tauri android build --target aarch64 -- --no-configuration-cache --stacktrace
+          bunx tauri android build --target aarch64 -- -- --no-configuration-cache --stacktrace
 
       - name: Locate and prepare APK
         run: |
