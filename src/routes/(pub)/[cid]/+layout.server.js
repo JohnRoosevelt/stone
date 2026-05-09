@@ -1,8 +1,7 @@
 import { validateCid } from "$lib/config";
 
-// Tauri: prerender = true, but load = undefined, so SvelteKit won't fetch __data.json
-// Cloudflare: prerender = false, load queries D1 dynamically at runtime
-export const prerender = !!process.env.TAURI;
+// No prerender for this route (dynamic content loaded via $effect in +layout.svelte)
+export const prerender = false;
 
 export const load = !!process.env.TAURI
   ? undefined
