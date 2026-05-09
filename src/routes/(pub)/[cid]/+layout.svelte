@@ -7,7 +7,8 @@
 
   const { data, children } = $props();
 
-  // Load from local SQLite in Tauri mode (Web mode uses page.data.books directly)
+  // Tauri: books come from local SQLite, loaded via Tauri API
+  // Cloudflare: books come from server (D1), no need to load on client
   $effect(() => {
     const cid = Number(page.params.cid);
     if (isTauri() && needsLoad(cid)) {

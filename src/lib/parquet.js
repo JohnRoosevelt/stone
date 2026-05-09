@@ -15,12 +15,27 @@ let wasmInitialized = false;
 let zstdInitialized = false;
 
 async function ensureWasm() {
+  const TIMEOUT = 10000; // 10s
+
   if (!wasmInitialized) {
-    await initWasm({});
+    await Promise.race([
+      initWasm({}),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("parquet-wasm init timeout")),
+          TIMEOUT,
+        ),
+      ),
+    ]);
     wasmInitialized = true;
   }
   if (!zstdInitialized) {
-    await initZstd({});
+    await Promise.race([
+      initZstd({}),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("zstd-wasm init timeout")), TIMEOUT),
+      ),
+    ]);
     zstdInitialized = true;
   }
 }

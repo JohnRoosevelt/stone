@@ -1,93 +1,72 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("rust")
+}
+
+val tauriProperties = Properties().apply {
+    val propFile = file("tauri.properties")
+    if (propFile.exists()) {
+        propFile.inputStream().use { load(it) }
+    }
 }
 
 android {
+    compileSdk = 36
     namespace = "com.stone.app"
-    compileSdk = 34
-
     defaultConfig {
+        manifestPlaceholders["usesCleartextTraffic"] = "false"
         applicationId = "com.stone.app"
         minSdk = 24
-        targetSdk = 34
-        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
-        versionName = System.getenv("VERSION_NAME") ?: "0.1.0"
+        targetSdk = 36
+        versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
+        versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
     }
-
-    signingConfigs {
-        create("release") {
-            // Using absolute path from environment or default
-            val path = System.getenv("KEYSTORE_PATH") ?: "../keystore.jks"
-            storeFile = file(path)
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "stone123"
-            keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
-            keyPassword = System.getenv("KEY_PASSWORD") ?: "stone123"
-        }
-    }
-
     buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-            signingConfig = signingConfigs.getByName("release")
-        }
-        debug {
+        getByName("debug") {
+            applicationIdSuffix = ".debug"
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
             isDebuggable = true
+            isJniDebuggable = true
+            isMinifyEnabled = false
+            packaging {                jniLibs.keepDebugSymbols.add("*/arm64-v8a/*.so")
+                jniLibs.keepDebugSymbols.add("*/armeabi-v7a/*.so")
+                jniLibs.keepDebugSymbols.add("*/x86/*.so")
+                jniLibs.keepDebugSymbols.add("*/x86_64/*.so")
+            }
+        }
+        getByName("release") {
+            isMinifyEnabled = true
+            proguardFiles(
+                *fileTree(".") { include("**/*.pro") }
+                    .plus(getDefaultProguardFile("proguard-android-optimize.txt"))
+                    .toList().toTypedArray()
+            )
         }
     }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "1.8"
     }
-
-    sourceSets {
-        getByName("main") {
-            manifest.srcFile("src/main/AndroidManifest.xml")
-            res.srcDirs("src/main/res")
-            java.srcDirs("src/main/java")
-        }
+    buildFeatures {
+        buildConfig = true
     }
+}
 
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-
-    // FIXED: Corrected syntax for Gradle 8.13+ to avoid Type Mismatch
-    val customBuildPath = "${rootProject.layout.buildDirectory.get()}/app/${projectDir.relativeTo(rootProject.projectDir)}/build"
-    layout.buildDirectory.set(file(customBuildPath))
+rust {
+    rootDirRel = "../../../"
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.activity:activity-compose:1.9.1")
-    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.webkit:webkit:1.11.0")
-
-    // Tauri
-    implementation("app.tauri:tauri-android:0.2.3")
+    implementation("androidx.webkit:webkit:1.14.0")
+    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("androidx.activity:activity-ktx:1.10.1")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.10.0")
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.4")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")
 }
 
-val tauriScript = rootProject.projectDir.resolve("tauri-android/tauri.android.kts")
-
-if (tauriScript.exists()) {
-    apply(from = tauriScript)
-} else {
-    logger.warn("Warning: Tauri Android script not yet found at: ${tauriScript.absolutePath}")
-}
+apply(from = "tauri.build.gradle.kts")

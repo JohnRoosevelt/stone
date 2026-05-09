@@ -14,7 +14,7 @@ export default defineConfig({
   define: {
     __GIT_COMMIT__: JSON.stringify(GIT_COMMIT),
     __BUILD_TIME__: JSON.stringify(BUILD_TIME),
-    "process.env.TAURI": process.env.TAURI,
+    "process.env.TAURI": !!process.env.TAURI,
   },
   plugins: [
     svelteAttributifyToClass(),
