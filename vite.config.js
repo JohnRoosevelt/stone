@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import UnoCSS from "@unocss/svelte-scoped/vite";
 import { execSync } from "child_process";
 import svelteAttributifyToClass from "./src/lib/svelte-attributify-to-class.js";
+import { isTauri } from "./scripts/env.js";
 
 let GIT_COMMIT = "unknown";
 const BUILD_TIME = new Date().toISOString().replace("T", " ").slice(0, 19);
@@ -14,7 +15,7 @@ export default defineConfig({
   define: {
     __GIT_COMMIT__: JSON.stringify(GIT_COMMIT),
     __BUILD_TIME__: JSON.stringify(BUILD_TIME),
-    "process.env.TAURI": !!process.env.TAURI,
+    "process.env.TAURI": isTauri,
   },
   plugins: [
     svelteAttributifyToClass(),

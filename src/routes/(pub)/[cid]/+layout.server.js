@@ -2,8 +2,7 @@ import { validateCid } from "$lib/config";
 
 // Tauri: prerender __data.json (avoid JSON parse error in static SPA)
 // Cloudflare: dynamic D1 query at runtime
-// export const prerender = process.env.TAURI;
-export const prerender = true;
+export const prerender = !!process.env.TAURI;
 
 export async function load({ params: { cid }, platform }) {
   // Browser: platform is undefined, returns { books: [] }, $effect handles loading

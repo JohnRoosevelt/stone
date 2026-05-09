@@ -2,10 +2,9 @@ import adapter from "@sveltejs/adapter-cloudflare";
 import staticAdapter from "@sveltejs/adapter-static";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import UnoCSS from "@unocss/svelte-scoped/preprocess";
+import { isTauri } from "../scripts/env.js";
 
 const combine = process.env.NODE_ENV !== "development";
-const isTauri = process.env.TAURI === "true";
-console.log(`[config] isTauri: ${isTauri}`);
 const config = {
   preprocess: [
     vitePreprocess(),
