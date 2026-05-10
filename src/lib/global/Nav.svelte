@@ -3,20 +3,10 @@
   import { DATAS } from "$lib/data.svelte";
   import { NAV_ITEMS } from "$lib/config";
 
-  /** Search nav item (only in APP mode, inserted in the middle on mobile) */
-  const SEARCH_ITEM = {
-    href: "/search",
-    icon: "i-carbon-search",
-    label: "搜索",
-    matchPrefix: "/search",
-  };
-
-  /** Mobile nav: insert SEARCH_ITEM between item 1 (怀著) and item 2 (圣经) */
-  const MOBILE_NAV_ITEMS = $derived([
-    ...NAV_ITEMS.slice(0, 2),
-    ...(DATAS.isTauri ? [SEARCH_ITEM] : []),
-    ...NAV_ITEMS.slice(2),
-  ]);
+  /** Filter out appOnly items when not in Tauri mode */
+  const VISIBLE_ITEMS = $derived(
+    NAV_ITEMS.filter((item) => !item.appOnly || DATAS.isTauri),
+  );
 
   /**
    * Determine whether a nav item should be highlighted
@@ -53,7 +43,7 @@
   {/each}
 {/snippet}
 
-<!-- only show on mobile home page (5 items, search in the middle) -->
+<!-- only show on mobile home page -->
 <footer
   data-device="mobile"
   class={[
@@ -61,10 +51,10 @@
     page.route.id?.includes("(home)") ? "h-12" : "h-0",
   ]}
 >
-  {@render nav(MOBILE_NAV_ITEMS)}
+  {@render nav(VISIBLE_ITEMS)}
 </footer>
 
-<!-- only show on desktop (original 4 items) -->
+<!-- only show on desktop -->
 <aside class="hidden w-12 bg-white flex-col sm:flex-ac dark:(bg-gray-900)">
-  {@render nav(NAV_ITEMS)}
+  {@render nav(VISIBLE_ITEMS)}
 </aside>

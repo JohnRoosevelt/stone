@@ -46,6 +46,8 @@ export function getCidInfo(cid) {
  * - label: displayed text
  * - matchCid: if set, highlights when page.params.cid === matchCid
  * - matchExact: if set, highlights when page.url.pathname === matchExact
+ * - matchPrefix: if set, highlights when page.url.pathname starts with this string
+ * - appOnly: if true, only shows in Tauri (APP) mode
  */
 export const NAV_ITEMS = [
   {
@@ -59,6 +61,13 @@ export const NAV_ITEMS = [
     icon: "i-icons-sda",
     label: "怀著",
     matchCid: CID.SDA,
+  },
+  {
+    href: "/search",
+    icon: "i-carbon-search",
+    label: "搜索",
+    matchPrefix: "/search",
+    appOnly: true,
   },
   {
     href: `/${CID.BIBLE}`,

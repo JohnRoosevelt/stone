@@ -90,7 +90,7 @@ export default defineConfig({
     ],
   ],
   safelist: [
-    /* 各页面高频通用 class（避免 SSR 首次渲染时缺失） */
+    /* High-frequency common classes across pages (avoid missing on first SSR render) */
     "rounded-xl",
     "space-y-5",
     "sm:hidden",
@@ -117,7 +117,7 @@ export default defineConfig({
         " ",
       ),
     ),
-    /* 圣经新旧约分类标签（Dir.svelte 动态绑定） */
+    /* Bible OT/NT category badges (dynamically bound in Dir.svelte) */
     ...Array.from(
       "bg-white dark:bg-black bg-gray-200 dark:bg-gray-600 bg-gray-300 dark:bg-gray-800 bg-gray-100 dark:bg-gray-700".split(
         " ",
@@ -129,9 +129,9 @@ export default defineConfig({
       ),
     ),
     ...Array.from("text-green text-red font-700".split(" ")),
-    /* 导航和首页图标（动态 class 绑定，需显式声明） */
+    /* Nav & home page icons (dynamically bound, must be explicitly listed) */
     ...Array.from(
-      "i-carbon-home i-icons-sda i-icons-bible i-icons-logo?bg i-carbon-user-settings i-carbon-user-avatar i-carbon-education i-carbon-debug i-carbon-screen i-carbon-fit-to-screen".split(
+      "i-carbon-home i-icons-sda i-icons-bible i-carbon-search i-icons-logo?bg i-carbon-user-settings i-carbon-user-avatar i-carbon-education i-carbon-debug i-carbon-screen i-carbon-fit-to-screen".split(
         " ",
       ),
     ),

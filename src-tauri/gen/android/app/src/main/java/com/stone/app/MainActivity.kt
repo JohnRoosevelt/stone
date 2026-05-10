@@ -1,5 +1,6 @@
 package com.stone.app
 
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -12,6 +13,11 @@ class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
+    // Follow the system dark-mode setting so status bar icons
+    // are visible against the app's background (light vs dark).
+    val isDarkMode = (resources.configuration.uiMode and
+      Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+
     if (Build.VERSION.SDK_INT >= 35) {
       // ── Android 15+ (API 35+): system-enforced edge-to-edge ──
       // `setDecorFitsSystemWindows` is deprecated and has no effect.
@@ -19,9 +25,10 @@ class MainActivity : TauriActivity() {
 
       val controller = WindowInsetsControllerCompat(window, window.decorView)
 
-      // Use light icons to match the dark theme-color (#1B2120) in app.html
-      controller.isAppearanceLightStatusBars = false // false = white icons on dark BG
-      controller.isAppearanceLightNavigationBars = false
+      // Dark mode  -> white icons (app background is #111615)
+      // Light mode -> black icons (app background is #EDF1F0)
+      controller.isAppearanceLightStatusBars = !isDarkMode
+      controller.isAppearanceLightNavigationBars = !isDarkMode
 
       // Manually apply system bar insets as padding so content doesn't draw underneath
       val contentView = findViewById<View>(android.R.id.content)
