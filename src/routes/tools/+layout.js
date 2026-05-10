@@ -1,5 +1,6 @@
 import { redirect } from "@sveltejs/kit";
 import { browser } from "$app/environment";
+import { isTauri } from "$lib/tauri";
 
 export const prerender = false;
 export const ssr = false;
@@ -7,8 +8,8 @@ export const ssr = false;
 /** @type {import('@sveltejs/kit').LayoutLoad} */
 export async function load({ url }) {
   // Tauri client allows all tools pages (including import panel)
-  const isTauri = browser && !!window.__TAURI_INTERNALS__;
-  if (isTauri) return {};
+  const isTauriEnv = isTauri();
+  if (isTauriEnv) return {};
 
   // Web side: check admin token
   const token = url.searchParams.get("t");

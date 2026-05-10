@@ -23,6 +23,7 @@ export const DATAS = $state({
   // ── Device ──
   uaInfo: {},
   dbInfo: {},
+  isTauri: false,
 
   // ── Reader ──
   fontSize: 16,

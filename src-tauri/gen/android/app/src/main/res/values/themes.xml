@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- Base application theme. -->
     <style name="Theme.app" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
+        <!-- Ignored on Android 15+ (targetSdk 36) due to mandatory edge-to-edge; effective on older versions -->
         <item name="android:statusBarColor">@color/status_bar_color</item>
         <item name="android:navigationBarColor">@color/status_bar_color</item>
         <item name="android:windowLightStatusBar">false</item>
-
-        <!-- Android 15+ (API 35) 强制 edge-to-edge，用此属性退出 -->
-        <item name="android:windowOptOutEdgeToEdgeEnforcement" tools:targetApi="35">true</item>
     </style>
 </resources>

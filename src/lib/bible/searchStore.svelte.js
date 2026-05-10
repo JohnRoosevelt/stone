@@ -10,6 +10,8 @@
  *   Cache limit of 50 entries, evict the oldest when exceeded (FIFO).
  */
 
+import { DATAS } from "$lib/data.svelte";
+
 /** @typedef {{ rowid: number, cid: number, book_id: number, chapter_id: number, id: string, num: number | null, text_content: string, format: string, lang_code: string, chapter_title: string, book_name: string }} SearchResult */
 
 /** @typedef {{ total: number, hasMore: boolean, results: SearchResult[] }} CacheEntry */
@@ -192,7 +194,7 @@ export async function doSearch(q, cid, append = false) {
 
   try {
     // Tauri mode: use local SQLite search
-    if (typeof window !== "undefined" && window.__TAURI_INTERNALS__) {
+    if (DATAS.isTauri) {
       const { searchAPI } = await import("$lib/tauri");
       const data = await searchAPI(trimmed, {
         lang: "zh",

@@ -8,6 +8,6 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- 状态栏和导航栏颜色，与 app.html 中 theme-color 一致 -->
+    <!-- Status bar & navigation bar color, matching the theme-color meta tag in app.html -->
     <color name="status_bar_color">#1B2120</color>
 </resources>

@@ -2,6 +2,7 @@
   import { DATAS } from "$lib/data.svelte";
   import Dialog from "$lib/global/Dialog.svelte";
   import RouteLoading from "$lib/global/RouteLoading.svelte";
+  import { isTauri } from "$lib/tauri";
   import { setTheme } from "$lib/setTheme.svelte";
   import { handleVisibilityChange, wakeLock } from "$lib/wakeLock";
   import { SvelteToast } from "@zerodevx/svelte-toast";
@@ -24,6 +25,9 @@
 
   // Client-side initialization (runs only in browser, not during SSR)
   onMount(async () => {
+    // ── Detect Tauri environment once at startup ──
+    DATAS.isTauri = isTauri();
+
     // Theme from localStorage
     DATAS.isDarkMode = localStorage.getItem("theme") == "dark";
 

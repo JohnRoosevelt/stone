@@ -2,23 +2,49 @@ package com.stone.app
 
 import android.os.Build
 import android.os.Bundle
-import android.view.WindowManager
+import android.view.View
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-      // 确保系统栏可以绘制背景色
-      window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+    if (Build.VERSION.SDK_INT >= 35) {
+      // ── Android 15+ (API 35+): system-enforced edge-to-edge ──
+      // `setDecorFitsSystemWindows` is deprecated and has no effect.
+      // Status bar background is always transparent; only icon appearance can be controlled.
 
-      // 设置状态栏和导航栏为不透明背景色
-      window.statusBarColor = android.graphics.Color.parseColor("#1B2120")
-      window.navigationBarColor = android.graphics.Color.parseColor("#1B2120")
+      val controller = WindowInsetsControllerCompat(window, window.decorView)
+
+      // Use light icons to match the dark theme-color (#1B2120) in app.html
+      controller.isAppearanceLightStatusBars = false // false = white icons on dark BG
+      controller.isAppearanceLightNavigationBars = false
+
+      // Manually apply system bar insets as padding so content doesn't draw underneath
+      val contentView = findViewById<View>(android.R.id.content)
+      ViewCompat.setOnApplyWindowInsetsListener(contentView) { view, insets ->
+        val statusBarInsets = insets.getInsets(WindowInsetsCompat.Type.statusBars())
+        val navBarInsets = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+        view.setPadding(
+          view.paddingLeft,
+          statusBarInsets.top,     // leave room for the status bar
+          view.paddingRight,
+          navBarInsets.bottom      // leave room for the navigation bar
+        )
+        insets
+      }
+    } else {
+      // ── Android 14 and below: traditional approach ──
+      WindowCompat.setDecorFitsSystemWindows(window, true)
+
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = android.graphics.Color.parseColor("#1B2120")
+        window.navigationBarColor = android.graphics.Color.parseColor("#1B2120")
+      }
     }
-
-    // 防止内容绘制到系统栏下方（非 Android 15+ 有效）
-    WindowCompat.setDecorFitsSystemWindows(window, true)
   }
 }

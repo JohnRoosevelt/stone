@@ -2,13 +2,13 @@
   import { safeGoBack } from "$lib";
   import { onMount } from "svelte";
   import { formatBuildTime } from "$lib/format.js";
+  import { DATAS } from "$lib/data.svelte";
 
   const R2_PUBLIC = "https://r2.lelexue.cn";
   const latestUrl = () =>
     `${R2_PUBLIC}/apk/stone-latest.apk?date=${Date.now()}`;
 
   // ─── Runtime state ──────────────────────────────────────────
-  let isTauri = $state(false);
   let isWeChat = $state(false);
   let isAndroid = $state(false);
   let isOtherPlatform = $state(false);
@@ -16,11 +16,8 @@
   let ready = $state(false);
 
   onMount(() => {
-    // Detect Tauri environment
-    isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
-
     // Only run device detection in web mode
-    if (!isTauri) {
+    if (!DATAS.isTauri) {
       const ua = navigator.userAgent;
 
       // WeChat detection
@@ -50,7 +47,7 @@
 </svelte:head>
 
 <!-- Tauri: render nothing -->
-{#if !ready || isTauri}
+{#if !ready || DATAS.isTauri}
   <!-- intentionally empty -->
 {:else}
   <!-- Shared back button -->

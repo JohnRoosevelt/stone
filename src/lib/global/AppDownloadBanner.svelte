@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
+  import { DATAS } from "$lib/data.svelte";
 
-  let isTauri = $state(false);
   let dismissed = $state(true);
   let enter = $state(false);
 
@@ -12,9 +12,8 @@
   const DISMISS_DURATION_MS = 24 * 60 * 60 * 1000;
 
   onMount(() => {
-    // Detect Tauri (desktop app) — never show banner inside the app itself
-    isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
-    if (isTauri) return;
+    // Never show banner inside the Tauri app itself
+    if (DATAS.isTauri) return;
 
     // Time-based dismiss: if dismissed within the duration, keep hidden
     const dismissedAt = localStorage.getItem(LS_KEY);
@@ -48,7 +47,7 @@
   ];
 </script>
 
-{#if !isTauri && !dismissed}
+{#if !DATAS.isTauri && !dismissed}
   <!--
     Outer wrapper uses max-height transition for a smooth slide-down entrance.
     The `enter` flag is set on the next frame after mount so the browser

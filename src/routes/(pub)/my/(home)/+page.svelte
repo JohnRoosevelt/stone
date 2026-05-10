@@ -1,11 +1,11 @@
 <script>
   import { DATAS } from "$lib/data.svelte";
-  import { isTauri, getDbSize } from "$lib/tauri";
+  import { getDbSize } from "$lib/tauri";
   import { formatBuildTime } from "$lib/format.js";
 
   let dbSize = $state("");
   $effect(async () => {
-    if (isTauri()) {
+    if (DATAS.isTauri) {
       try {
         dbSize = await getDbSize();
       } catch (_) {}
@@ -150,7 +150,7 @@
   </a>
 
   <!-- Download App (Web only) -->
-  {#if !isTauri()}
+  {#if !DATAS.isTauri}
     <a
       href="/download"
       class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 no-underline"
@@ -165,7 +165,7 @@
   {/if}
 
   <!-- Book import (Tauri only) -->
-  {#if isTauri()}
+  {#if DATAS.isTauri}
     <a
       href="/tools/import"
       class="w-full flex items-center justify-between px-4 py-3.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
@@ -307,8 +307,11 @@
 
         <div>
           <span text-gray-400>mode: </span>
-          <span class:text-green={isTauri()} class:text-blue={!isTauri()}>
-            {isTauri() ? "🧊 Tauri" : "🌐 Web"}
+          <span
+            class:text-green={DATAS.isTauri}
+            class:text-blue={!DATAS.isTauri}
+          >
+            {DATAS.isTauri ? "🧊 Tauri" : "🌐 Web"}
           </span>
         </div>
 

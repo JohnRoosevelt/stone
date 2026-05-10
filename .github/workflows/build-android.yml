@@ -119,10 +119,11 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           VERSION_CODE: ${{ github.run_number }}
           VERSION_NAME: 0.1.${{ github.run_number }}
-        # Removed --release flag (Tauri Android builds are release by default)
-        # Ensure the android project is fully initialized and scripts are generated
+        # The `src-tauri/gen/android/` directory is committed to the repo,
+        # including custom MainActivity.kt / themes.xml / colors.xml.
+        # No need to run `tauri android init` (it would regenerate template files).
+        # `tauri android build` uses the existing project files as-is.
         run: |
-          bunx tauri android init
           bunx tauri android build --target aarch64
 
       - name: Sign APK if unsigned

@@ -2,7 +2,7 @@
   import { page } from "$app/state";
   import Dir from "$lib/cid/Dir.svelte";
   import { DATAS } from "$lib/data.svelte";
-  import { isTauri, getBooks } from "$lib/tauri";
+  import { getBooks } from "$lib/tauri";
   import { needsLoad, setBooks } from "$lib/booksStore.svelte.js";
 
   const { data, children } = $props();
@@ -11,7 +11,7 @@
   // Cloudflare: books come from server (D1), no need to load on client
   $effect(() => {
     const cid = Number(page.params.cid);
-    if (isTauri() && needsLoad(cid)) {
+    if (DATAS.isTauri && needsLoad(cid)) {
       getBooks("zh", cid)
         .then((list) => setBooks(list, cid))
         .catch((e) => console.error("[cid] load books error:", e));
