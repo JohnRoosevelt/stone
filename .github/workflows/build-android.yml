@@ -92,6 +92,18 @@ jobs:
           echo "Found APK at: $APK"
           cp "$APK" dist/stone.apk
 
+      - name: Validate R2 secrets
+        run: |
+          if [ -z "${{ secrets.R2_ACCESS_KEY }}" ]; then
+            echo "::error::Secret R2_ACCESS_KEY is empty or not set. Please add it to GitHub repository secrets."
+            exit 1
+          fi
+          if [ -z "${{ secrets.R2_SECRET_KEY }}" ]; then
+            echo "::error::Secret R2_SECRET_KEY is empty or not set. Please add it to GitHub repository secrets."
+            exit 1
+          fi
+          echo "R2 secrets are properly configured."
+
       - name: Upload to Cloudflare R2
         if: success()
         run: |
