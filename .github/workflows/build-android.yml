@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      debug:
+        description: "Skip build, only validate secrets"
+        type: boolean
+        default: false
 
 env:
   # Global environment variables for R2 storage
@@ -19,6 +24,50 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # ── Debug: validate all secrets before spending time on build ──
+      - name: Validate all secrets
+        env:
+          TEST_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          TEST_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          TEST_R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
+          TEST_R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
+        run: |
+          ALL_OK=true
+          secrets_status=""
+          for entry in \
+            "ANDROID_KEYSTORE_B64|TEST_KEYSTORE_B64" \
+            "KEYSTORE_PASSWORD|TEST_KEYSTORE_PASSWORD" \
+            "R2_ACCESS_KEY|TEST_R2_ACCESS_KEY" \
+            "R2_SECRET_KEY|TEST_R2_SECRET_KEY"; do
+            NAME="${entry%%|*}"
+            VAR="${entry##*|}"
+            VAL="${!VAR}"
+            if [ -z "$VAL" ]; then
+              echo "::error::$NAME → EMPTY (not set in GitHub Secrets)"
+              ALL_OK=false
+              secrets_status="${secrets_status}❌ ${NAME}  "
+            else
+              echo "✅ $NAME → ${#VAL} chars"
+              secrets_status="${secrets_status}✅ ${NAME}  "
+            fi
+          done
+          echo ""
+          echo "Secrets summary: $secrets_status"
+          echo ""
+          if [ "$ALL_OK" = false ]; then
+            echo "::error::Some secrets are missing. Fix them before running the build."
+            exit 1
+          fi
+          echo "All 4 secrets are properly configured!"
+
+      # ── Debug mode: stop here if debug=true ──
+      - name: Stop early in debug mode
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug }}
+        run: |
+          echo "🧪 Debug mode enabled. Build skipped."
+          echo "All secrets validated successfully. Exiting early."
+          exit 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
