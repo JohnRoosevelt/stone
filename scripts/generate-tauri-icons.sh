@@ -18,8 +18,8 @@ const fs = require('fs');
 const svg = fs.readFileSync('$SVG', 'utf-8');
 const buf = Buffer.from(svg);
 Promise.all([
-  sharp(buf).resize(512, 512).toFile('$PNG_DIR/pwa-512.png'),
-  sharp(buf).resize(192, 192).toFile('$PNG_DIR/pwa-192.png'),
+  sharp(buf).resize(512, 512).flatten({ background: '#000000' }).toFile('$PNG_DIR/pwa-512.png'),
+  sharp(buf).resize(192, 192).flatten({ background: '#000000' }).toFile('$PNG_DIR/pwa-192.png'),
 ]).then(() => console.log('PWA icons OK')).catch(console.error);
 "
 

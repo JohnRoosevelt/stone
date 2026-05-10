@@ -7,4 +7,7 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- 状态栏和导航栏颜色，与 app.html 中 theme-color 一致 -->
+    <color name="status_bar_color">#1B2120</color>
 </resources>

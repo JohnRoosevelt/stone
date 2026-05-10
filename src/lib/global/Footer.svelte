@@ -33,6 +33,16 @@
       {/if}
     </div>
 
+    <!-- App download link -->
+    <a
+      href="/download"
+      class="flex-cc gap-1 text-gray-400 hover:text-green transition300"
+      aria-label="下载 APP"
+    >
+      <span class="i-carbon-phone text-sm"></span>
+      <span class="text-xs">APP</span>
+    </a>
+
     <button
       class="flex-cc gap-x-2 bg-gray-200 px-1 py-px rounded-1 dark:bg-gray-700"
       aria-label="theme"
