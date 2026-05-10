@@ -126,12 +126,56 @@ jobs:
           bunx tauri android init
           bunx tauri android build --target aarch64
 
+      - name: Sign APK if unsigned
+        run: |
+          KEYSTORE="${{ github.workspace }}/src-tauri/gen/android/keystore.jks"
+          if [ ! -f "$KEYSTORE" ]; then
+            echo "Keystore not found; APK will remain unsigned."
+            exit 0
+          fi
+
+          # Check if the built APK is unsigned
+          UNSIGNED_APK=$(find src-tauri/gen/android -name "*unsigned*.apk" -type f | head -1)
+          if [ -z "$UNSIGNED_APK" ]; then
+            echo "No unsigned APK found; assuming it's already signed."
+            exit 0
+          fi
+
+          echo "Found unsigned APK: $UNSIGNED_APK"
+          SIGNED_APK="${UNSIGNED_APK//-unsigned/}"
+
+          # Find apksigner from Android SDK
+          APKSIGNER=$(find "$ANDROID_HOME" -name "apksigner" -type f 2>/dev/null | head -1)
+          if [ -z "$APKSIGNER" ]; then
+            # Try build-tools path directly
+            APKSIGNER="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner"
+          fi
+
+          echo "Using apksigner: $APKSIGNER"
+          echo "Signing APK..."
+
+          "$APKSIGNER" sign --ks "$KEYSTORE" \
+            --ks-key-alias upload \
+            --ks-pass "pass:${{ secrets.KEYSTORE_PASSWORD }}" \
+            --key-pass "pass:${{ secrets.KEYSTORE_PASSWORD }}" \
+            --out "$SIGNED_APK" \
+            "$UNSIGNED_APK"
+
+          # Verify signature
+          "$APKSIGNER" verify "$SIGNED_APK"
+          echo "APK signed successfully: $SIGNED_APK"
+
       - name: Locate and prepare APK
         run: |
           mkdir -p dist
-          # Look for the generated APK file
-          # Tauri usually outputs to src-tauri/gen/android/app/build/outputs/apk/
-          APK=$(find src-tauri/gen/android -name "*.apk" -type f | grep -v "unaligned" | head -1)
+          # Prefer signed APK (without "unsigned" in name)
+          APK=$(find src-tauri/gen/android -name "*.apk" -type f ! -name "*unsigned*" ! -name "*unaligned*" | head -1)
+
+          # Fall back to unsigned APK if no signed one found
+          if [ -z "$APK" ]; then
+            echo "Warning: No signed APK found, falling back to unsigned."
+            APK=$(find src-tauri/gen/android -name "*.apk" -type f ! -name "*unaligned*" | head -1)
+          fi
 
           if [ -z "$APK" ]; then
             echo "Error: No APK found after build."
