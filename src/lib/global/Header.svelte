@@ -5,7 +5,7 @@
 <!-- only show on desktop -->
 <header class="w-full h-12 px-3 hidden bg-white dark:bg-gray-900 sm:flex-bc">
   <a href="/" data-sveltekit-replacestate class="flex-cc flex-row gap-2 text-6">
-    <span class="i-icons-logo text-6"></span>
+    <span class="i-icons-logo?bg text-6"></span>
     <span>脚前的灯</span>
   </a>
 

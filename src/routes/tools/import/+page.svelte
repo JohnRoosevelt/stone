@@ -44,7 +44,7 @@
     pageError = "";
     try {
       const { loadR2Parquet } = await import("$lib/parquet");
-      const chapters = await loadR2Parquet(`${cid}/${lang}/${bookId}`);
+      const chapters = await loadR2Parquet(`${cid}/${lang}/${bookId}`, true);
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke("save_book", { cid, bookId, lang, chapters });
       localBooks.add(bookId);

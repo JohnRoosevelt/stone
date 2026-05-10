@@ -1,37 +1,43 @@
 #!/bin/bash
-# Generate Tauri icons from the web PWA icon (pwa-512.png)
-# Uses Tauri CLI to generate all required sizes
+# Generate PWA icons from SVG, then Tauri icons from the PWA icon
+# Uses sharp (Node.js) for SVG→PNG, then Tauri CLI for platform icons
 
 set -e
 
-# Source icon from web manifest
-SOURCE="static/png/pwa-512.png"
+SVG="static/icons/logo.svg"
+PNG_DIR="static/png"
 ICONS_DIR="src-tauri/icons"
 
-if [ ! -f "$SOURCE" ]; then
-  echo "Error: Source icon not found at $SOURCE"
-  exit 1
-fi
+# ── Step 1: Generate PWA PNGs from SVG ─────────────────────────
+echo "Generating PWA icons from $SVG ..."
+mkdir -p "$PNG_DIR"
 
+node -e "
+const sharp = require('sharp');
+const fs = require('fs');
+const svg = fs.readFileSync('$SVG', 'utf-8');
+const buf = Buffer.from(svg);
+Promise.all([
+  sharp(buf).resize(512, 512).toFile('$PNG_DIR/pwa-512.png'),
+  sharp(buf).resize(192, 192).toFile('$PNG_DIR/pwa-192.png'),
+]).then(() => console.log('PWA icons OK')).catch(console.error);
+"
+
+# ── Step 2: Generate Tauri icons from PWA 512 ─────────────────────
+SOURCE="$PNG_DIR/pwa-512.png"
 echo "Generating Tauri icons from $SOURCE ..."
 
-# Use Tauri CLI to generate all icon sizes
 bunx tauri icon "$SOURCE" --output "$ICONS_DIR" 2>/dev/null || {
   echo "Tauri CLI not available, using fallback..."
 
   # Fallback: manually copy and resize using macOS sips
   mkdir -p "$ICONS_DIR"
-
-  # Copy source as base icon
   cp "$SOURCE" "$ICONS_DIR/icon.png"
-
-  # Resize using sips (macOS built-in)
   sips -z 32 32 "$SOURCE" --out "$ICONS_DIR/32x32.png" > /dev/null 2>&1
   sips -z 128 128 "$SOURCE" --out "$ICONS_DIR/128x128.png" > /dev/null 2>&1
   sips -z 256 256 "$SOURCE" --out "$ICONS_DIR/128x128@2x.png" > /dev/null 2>&1
-
-  echo "Fallback complete. Note: .icns and .ico not generated."
+  echo "Fallback complete."
 }
 
-echo "Done! Icons generated in $ICONS_DIR"
+echo "Done!"
 ls -lh "$ICONS_DIR"

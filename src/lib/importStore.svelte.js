@@ -106,7 +106,7 @@ export async function startImport(cid, lang, booksToImport) {
   function downloadOne(b) {
     const startedAt = nowStr();
     const t1 = performance.now();
-    loadR2Parquet(`${cid}/${lang}/${b.book_id}`)
+    loadR2Parquet(`${cid}/${lang}/${b.book_id}`, true)
       .then((chapters) => {
         const ms = (performance.now() - t1).toFixed(0);
         addLog(

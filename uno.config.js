@@ -97,7 +97,7 @@ export default defineConfig({
     "max-sm:hidden",
     "sm:flex",
     "max-sm:flex",
-    ...Array.from("text-3 text-4 text-5 text-6 text-7".split(" ")),
+    ...Array.from("text-3 text-4 text-5 text-6 text-7 text-24".split(" ")),
     ...Array.from("text-white/100 text-white/45".split(" ")),
     ...Array.from(
       "bg-white/100 bg-white/50 bg-[#1B2120]/100 bg-[#1B2120]/50".split(" "),
@@ -131,7 +131,7 @@ export default defineConfig({
     ...Array.from("text-green text-red font-700".split(" ")),
     /* 导航和首页图标（动态 class 绑定，需显式声明） */
     ...Array.from(
-      "i-carbon-home i-icons-sda i-icons-bible i-carbon-user-settings i-carbon-user-avatar i-carbon-education i-carbon-debug i-carbon-screen i-carbon-fit-to-screen".split(
+      "i-carbon-home i-icons-sda i-icons-bible i-icons-logo?bg i-carbon-user-settings i-carbon-user-avatar i-carbon-education i-carbon-debug i-carbon-screen i-carbon-fit-to-screen".split(
         " ",
       ),
     ),

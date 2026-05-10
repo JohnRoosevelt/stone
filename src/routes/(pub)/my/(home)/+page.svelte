@@ -323,6 +323,15 @@
             ({formatBuildTime(__BUILD_TIME__)})
           </span>
         </div>
+
+        <div>
+          <span text-gray-400>origin: </span>
+          <span class="text-green"
+            >{typeof window !== "undefined"
+              ? window.location.origin
+              : "-"}</span
+          >
+        </div>
       </div>
     {/if}
   </div>

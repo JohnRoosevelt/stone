@@ -40,14 +40,14 @@ async function ensureWasm() {
   }
 }
 
-export async function loadR2Parquet(path) {
+export async function loadR2Parquet(path, noCache = false) {
   console.log("[Parquet] Loading from R2:", path);
   await ensureWasm();
 
   try {
     const base = `${PUBLIC_R2}/${path}${path.endsWith(".parquet.zst") ? "" : ".parquet.zst"}`;
     const url = new URL(base);
-    if (dev) url.searchParams.set("data", String(Date.now()));
+    if (dev || noCache) url.searchParams.set("t", String(Date.now()));
     const resp = await fetch(url);
 
     const buffer = await resp.arrayBuffer();
