@@ -4,7 +4,8 @@
   import { formatBuildTime } from "$lib/format.js";
 
   const R2_PUBLIC = "https://r2.lelexue.cn";
-  const latestUrl = `${R2_PUBLIC}/apk/stone-latest.apk`;
+  const latestUrl = () =>
+    `${R2_PUBLIC}/apk/stone-latest.apk?date=${Date.now()}`;
 
   // ─── Runtime state ──────────────────────────────────────────
   let isTauri = $state(false);
@@ -37,7 +38,7 @@
 
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(latestUrl);
+      await navigator.clipboard.writeText(latestUrl());
       copying = true;
       setTimeout(() => (copying = false), 2000);
     } catch (_) {}
@@ -127,7 +128,7 @@
     </div>
 
     <a
-      href={latestUrl}
+      href={latestUrl()}
       download
       class="px-10 py-5 rounded-2xl bg-green text-white text-xl font-bold hover:bg-green/80 transition300 flex-cc gap-3 shadow-lg active:scale-95"
     >

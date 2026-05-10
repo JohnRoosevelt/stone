@@ -59,6 +59,14 @@
   $effect(() => {
     DATAS.isMobile = innerWidth < 640;
   });
+
+  // ── Debug: detect current origin (for Android CORS troubleshooting) ──
+  let origin = $state("");
+  $effect(() => {
+    if (typeof window !== "undefined") {
+      origin = window.location.origin;
+    }
+  });
 </script>
 
 <SvelteToast options={{}} />
@@ -73,6 +81,15 @@
 >
   {@render children()}
 </main>
+
+<!-- Debug: show current origin for CORS troubleshooting -->
+{#if origin}
+  <div
+    class="fixed bottom-0 left-0 z-50 bg-black/70 text-white text-xs px-2 py-0.5 rounded-tr"
+  >
+    origin: {origin}
+  </div>
+{/if}
 
 <style uno-preflights uno-global uno-safelist="rounded-xl space-y-5">
   :global(body) {

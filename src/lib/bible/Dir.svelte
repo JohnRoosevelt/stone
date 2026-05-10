@@ -113,3 +113,9 @@
     </a>
   </div>
 {/snippet}
+
+<style
+  uno-global
+  uno-safelist="text-green font-700 bg-gray-200 dark:bg-gray-600 text-red bg-gray-300 dark:bg-gray-800"
+>
+</style>
