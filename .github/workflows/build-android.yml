@@ -92,22 +92,28 @@ jobs:
           echo "Found APK at: $APK"
           cp "$APK" dist/stone.apk
 
-      - name: Validate R2 secrets
+      - name: Upload to Cloudflare R2
+        if: success()
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_KEY }}
         run: |
-          if [ -z "${{ secrets.R2_ACCESS_KEY }}" ]; then
-            echo "::error::Secret R2_ACCESS_KEY is empty or not set. Please add it to GitHub repository secrets."
+          # Validate secrets are non-empty
+          if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+            echo "::error::Secret R2_ACCESS_KEY is empty or not set."
+            echo "::error::Please go to GitHub repo → Settings → Secrets and variables → Actions → Secrets"
+            echo "::error::and add: R2_ACCESS_KEY = 85ac4a675838688f09e61e8e52ca24bc"
             exit 1
           fi
-          if [ -z "${{ secrets.R2_SECRET_KEY }}" ]; then
-            echo "::error::Secret R2_SECRET_KEY is empty or not set. Please add it to GitHub repository secrets."
+          if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::Secret R2_SECRET_KEY is empty or not set."
+            echo "::error::Please go to GitHub repo → Settings → Secrets and variables → Actions → Secrets"
+            echo "::error::and add: R2_SECRET_KEY = dd28cc17212f27ebd63fe8bd597671369877f9bf31d0aad4c636b26a7cfa0b3f"
             exit 1
           fi
           echo "R2 secrets are properly configured."
 
-      - name: Upload to Cloudflare R2
-        if: success()
-        run: |
-          # Install AWS CLI if not present (GitHub runners may have v1, ensure v2)
+          # Install AWS CLI if not present
           if ! command -v aws &> /dev/null; then
             echo "Installing AWS CLI..."
             curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
@@ -115,10 +121,8 @@ jobs:
             sudo /tmp/aws/install --update
           fi
 
-          # Configure credentials explicitly for the runner user
-          aws configure set aws_access_key_id "${{ secrets.R2_ACCESS_KEY }}"
-          aws configure set aws_secret_access_key "${{ secrets.R2_SECRET_KEY }}"
-          aws configure set default.region auto
+          # Configure credentials via env vars (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY)
+          # The AWS CLI reads these automatically, no need for aws configure set
 
           SHORT_SHA=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
