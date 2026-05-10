@@ -94,10 +94,20 @@ jobs:
 
       - name: Upload to Cloudflare R2
         if: success()
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_KEY }}
         run: |
+          # Install AWS CLI if not present (GitHub runners may have v1, ensure v2)
+          if ! command -v aws &> /dev/null; then
+            echo "Installing AWS CLI..."
+            curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+            unzip -q /tmp/awscliv2.zip -d /tmp
+            sudo /tmp/aws/install --update
+          fi
+
+          # Configure credentials explicitly for the runner user
+          aws configure set aws_access_key_id "${{ secrets.R2_ACCESS_KEY }}"
+          aws configure set aws_secret_access_key "${{ secrets.R2_SECRET_KEY }}"
+          aws configure set default.region auto
+
           SHORT_SHA=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
 
