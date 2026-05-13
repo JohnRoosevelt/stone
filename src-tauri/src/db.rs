@@ -3,9 +3,14 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-/// 包装 Connection 以便在线程间共享
+/// 读写分离的数据库状态
+/// - read_conn: 独立 Mutex 读取连接，与写入互不阻塞 (WAL 模式下可并发)
+/// - write_conn: 独立 Mutex 写入连接，串行化写入操作
+///
+/// 利用 SQLite WAL 模式：读连接不会阻塞写连接，写连接也不会阻塞读连接。
 pub struct DbState {
-    pub conn: Arc<Mutex<Connection>>,
+    pub read_conn: Arc<Mutex<Connection>>,
+    pub write_conn: Arc<Mutex<Connection>>,
     pub db_path: PathBuf,
 }
 
@@ -52,15 +57,14 @@ pub struct SearchResult {
 }
 
 /// 初始化数据库：创建表结构和 FTS5 索引
-pub fn init_database(db_path: &PathBuf) -> Result<Connection> {
-    let conn = Connection::open(db_path)?;
+/// 返回 (write_conn, read_conn) 读写分离连接
+pub fn init_database(db_path: &PathBuf) -> Result<(Connection, Connection)> {
+    // 写连接：负责 DDL/DML 变更
+    let write_conn = Connection::open(db_path)?;
+    write_conn.execute_batch("PRAGMA journal_mode=WAL;")?;
+    write_conn.execute_batch("PRAGMA foreign_keys=ON;")?;
 
-    // 启用 WAL 模式（更好的并发性能）
-    conn.execute_batch("PRAGMA journal_mode=WAL;")?;
-    // 启用外键约束
-    conn.execute_batch("PRAGMA foreign_keys=ON;")?;
-
-    conn.execute_batch(
+    write_conn.execute_batch(
         "
         -- book_base: 书籍基础信息（语言无关）
         CREATE TABLE IF NOT EXISTS book_base (
@@ -140,7 +144,19 @@ pub fn init_database(db_path: &PathBuf) -> Result<Connection> {
         "
     )?;
 
-    Ok(conn)
+    // app_flags: 应用标志位表（如首次导入完成标记）
+    write_conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS app_flags (
+            key   TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        ) STRICT, WITHOUT ROWID;",
+    )?;
+
+    // 读连接：以只读方式打开同一数据库，利用 WAL 实现读写并发
+    let read_conn = Connection::open(db_path)?;
+    read_conn.execute_batch("PRAGMA query_only=ON;")?;
+
+    Ok((write_conn, read_conn))
 }
 
 /// 获取书籍列表
@@ -281,6 +297,14 @@ pub struct FullChapter {
 }
 
 /// 获取整本书（章节+段落），返回格式与 R2 parquet 一致
+/// 轻量结构：用于首次导入的书籍信息
+#[derive(Debug, Serialize)]
+pub struct BookForImport {
+    pub cid: i64,
+    pub book_id: i64,
+    pub name: String,
+}
+
 pub fn get_full_book(
     conn: &Connection,
     cid: i64,
@@ -392,6 +416,88 @@ pub fn delete_book_data(
 }
 
 /// 搜索
+/// Check whether the initial import needs to run.
+///
+/// Returns true when:
+/// - book_base has metadata (seed completed), AND
+/// - `initial_import_done` flag is NOT set to "1".
+///
+/// This means it will also return true after a crash mid-import
+/// (partially imported books + flag still "0"), allowing the
+/// first-launch UI to resume and fill in the gaps.
+pub fn needs_initial_import(conn: &Connection) -> Result<bool> {
+    let has_books: i64 = conn
+        .query_row("SELECT COUNT(*) FROM book_base", [], |row| row.get(0))
+        .unwrap_or(0);
+    if has_books == 0 {
+        return Ok(false);
+    }
+    // Only skip if the flag is explicitly "1" (fully done)
+    let flag: String = conn
+        .query_row(
+            "SELECT value FROM app_flags WHERE key='initial_import_done'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or_default();
+    Ok(flag != "1")
+}
+
+/// 标记首次导入已完成
+pub fn mark_import_complete(conn: &Connection) -> Result<()> {
+    conn.execute(
+        "INSERT OR REPLACE INTO app_flags (key, value) VALUES ('initial_import_done', '1')",
+        [],
+    )?;
+    Ok(())
+}
+
+/// Reset the initial-import flag so the first-launch UI triggers again.
+pub fn reset_import_flag(conn: &Connection) -> Result<()> {
+    conn.execute(
+        "INSERT OR REPLACE INTO app_flags (key, value) VALUES ('initial_import_done', '0')",
+        [],
+    )?;
+    Ok(())
+}
+
+/// Get all book IDs that already have chapter data for a given language.
+/// Used by the first-launch UI to skip already-imported books.
+pub fn get_imported_book_ids(conn: &Connection, lang: &str) -> Result<Vec<(i64, i64)>> {
+    let mut stmt = conn.prepare("SELECT DISTINCT cid, book_id FROM chapters WHERE lang_code=?1")?;
+    let rows = stmt.query_map(params![lang], |row| {
+        Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
+    })?;
+    let mut result = Vec::new();
+    for r in rows {
+        result.push(r?);
+    }
+    Ok(result)
+}
+
+/// Get book list for initial import (all books regardless of import status).
+pub fn get_all_books_for_import(conn: &Connection, lang: &str) -> Result<Vec<(i64, i64, String)>> {
+    let mut stmt = conn.prepare(
+        "SELECT bb.cid, bb.book_id, bi.name
+         FROM book_base bb
+         JOIN book_i18n bi ON bi.cid = bb.cid AND bi.book_id = bb.book_id
+         WHERE bi.lang_code = ?1
+         ORDER BY bb.cid, bb.book_id",
+    )?;
+    let rows = stmt.query_map(params![lang], |row| {
+        Ok((
+            row.get::<_, i64>(0)?,
+            row.get::<_, i64>(1)?,
+            row.get::<_, String>(2)?,
+        ))
+    })?;
+    let mut result = Vec::new();
+    for r in rows {
+        result.push(r?);
+    }
+    Ok(result)
+}
+
 pub fn search(
     conn: &Connection,
     q: &str,
@@ -530,9 +636,13 @@ pub fn get_db_size(db_path: &std::path::Path) -> Result<u64, String> {
 
 /// 格式化文件大小
 pub fn format_size(bytes: u64) -> String {
-    if bytes < 1024 { return format!("{bytes} B"); }
+    if bytes < 1024 {
+        return format!("{bytes} B");
+    }
     let kb = bytes as f64 / 1024.0;
-    if kb < 1024.0 { return format!("{:.1} KB", kb); }
+    if kb < 1024.0 {
+        return format!("{:.1} KB", kb);
+    }
     let mb = kb / 1024.0;
     format!("{:.1} MB", mb)
 }

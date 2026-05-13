@@ -1,6 +1,10 @@
 <script>
   import { DATAS } from "$lib/data.svelte";
-  import { getDbSize } from "$lib/tauri";
+  import {
+    getDbSize,
+    needsInitialImport,
+    resetInitialImport,
+  } from "$lib/tauri";
   import { formatBuildTime } from "$lib/format.js";
 
   let dbSize = $state("");
@@ -11,6 +15,38 @@
       } catch (_) {}
     }
   });
+
+  let initStatus = $state(""); // "" | "checking" | "needed" | "done" | "error"
+  let initChecking = $state(false);
+
+  async function checkInit() {
+    initChecking = true;
+    initStatus = "checking";
+    try {
+      const needed = await needsInitialImport();
+      initStatus = needed ? "needed" : "done";
+    } catch (e) {
+      initStatus = "error";
+      console.error("checkInit error:", e);
+    } finally {
+      initChecking = false;
+    }
+  }
+
+  async function resetAndCheck() {
+    initStatus = "checking";
+    initChecking = true;
+    try {
+      await resetInitialImport();
+      const needed = await needsInitialImport();
+      initStatus = needed ? "needed" : "done";
+    } catch (e) {
+      initStatus = "error";
+      console.error("resetAndCheck error:", e);
+    } finally {
+      initChecking = false;
+    }
+  }
 
   const roadmap = [
     {
@@ -71,24 +107,47 @@
         <span class="i-carbon-sun text-xl"></span>
         <div>
           <div class="font-medium">深色模式</div>
-          <div class="text-sm text-gray-500">切换界面明暗主题</div>
+          <div class="text-sm text-gray-500">
+            {DATAS.themeMode === "system"
+              ? "跟随系统"
+              : DATAS.themeMode === "dark"
+                ? "深色"
+                : "浅色"}
+          </div>
         </div>
       </div>
-      <button
-        class={[
-          DATAS.isDarkMode ? "bg-green" : "bg-gray-300 dark:bg-gray-600",
-          "w-12 h-7 rounded-full transition300 relative",
-        ]}
-        onclick={() => (DATAS.isDarkMode = !DATAS.isDarkMode)}
-        aria-label="切换深色模式"
-      >
-        <span
-          class={[
-            DATAS.isDarkMode ? "left-5" : "left-0.5",
-            "absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition300",
-          ]}
-        ></span>
-      </button>
+      <div class="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+        <button
+          aria-label="切换到浅色模式"
+          class="px-3 py-1 rounded-md text-sm transition300"
+          class:bg-white={DATAS.themeMode === "light"}
+          class:shadow-sm={DATAS.themeMode === "light"}
+          class:text-gray-400={DATAS.themeMode !== "light"}
+          onclick={() => (DATAS.themeMode = "light")}
+        >
+          <span class="i-carbon-sun"></span>
+        </button>
+        <button
+          aria-label="切换到深色模式"
+          class="px-3 py-1 rounded-md text-sm transition300"
+          class:bg-white={DATAS.themeMode === "dark"}
+          class:shadow-sm={DATAS.themeMode === "dark"}
+          class:text-gray-400={DATAS.themeMode !== "dark"}
+          onclick={() => (DATAS.themeMode = "dark")}
+        >
+          <span class="i-carbon-moon"></span>
+        </button>
+        <button
+          aria-label="切换到系统模式"
+          class="px-3 py-1 rounded-md text-sm transition300"
+          class:bg-white={DATAS.themeMode === "system"}
+          class:shadow-sm={DATAS.themeMode === "system"}
+          class:text-gray-400={DATAS.themeMode !== "system"}
+          onclick={() => (DATAS.themeMode = "system")}
+        >
+          <span class="i-carbon-automatic"></span>
+        </button>
+      </div>
     </div>
 
     <!-- Font size -->
@@ -177,6 +236,81 @@
       <span class="text-xs text-gray-400">未导入的内容从 R2 加载</span>
       <span class="i-carbon-chevron-right text-gray-400"></span>
     </a>
+
+    <!-- Initialization check -->
+    <div
+      class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+    >
+      <button
+        class="w-full flex items-center justify-between px-4 py-3.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300"
+        onclick={checkInit}
+      >
+        <span class="flex-cc gap-2">
+          <span
+            class={[
+              initStatus === "done"
+                ? "i-carbon-checkmark-filled text-green"
+                : initStatus === "needed"
+                  ? "i-carbon-warning text-orange"
+                  : initStatus === "error"
+                    ? "i-carbon-error text-red"
+                    : initChecking
+                      ? "i-line-md-loading-twotone-loop animate-spin"
+                      : "i-carbon-information text-gray-400",
+            ]}
+          ></span>
+          初始化检查
+        </span>
+        <span class="text-xs text-gray-400">
+          {#if initStatus === ""}
+            点击检查
+          {:else if initStatus === "checking"}
+            检查中...
+          {:else if initStatus === "needed"}
+            需要初始化
+          {:else if initStatus === "done"}
+            已完成
+          {:else if initStatus === "error"}
+            检查失败
+          {/if}
+        </span>
+        <span class="i-carbon-chevron-right text-gray-400"></span>
+      </button>
+
+      {#if initStatus === "needed"}
+        <div
+          class="border-t border-gray-100 dark:border-gray-800 px-4 py-3 space-y-3"
+        >
+          <p class="text-xs text-gray-500">
+            有书籍数据尚未导入，需要重新运行初始化流程。
+          </p>
+          <a
+            href="/"
+            onclick={() => setTimeout(() => location.reload(), 100)}
+            class="inline-block px-4 py-2 rounded-lg bg-green text-white text-sm font-medium hover:bg-green/80 transition300"
+          >
+            开始初始化导入
+          </a>
+        </div>
+      {:else if initStatus === "done"}
+        <div
+          class="border-t border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center justify-between"
+        >
+          <p class="text-xs text-gray-500">初始化已完成，所有书籍已就绪。</p>
+          <button
+            onclick={resetAndCheck}
+            disabled={initChecking}
+            class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition300"
+          >
+            重置并重新检查
+          </button>
+        </div>
+      {:else if initStatus === "error"}
+        <div class="border-t border-gray-100 dark:border-gray-800 px-4 py-3">
+          <p class="text-xs text-red">检查失败，请稍后重试。</p>
+        </div>
+      {/if}
+    </div>
   {/if}
 
   <!-- ─── Development Roadmap ─── -->

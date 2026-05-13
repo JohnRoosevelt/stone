@@ -64,6 +64,31 @@ export async function getDbSize() {
   return "N/A";
 }
 
+// ── Initial Import ────────────────────────────────────────────
+
+export async function needsInitialImport() {
+  if (isTauri()) return tauriInvoke("needs_initial_import", {});
+  return false;
+}
+
+export async function getAllBooksForImport(lang = "zh") {
+  if (isTauri()) return tauriInvoke("get_all_books_for_import", { lang });
+  return [];
+}
+
+export async function getImportedBooks(lang = "zh") {
+  if (isTauri()) return tauriInvoke("get_imported_books", { lang });
+  return [];
+}
+
+export async function markImportComplete() {
+  if (isTauri()) return tauriInvoke("mark_import_complete", {});
+}
+
+export async function resetInitialImport() {
+  if (isTauri()) return tauriInvoke("reset_initial_import", {});
+}
+
 // ── Search ────────────────────────────────────────────────────
 
 export async function searchAPI(

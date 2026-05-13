@@ -46,10 +46,20 @@
     <button
       class="flex-cc gap-x-2 bg-gray-200 px-1 py-px rounded-1 dark:bg-gray-700"
       aria-label="theme"
-      onclick={() => (DATAS.isDarkMode = !DATAS.isDarkMode)}
+      onclick={() => {
+        // cycle: light → dark → system → light
+        const next = { light: "dark", dark: "system", system: "light" };
+        DATAS.themeMode = next[DATAS.themeMode] || "system";
+      }}
     >
-      <span class="i-carbon-sun" class:text-green={!DATAS.isDarkMode}></span>
-      <span class="i-carbon-moon" class:text-green={DATAS.isDarkMode}></span>
+      <span class="i-carbon-sun" class:text-green={DATAS.themeMode === "light"}
+      ></span>
+      <span class="i-carbon-moon" class:text-green={DATAS.themeMode === "dark"}
+      ></span>
+      <span
+        class="i-carbon-automatic"
+        class:text-green={DATAS.themeMode === "system"}
+      ></span>
     </button>
   </div>
 </footer>

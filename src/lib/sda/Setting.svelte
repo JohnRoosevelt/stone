@@ -87,7 +87,7 @@
             ? color.value
             : "transparent"}
           onclick={() => {
-            DATAS.isDarkMode = false;
+            DATAS.themeMode = "light";
             DATAS.bg = color.value;
           }}
         >
@@ -111,7 +111,7 @@
         style:border-color={DATAS.isDarkMode ? "white" : "transparent"}
         onclick={() => {
           DATAS.bg = "#000";
-          DATAS.isDarkMode = true;
+          DATAS.themeMode = "dark";
         }}
       >
         <div flex-cc gap-1>

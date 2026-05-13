@@ -18,6 +18,9 @@ export const DATAS = $state({
   connectionType: "unknown",
 
   // ── Theme ──
+  /** "system" | "light" | "dark" — follows OS pref by default; pages can override */
+  themeMode: "system",
+  /** Derived: true when the dark class should be active on <html> */
   isDarkMode: false,
 
   // ── Device ──
