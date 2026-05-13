@@ -8,6 +8,7 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- Status bar & navigation bar color, matching the theme-color meta tag in app.html -->
-    <color name="status_bar_color">#1B2120</color>
+    <!-- Status bar / navigation bar (pre-API-35, where edge-to-edge is not forced) -->
+    <color name="status_bar_color_day">#EDF1F0</color>   <!-- light mode: blend with app bg (#EDF1F0) -->
+    <color name="status_bar_color_night">#1B2120</color> <!-- dark  mode: blend with header bg  (#1B2120) -->
 </resources>

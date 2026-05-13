@@ -49,8 +49,7 @@ class MainActivity : TauriActivity() {
 
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.statusBarColor = android.graphics.Color.parseColor("#1B2120")
-        window.navigationBarColor = android.graphics.Color.parseColor("#1B2120")
+        // Status bar colors are set by the DayNight theme (themes.xml / values-night/themes.xml)
       }
     }
   }
