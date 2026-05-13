@@ -86,7 +86,11 @@
 
 <svelte:head><title>数据导入 - 脚前的灯</title></svelte:head>
 
-<div class="w-full px-3 py-4 sm:px-6 sm:py-6 space-y-4 h-full overflow-y-auto">
+<div
+  class="w-full px-3 py-4 sm:px-6 sm:py-6 h-full {IS.isRunning()
+    ? 'flex flex-col'
+    : 'space-y-4 overflow-y-auto'}"
+>
   <div class="flex items-center gap-3 mb-2">
     <a href="/my" class="text-gray-400 hover:text-green"
       ><span class="i-carbon-arrow-left text-xl"></span></a
@@ -104,64 +108,84 @@
 
   <!-- ===== Importing: frozen UI, showing progress ===== -->
   {#if IS.isRunning()}
-    <div class="space-y-4">
-      <div class="flex items-center gap-3">
-        <span class="i-carbon-loading animate-spin text-green text-xl"></span>
-        <span class="font-medium"
-          >正在导入 {IS.getCurrentLang()} / CID={IS.getCurrentCid()} · 请勿切换</span
+    <div class="flex flex-col h-full">
+      <!-- Top info: compact -->
+      <div class="flex-shrink-0 space-y-2">
+        <div class="flex items-center gap-3">
+          <span
+            class="i-line-md-loading-twotone-loop animate-spin text-green text-xl"
+          ></span>
+          <span class="font-medium text-sm"
+            >Importing {IS.getCurrentLang()} / CID={IS.getCurrentCid()}</span
+          >
+        </div>
+
+        <!-- DL progress -->
+        <div class="flex items-center gap-2 text-xs text-gray-500">
+          <span class="w-12 flex-shrink-0">DL</span>
+          <div
+            class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
+          >
+            <div
+              class="h-full bg-blue transition-all duration-300"
+              style:width="{IS.getTotal() > 0
+                ? (IS.getDownloaded() / IS.getTotal()) * 100
+                : 0}%"
+            ></div>
+          </div>
+          <span class="w-16 text-right flex-shrink-0"
+            >{IS.getDownloaded()}/{IS.getTotal()}</span
+          >
+        </div>
+
+        <!-- DB write progress -->
+        <div class="flex items-center gap-2 text-xs text-gray-500">
+          <span class="w-12 flex-shrink-0">DB</span>
+          <div
+            class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
+          >
+            <div
+              class="h-full bg-green transition-all duration-300"
+              style:width="{IS.getTotal() > 0
+                ? (IS.getWritten() / IS.getTotal()) * 100
+                : 0}%"
+            ></div>
+          </div>
+          <span class="w-16 text-right flex-shrink-0"
+            >{IS.getWritten()}/{IS.getTotal()}</span
+          >
+        </div>
+      </div>
+
+      <!-- Log area: fill remaining space -->
+      <div class="flex-1 min-h-0 mt-3">
+        <div
+          class="h-full bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-3 overflow-y-auto font-mono text-xs space-y-1"
         >
-      </div>
-
-      <!-- Progress bar -->
-      <div class="space-y-2">
-        <div class="flex items-center gap-2 text-sm text-gray-500">
-          下载: {IS.getDownloaded()}/{IS.getTotal()}
-          <div class="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
-            <div
-              class="h-full bg-blue"
-              style:width="{(IS.getDownloaded() / IS.getTotal()) * 100}%"
-            ></div>
-          </div>
+          {#each IS.getLogs() as log (log.time + log.text)}
+            <div class="flex gap-2 items-start">
+              <span class="text-gray-400 w-16 flex-shrink-0 select-none"
+                >{log.time}</span
+              >
+              <span
+                class:opacity-70={log.type === "info"}
+                class="whitespace-pre-wrap break-all"
+              >
+                {log.text}
+              </span>
+            </div>
+          {/each}
         </div>
-        <div class="flex items-center gap-2 text-sm text-gray-500">
-          写入: {IS.getWritten()}/{IS.getTotal()}
-          <div class="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
-            <div
-              class="h-full bg-green"
-              style:width="{(IS.getWritten() / IS.getTotal()) * 100}%"
-            ></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Recent logs -->
-      <div
-        class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 max-h-64 overflow-y-auto font-mono text-xs space-y-1"
-      >
-        {#each IS.getLogs() as log (log.time + log.text)}
-          <div class="flex gap-2">
-            <span class="text-gray-400 w-16 flex-shrink-0">{log.time}</span>
-            <span
-              class={log.type === "download"
-                ? "text-blue"
-                : log.type === "write"
-                  ? "text-green"
-                  : log.type === "error"
-                    ? "text-red"
-                    : "text-gray-500"}
-            >
-              {log.text}
-            </span>
-          </div>
-        {/each}
       </div>
 
       <!-- Error -->
       {#if IS.getError()}
-        <div
-          class="bg-red-50 dark:bg-red-900/20 text-red-600 text-sm px-4 py-2 rounded-lg"
-        >
-          {IS.getError()}
+        <div class="flex-shrink-0 mt-2">
+          <div
+            class="bg-red-50 dark:bg-red-900/20 text-red-600 text-sm px-4 py-2 rounded-lg"
+          >
+            {IS.getError()}
+          </div>
         </div>
       {/if}
     </div>
@@ -170,13 +194,13 @@
     <div
       class="bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-lg p-4 text-center space-y-2"
     >
-      <p class="text-green-600 font-medium text-lg">✅ 全部导入完成！</p>
-      <p class="text-green-500 text-sm">已导入 {IS.getTotal()} 本书</p>
+      <p class="text-green-600 font-medium text-lg">All imported!</p>
+      <p class="text-green-500 text-sm">{IS.getTotal()} books imported</p>
       <button
         onclick={() => window.location.reload()}
         class="px-4 py-2 rounded-lg bg-green text-white text-sm font-medium"
       >
-        刷新查看最新状态
+        Reload to see latest status
       </button>
     </div>
   {:else}

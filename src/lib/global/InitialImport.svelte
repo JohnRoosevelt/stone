@@ -165,88 +165,69 @@
 
 {#if phase !== "idle"}
   <!-- Full-screen overlay -->
-  <div class="fixed inset-0 z-50 bg-[#EDF1F0] dark:bg-[#111615] flex flex-col">
-    <div
-      class="flex-1 overflow-y-auto px-4 py-6 sm:px-8 space-y-5 max-w-2xl mx-auto w-full"
-    >
-      <!-- Header -->
-      <div class="text-center space-y-2 pt-8">
-        {#if phase === "checking"}
-          <div
-            class="i-line-md-loading-twotone-loop text-5 mx-auto text-green animate-spin"
-          ></div>
-          <h1 class="text-xl font-bold">Stone Bible</h1>
-          <p class="text-sm text-gray-500">Preparing...</p>
-        {:else if phase === "ready"}
-          <div class="i-carbon-download text-5 mx-auto text-green"></div>
-          <h1 class="text-xl font-bold">First-time Setup</h1>
-          <p class="text-sm text-gray-500">
-            Downloading all books to your device. This may take a while...
-          </p>
-        {:else if phase === "importing"}
-          <div
-            class="i-line-md-loading-twotone-loop text-5 mx-auto text-green animate-spin"
-          ></div>
-          <h1 class="text-xl font-bold">Downloading Data</h1>
-          <p class="text-sm text-gray-500">
-            Batch {currentBatch}/{totalBatches}
-            &middot; {Engine.getDownloaded()}/{Engine.getTotal()} downloaded &middot;
-            {Engine.getWritten()} written
-          </p>
-        {:else if phase === "done"}
-          <div
-            class="i-carbon-checkmark-filled text-5 mx-auto text-green"
-          ></div>
-          <h1 class="text-xl font-bold">Ready!</h1>
-          <p class="text-sm text-gray-500">
-            {importedCount} books imported
-            {failedCount > 0 ? `, ${failedCount} failed` : ""}
-          </p>
-          <button
-            onclick={() => (phase = "idle")}
-            class="mt-4 px-6 py-3 rounded-xl bg-green text-white font-medium text-base hover:bg-green/80 transition300"
-          >
-            Get Started
-          </button>
-        {/if}
-      </div>
-
-      <!-- Progress bar (engine-level: current batch) -->
-      {#if phase === "importing"}
-        <div class="space-y-2">
-          <div class="flex items-center gap-2 text-sm text-gray-500">
-            <span>Batch progress:</span>
-            <div
-              class="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
-            >
-              <div
-                class="h-full bg-green transition-all duration-300"
-                style:width="{Engine.getTotal() > 0
-                  ? (Engine.getWritten() / Engine.getTotal()) * 100
-                  : 0}%"
-              ></div>
-            </div>
-            <span class="text-xs w-16 text-right flex-shrink-0"
-              >{Engine.getWritten()}/{Engine.getTotal()}</span
-            >
-          </div>
-        </div>
-      {/if}
-
-      <!-- Aggregate stats -->
-      {#if phase === "done" && (importedCount > 0 || failedCount > 0)}
-        <div class="flex items-center justify-center gap-4 text-sm">
-          <span class="text-green">{importedCount} ok</span>
-          {#if failedCount > 0}
-            <span class="text-red">{failedCount} failed</span>
-          {/if}
-        </div>
-      {/if}
-
-      <!-- Logs (from engine) -->
-      {#if logs.length > 0}
+  <div
+    class="fixed inset-0 z-50 bg-[#EDF1F0] dark:bg-[#111615] flex flex-col px-4 py-4 sm:px-8"
+  >
+    <!-- Header + progress: minimum height -->
+    <div class="text-center flex-shrink-0">
+      {#if phase === "checking"}
         <div
-          class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-3 max-h-80 overflow-y-auto font-mono text-xs space-y-1"
+          class="i-line-md-loading-twotone-loop text-5 mx-auto text-green animate-spin"
+        ></div>
+        <h1 class="text-xl font-bold">Stone Bible</h1>
+        <p class="text-sm text-gray-500">Preparing...</p>
+      {:else if phase === "ready"}
+        <div class="i-carbon-download text-5 mx-auto text-green"></div>
+        <h1 class="text-xl font-bold">First-time Setup</h1>
+        <p class="text-sm text-gray-500">
+          Downloading all books to your device. This may take a while...
+        </p>
+      {:else if phase === "importing"}
+        <div
+          class="i-line-md-loading-twotone-loop text-4 mx-auto text-green animate-spin"
+        ></div>
+        <h1 class="text-lg font-bold">Downloading Data</h1>
+        <p class="text-xs text-gray-500">
+          Batch {currentBatch}/{totalBatches}
+          &middot; DL {Engine.getDownloaded()}/{Engine.getTotal()}
+          &middot; DB {Engine.getWritten()}
+        </p>
+        <div class="flex items-center gap-2 mt-2 max-w-md mx-auto">
+          <div
+            class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
+          >
+            <div
+              class="h-full bg-green transition-all duration-300"
+              style:width="{Engine.getTotal() > 0
+                ? (Engine.getWritten() / Engine.getTotal()) * 100
+                : 0}%"
+            ></div>
+          </div>
+          <span class="text-xs text-gray-400 w-14 text-right flex-shrink-0"
+            >{Engine.getWritten()}/{Engine.getTotal()}</span
+          >
+        </div>
+      {:else if phase === "done"}
+        <div class="i-carbon-checkmark-filled text-5 mx-auto text-green"></div>
+        <h1 class="text-xl font-bold">Ready!</h1>
+        <p class="text-sm text-gray-500">
+          {importedCount} books imported
+          {failedCount > 0 ? `, ${failedCount} failed` : ""}
+        </p>
+        <button
+          onclick={() => (phase = "idle")}
+          class="mt-3 px-6 py-3 rounded-xl bg-green text-white font-medium text-base hover:bg-green/80 transition300"
+        >
+          Get Started
+        </button>
+      {/if}
+    </div>
+
+    <!-- Log area: fills remaining vertical space -->
+    {#if logs.length > 0}
+      <div class="flex-1 min-h-0 mt-3">
+        <div
+          class="h-full bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-3 overflow-y-auto font-mono text-xs space-y-1"
         >
           {#each logs as log (log.time + log.text)}
             <div class="flex gap-2 items-start">
@@ -262,7 +243,7 @@
             </div>
           {/each}
         </div>
-      {/if}
-    </div>
+      </div>
+    {/if}
   </div>
 {/if}
