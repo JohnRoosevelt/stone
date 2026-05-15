@@ -185,6 +185,13 @@ jobs:
           echo "Found APK at: $APK"
           cp "$APK" dist/stone.apk
 
+      - name: Generate updater manifest
+        run: |
+          VERSION_NAME="0.1.${{ github.run_number }}"
+          NOTES="Build #${{ github.run_number }} from ${{ github.sha }}"
+          bash scripts/update/generate-manifest.sh "${VERSION_NAME}" "${NOTES}"
+          cp update.json dist/update.json
+
       - name: Upload to Cloudflare R2
         if: success()
         env:
@@ -230,7 +237,13 @@ jobs:
             --endpoint-url "${{ env.R2_ENDPOINT }}" \
             --region auto
 
+          # Upload updater manifest
+          aws s3 cp dist/update.json "s3://${{ env.R2_BUCKET }}/apk/update.json" \
+            --endpoint-url "${{ env.R2_ENDPOINT }}" \
+            --region auto
+
           echo "Public Link: ${{ env.R2_PUBLIC }}/apk/stone-latest.apk"
+          echo "Manifest:    ${{ env.R2_PUBLIC }}/apk/update.json"
 
       - name: Clean up old APKs from R2
         if: success()
@@ -262,8 +275,8 @@ jobs:
 
           # Keep the 2 most recent versioned APKs (last 2 after sorting)
           KEEP_VERSIONED=$(echo "$VERSIONED" | tail -2)
-          # Always keep stone-latest.apk
-          KEEP=$(printf '%s\n%s' "$KEEP_VERSIONED" "$LATEST")
+          # Always keep stone-latest.apk and update.json
+          KEEP=$(printf '%s\n%s\n%s' "$KEEP_VERSIONED" "$LATEST" "apk/update.json")
 
           echo ""
           echo "Files to keep:"
