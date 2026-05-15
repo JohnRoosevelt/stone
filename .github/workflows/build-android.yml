@@ -238,9 +238,6 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_KEY }}
         run: |
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
-          CURRENT="apk/stone-${SHORT_SHA}-${TIMESTAMP}.apk"
           LATEST="apk/stone-latest.apk"
 
           echo "Listing existing APKs in R2 bucket (${{ env.R2_BUCKET }}/apk/)..."
@@ -255,31 +252,34 @@ jobs:
             exit 0
           fi
 
-          # Build list of keys to keep: latest pointer + current version
-          KEEP="$LATEST $CURRENT"
+          # Convert tab-separated output to newline-separated list
+          ALL_KEYS=$(echo "$OBJECTS" | tr '\t' '\n')
 
-          # Among all versioned APKs that are NOT the current one, pick the most recent to keep as previous version
-          PREVIOUS=$(echo "$OBJECTS" | tr '\t' '\n' | grep -E '^apk/stone-[a-z0-9]+-[0-9]{8}-[0-9]{6}\.apk$' \
-            | grep -v "$CURRENT" \
-            | sort -r \
-            | head -1 || true)
+          # Filter versioned APKs (stone-<sha>-<timestamp>.apk), sort ascending
+          VERSIONED=$(echo "$ALL_KEYS" \
+            | grep -E '^apk/stone-[a-z0-9]+-[0-9]{8}-[0-9]{6}\.apk$' \
+            | sort)
 
-          if [ -n "$PREVIOUS" ]; then
-            echo "  Previous version to keep: $PREVIOUS"
-            KEEP="$KEEP $PREVIOUS"
-          else
-            echo "  No previous version found."
-          fi
+          # Keep the 2 most recent versioned APKs (last 2 after sorting)
+          KEEP=$(echo "$VERSIONED" | tail -2)
+          # Always keep stone-latest.apk
+          KEEP="$KEEP
+$LATEST"
+
+          echo ""
+          echo "Files to keep:"
+          echo "$KEEP" | sed 's/^/  /'
+          echo ""
 
           DELETED_COUNT=0
           KEPT_COUNT=0
-          for key in $OBJECTS; do
+          for key in $ALL_KEYS; do
             # Skip directory markers (e.g., "apk/" itself)
             if [ "$key" = "apk/" ]; then
               continue
             fi
 
-            if echo "$KEEP" | tr ' ' '\n' | grep -qxF "$key"; then
+            if echo "$KEEP" | grep -qxF "$key"; then
               echo "  Keeping:  $key"
               KEPT_COUNT=$((KEPT_COUNT + 1))
             else
