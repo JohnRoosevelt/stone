@@ -2,12 +2,15 @@
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { showId } from "$lib";
+  import { getAllReadingProgress, isTauri } from "$lib/tauri";
 
   let { bookList = page.data.books || [] } = $props();
 
   let clientHeight = $state(0);
   let activeId = $state("");
   let selectId = $state("");
+  /** Map of "cid-bookId" -> reading progress record */
+  let progressMap = $state({});
 
   const groupByTag = $derived(
     bookList.reduce((pre, cur) => {
@@ -20,6 +23,22 @@
   );
 
   // console.log({ bible, groupByTag });
+
+  // Load reading progress for all books
+  async function loadProgress() {
+    if (!isTauri()) return;
+    try {
+      const list = await getAllReadingProgress();
+      const map = {};
+      for (const rp of list) {
+        const key = rp.cid + "-" + rp.book_id;
+        map[key] = rp;
+      }
+      progressMap = map;
+    } catch (err) {
+      console.error("Failed to load reading progress:", err);
+    }
+  }
 
   function observeHeaders() {
     const observer = new IntersectionObserver(
@@ -44,6 +63,7 @@
     ids.forEach((id) => observer.observe(document.getElementById(id)));
   }
   onMount(() => {
+    loadProgress();
     observeHeaders();
   });
 </script>
@@ -97,17 +117,38 @@
 </article>
 
 {#snippet Rbook(book)}
+  {@const key = "0-" + book.book_id}
+  {@const rp = progressMap[key]}
+  {@const chapterLink = rp
+    ? `/0/${book.book_id}/${rp.chapter_id}`
+    : `/0/${book.book_id}/1`}
   <div class="flex-bc h-12 px-3 bg-gray-100 dark:bg-gray-700">
-    <a flex-1 href="/0/{book.book_id}/1">
+    <a
+      flex-1
+      href={chapterLink}
+      onclick={() => {
+        if (rp && rp.scroll_percentage > 0) {
+          sessionStorage.setItem(
+            "restoreScroll_" + book.book_id,
+            String(rp.scroll_percentage),
+          );
+        }
+      }}
+    >
       <p flex-bc class:text-green={page.params.bookId == book.book_id}>
         <span>{book.name}</span>
-        <span flex>
+        <span flex class="gap-1">
           <!-- https://symbl.cc/cn/unicode-table/#spacing-modifier-letters -->
           <!-- u+20FB -->
           <span text-green>˻</span>
           <span>{book.abbreviation}</span>
           <span text-green>˼</span>
           <!-- u+20FC -->
+          {#if rp}
+            <span class="text-2 text-gray-400"
+              >{rp.chapter_id}˼ {rp.scroll_percentage}%</span
+            >
+          {/if}
         </span>
       </p>
     </a>

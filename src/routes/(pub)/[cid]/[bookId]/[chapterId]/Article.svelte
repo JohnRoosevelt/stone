@@ -4,8 +4,96 @@
   import { CID } from "$lib/config";
   import { DATAS } from "$lib/data.svelte.js";
   import { searchState } from "$lib/bible/searchStore.svelte.js";
+  import { getAnnotations } from "$lib/tauri";
+
+  /** Load and apply saved annotations for the current chapter */
+  async function loadAnnotations() {
+    if (!DATAS.isTauri) return;
+    try {
+      const annotations = await getAnnotations(
+        Number(page.params.cid),
+        Number(page.params.bookId),
+        Number(page.params.chapterId),
+        "zh",
+      );
+      if (!annotations || annotations.length === 0) return;
+
+      // Group annotations by paragraph index
+      const byParagraph = {};
+      for (const ann of annotations) {
+        if (!byParagraph[ann.p_index]) byParagraph[ann.p_index] = [];
+        byParagraph[ann.p_index].push(ann);
+      }
+
+      for (const [pIdx, anns] of Object.entries(byParagraph)) {
+        const pEl = document.querySelector(`[data-i="${pIdx}"]`);
+        if (!pEl) continue;
+
+        // Sort annotations by start_offset descending so we don't mess up offsets
+        anns.sort((a, b) => b.start_offset - a.start_offset);
+
+        for (const ann of anns) {
+          // Find the text node range for this annotation
+          const textNode = pEl.firstChild;
+          if (!textNode || textNode.nodeType !== Node.TEXT_NODE) continue;
+
+          const range = document.createRange();
+          range.setStart(textNode, ann.start_offset);
+          range.setEnd(textNode, ann.start_offset + ann.length);
+
+          // Build CSS based on annotation type
+          let cssText = "";
+          switch (ann.ann_type) {
+            case "underline-wavy":
+              cssText = `text-decoration-line: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; text-decoration-style: wavy; text-decoration-color: ${ann.color};`;
+              break;
+            case "underline":
+              cssText = `text-decoration-line: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; text-decoration-color: ${ann.color};`;
+              break;
+            case "bg":
+              cssText = `background-color: ${ann.color};`;
+              break;
+            case "text":
+              cssText = `color: ${ann.color};`;
+              break;
+          }
+
+          const span = document.createElement("span");
+          span.style.cssText = cssText;
+          span.setAttribute("data-type", ann.ann_type);
+          span.setAttribute("data-ann-id", ann.id);
+
+          // Add click handler for re-selecting
+          span.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const selection = window.getSelection();
+            const selRange = document.createRange();
+            selRange.selectNodeContents(e.target);
+            selection.removeAllRanges();
+            selection.addRange(selRange);
+
+            // Trigger LongpressCtrl by setting type
+            const dt = e.target.getAttribute("data-type");
+            document.querySelector("[data-type='" + dt + "']");
+          });
+
+          try {
+            range.surroundContents(span);
+          } catch (e) {
+            console.warn("Could not surround annotation contents:", e);
+          }
+        }
+      }
+      console.log(`Loaded ${annotations.length} annotations`);
+    } catch (err) {
+      console.error("Failed to load annotations:", err);
+    }
+  }
 
   onMount(() => {
+    // Load saved annotations
+    loadAnnotations();
+
     const hash = page.url.hash || window.location.hash;
     if (!hash.startsWith("#zh-")) return;
     const id = hash.slice(1);

@@ -89,6 +89,40 @@ export async function resetInitialImport() {
   if (isTauri()) return tauriInvoke("reset_initial_import", {});
 }
 
+// ── Annotations ────────────────────────────────────────────────────
+
+export async function getAnnotations(cid, bookId, chapterId, lang = "zh") {
+  if (!isTauri()) return [];
+  return tauriInvoke("get_annotations", { cid, bookId, chapterId, lang });
+}
+
+export async function saveAnnotation(annotation) {
+  if (!isTauri()) return -1;
+  return tauriInvoke("save_annotation", { annotation });
+}
+
+export async function deleteAnnotation(id) {
+  if (!isTauri()) return;
+  return tauriInvoke("delete_annotation", { id });
+}
+
+// ── Reading Progress ───────────────────────────────────────────────
+
+export async function saveReadingProgress(progress) {
+  if (!isTauri()) return;
+  return tauriInvoke("save_reading_progress", { progress });
+}
+
+export async function getReadingProgress(cid, bookId, lang = "zh") {
+  if (!isTauri()) return null;
+  return tauriInvoke("get_reading_progress", { cid, bookId, lang });
+}
+
+export async function getAllReadingProgress() {
+  if (!isTauri()) return [];
+  return tauriInvoke("get_all_reading_progress", {});
+}
+
 // ── Search ────────────────────────────────────────────────────
 
 export async function searchAPI(

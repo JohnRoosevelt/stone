@@ -3,18 +3,18 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-/// 读写分离的数据库状态
-/// - read_conn: 独立 Mutex 读取连接，与写入互不阻塞 (WAL 模式下可并发)
-/// - write_conn: 独立 Mutex 写入连接，串行化写入操作
+/// Read-write split database state.
+/// - read_conn: independent Mutex-guarded read connection (non-blocking concurrent reads under WAL)
+/// - write_conn: independent Mutex-guarded write connection (serialized writes)
 ///
-/// 利用 SQLite WAL 模式：读连接不会阻塞写连接，写连接也不会阻塞读连接。
+/// SQLite WAL mode: reads do not block writes, and writes do not block reads.
 pub struct DbState {
     pub read_conn: Arc<Mutex<Connection>>,
     pub write_conn: Arc<Mutex<Connection>>,
     pub db_path: PathBuf,
 }
 
-// ── 数据模型 ────────────────────────────────────────────────
+// ── Data models ──────────────────────────────────────────────
 
 #[derive(Debug, Serialize)]
 pub struct Book {
@@ -56,17 +56,46 @@ pub struct SearchResult {
     pub book_name: String,
 }
 
-/// 初始化数据库：创建表结构和 FTS5 索引
-/// 返回 (write_conn, read_conn) 读写分离连接
+// ── New data models ─────────────────────────────────────────
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct Annotation {
+    pub id: Option<i64>,
+    pub cid: i64,
+    pub book_id: i64,
+    pub chapter_id: i64,
+    pub lang_code: String,
+    pub p_index: i64,
+    pub start_offset: i64,
+    pub length: i64,
+    pub text: String,
+    pub ann_type: String, // "underline-wavy", "underline", "bg", "text"
+    pub color: String,
+    pub created_at: Option<String>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct ReadingProgress {
+    pub id: Option<i64>,
+    pub cid: i64,
+    pub book_id: i64,
+    pub lang_code: String,
+    pub chapter_id: i64,
+    pub scroll_percentage: i64,
+    pub updated_at: Option<String>,
+}
+
+/// Initialize the database: create tables and FTS5 indexes.
+/// Returns (write_conn, read_conn) for read-write split.
 pub fn init_database(db_path: &PathBuf) -> Result<(Connection, Connection)> {
-    // 写连接：负责 DDL/DML 变更
+    // Write connection: handles DDL/DML changes
     let write_conn = Connection::open(db_path)?;
     write_conn.execute_batch("PRAGMA journal_mode=WAL;")?;
     write_conn.execute_batch("PRAGMA foreign_keys=ON;")?;
 
     write_conn.execute_batch(
         "
-        -- book_base: 书籍基础信息（语言无关）
+        -- book_base: language-independent book metadata
         CREATE TABLE IF NOT EXISTS book_base (
             cid       INTEGER NOT NULL,
             book_id   INTEGER NOT NULL,
@@ -75,7 +104,7 @@ pub fn init_database(db_path: &PathBuf) -> Result<(Connection, Connection)> {
             PRIMARY KEY (cid, book_id)
         ) STRICT, WITHOUT ROWID;
 
-        -- book_i18n: 书籍多语言名称/标题
+        -- book_i18n: book names / titles in multiple languages
         CREATE TABLE IF NOT EXISTS book_i18n (
             cid          INTEGER NOT NULL,
             book_id      INTEGER NOT NULL,
@@ -88,7 +117,7 @@ pub fn init_database(db_path: &PathBuf) -> Result<(Connection, Connection)> {
         ) STRICT, WITHOUT ROWID;
         CREATE INDEX IF NOT EXISTS idx_book_i18n_lookup ON book_i18n(lang_code, cid, book_id);
 
-        -- chapters: 章节表
+        -- chapters
         CREATE TABLE IF NOT EXISTS chapters (
             cid        INTEGER NOT NULL,
             book_id    INTEGER NOT NULL,
@@ -101,7 +130,7 @@ pub fn init_database(db_path: &PathBuf) -> Result<(Connection, Connection)> {
         ) STRICT, WITHOUT ROWID;
         CREATE INDEX IF NOT EXISTS idx_chapters_lookup ON chapters(lang_code, cid, book_id);
 
-        -- chapter_paragraphs: 段落表（核心数据）
+        -- chapter_paragraphs: core paragraph data
         CREATE TABLE IF NOT EXISTS chapter_paragraphs (
             cid             INTEGER NOT NULL,
             book_id         INTEGER NOT NULL,
@@ -118,13 +147,13 @@ pub fn init_database(db_path: &PathBuf) -> Result<(Connection, Connection)> {
         CREATE INDEX IF NOT EXISTS idx_paragraphs_lookup ON chapter_paragraphs(lang_code, book_id, chapter_id);
         CREATE INDEX IF NOT EXISTS idx_paragraphs_cid_book ON chapter_paragraphs(cid, book_id);
 
-        -- FTS5 全文搜索
+        -- FTS5 full-text search
         CREATE VIRTUAL TABLE IF NOT EXISTS chapter_paragraphs_fts USING fts5(
             text_content,
             content='chapter_paragraphs'
         );
 
-        -- FTS 同步触发器
+        -- FTS sync triggers
         CREATE TRIGGER IF NOT EXISTS trg_paragraphs_ai AFTER INSERT ON chapter_paragraphs BEGIN
             INSERT INTO chapter_paragraphs_fts(rowid, text_content)
             VALUES (new.rowid, new.text_content);
@@ -144,7 +173,7 @@ pub fn init_database(db_path: &PathBuf) -> Result<(Connection, Connection)> {
         "
     )?;
 
-    // app_flags: 应用标志位表（如首次导入完成标记）
+    // app_flags: application flags (e.g. initial import completion marker)
     write_conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS app_flags (
             key   TEXT PRIMARY KEY,
@@ -152,14 +181,47 @@ pub fn init_database(db_path: &PathBuf) -> Result<(Connection, Connection)> {
         ) STRICT, WITHOUT ROWID;",
     )?;
 
-    // 读连接：以只读方式打开同一数据库，利用 WAL 实现读写并发
+    // annotations: text marks (underline, highlight, background, text color)
+    write_conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS annotations (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            cid         INTEGER NOT NULL,
+            book_id     INTEGER NOT NULL,
+            chapter_id  INTEGER NOT NULL,
+            lang_code   TEXT    NOT NULL,
+            p_index     INTEGER NOT NULL,
+            start_offset INTEGER NOT NULL,
+            length      INTEGER NOT NULL,
+            text        TEXT    NOT NULL,
+            ann_type    TEXT    NOT NULL,
+            color       TEXT    NOT NULL,
+            created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+        ) STRICT;
+        CREATE INDEX IF NOT EXISTS idx_annotations_lookup ON annotations(cid, book_id, chapter_id, lang_code);",
+    )?;
+
+    // reading_progress: reading progress per book
+    write_conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS reading_progress (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            cid               INTEGER NOT NULL,
+            book_id           INTEGER NOT NULL,
+            lang_code         TEXT    NOT NULL,
+            chapter_id        INTEGER NOT NULL,
+            scroll_percentage INTEGER NOT NULL DEFAULT 0,
+            updated_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(cid, book_id, lang_code)
+        ) STRICT;",
+    )?;
+
+    // Read connection: open the same database read-only for WAL concurrency
     let read_conn = Connection::open(db_path)?;
     read_conn.execute_batch("PRAGMA query_only=ON;")?;
 
     Ok((write_conn, read_conn))
 }
 
-/// 获取书籍列表
+/// Get all books for a given language, optionally filtered by CID
 pub fn get_books(conn: &Connection, lang: &str, cid: Option<i64>) -> Result<Vec<Book>> {
     let mut sql = String::from(
         "SELECT i.cid, i.book_id, i.name, i.title, i.abbreviation, b.section, b.featured
@@ -174,7 +236,7 @@ pub fn get_books(conn: &Connection, lang: &str, cid: Option<i64>) -> Result<Vec<
 
     let mut stmt = conn.prepare(&sql)?;
 
-    // 统一使用动态参数以避免闭包类型不一致
+    // Use dynamic params to avoid closure type mismatch
     let params: Vec<Box<dyn rusqlite::types::ToSql>> = if let Some(cid_val) = cid {
         vec![Box::new(lang.to_string()), Box::new(cid_val)]
     } else {
@@ -201,7 +263,7 @@ pub fn get_books(conn: &Connection, lang: &str, cid: Option<i64>) -> Result<Vec<
     Ok(books)
 }
 
-/// 获取章节列表
+/// Get chapters for a given book
 pub fn get_chapters(conn: &Connection, cid: i64, book_id: i64, lang: &str) -> Result<Vec<Chapter>> {
     let mut stmt = conn.prepare(
         "SELECT chapter_id, title
@@ -224,7 +286,7 @@ pub fn get_chapters(conn: &Connection, cid: i64, book_id: i64, lang: &str) -> Re
     Ok(chapters)
 }
 
-/// 获取段落内容
+/// Get paragraphs for a given chapter
 pub fn get_paragraphs(
     conn: &Connection,
     cid: i64,
@@ -255,7 +317,7 @@ pub fn get_paragraphs(
     Ok(paragraphs)
 }
 
-/// 判断字符是否包含 CJK 中文
+/// Check whether the query string contains CJK characters
 fn has_cjk(s: &str) -> bool {
     s.chars().any(|c| {
         let cp = c as u32;
@@ -266,7 +328,7 @@ fn has_cjk(s: &str) -> bool {
     })
 }
 
-/// 构建 FTS5 MATCH 查询（非中文用）
+/// Build an FTS5 MATCH query (for non-CJK text)
 fn build_fts_match(raw: &str) -> String {
     let cleaned: String = raw.chars().filter(|c| !r#"*"()+~^"#.contains(*c)).collect();
     let words: Vec<&str> = cleaned
@@ -296,8 +358,8 @@ pub struct FullChapter {
     pub ps: Vec<FullParagraph>,
 }
 
-/// 获取整本书（章节+段落），返回格式与 R2 parquet 一致
-/// 轻量结构：用于首次导入的书籍信息
+/// Get the full book content (chapters + paragraphs) in the same format as R2 parquet
+/// Lightweight struct for initial import: book ID and name only
 #[derive(Debug, Serialize)]
 pub struct BookForImport {
     pub cid: i64,
@@ -340,9 +402,9 @@ pub fn get_full_book(
     Ok(chapters)
 }
 
-/// 保存前端已解析的章节数据到 SQLite
-/// append=false 时先清空旧数据再写入
-/// start_chapter_id: 分块时第一章节的 ID 偏移
+/// Save pre-parsed chapter data from the frontend to SQLite.
+/// When append=false, old data is cleared before writing.
+/// start_chapter_id: chapter ID offset for chunked imports.
 pub fn save_book(
     conn: &Connection,
     cid: i64,
@@ -385,7 +447,7 @@ pub fn save_book(
     Ok((ch_count, p_count))
 }
 
-/// 检查某本书是否已导入本地
+/// Check whether a book has chapter data in the local database
 pub fn has_book_data(conn: &Connection, cid: i64, book_id: i64, lang: &str) -> Result<bool> {
     let count: i64 = conn.query_row(
         "SELECT COUNT(*) FROM chapters WHERE cid=?1 AND book_id=?2 AND lang_code=?3",
@@ -395,7 +457,7 @@ pub fn has_book_data(conn: &Connection, cid: i64, book_id: i64, lang: &str) -> R
     Ok(count > 0)
 }
 
-/// 删除一本书的本地数据
+/// Delete a book's local data (paragraphs + chapters)
 pub fn delete_book_data(
     conn: &Connection,
     cid: i64,
@@ -510,7 +572,7 @@ pub fn search(
     let mut params_vec: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
 
     let (where_clause, from_clause, order_clause) = if is_cjk {
-        // 中文用 LIKE
+        // CJK: use LIKE
         let mut where_sql = format!(
             "WHERE cp.lang_code = ?{} AND cp.text_content LIKE ?{}",
             params_vec.len() + 1,
@@ -531,7 +593,7 @@ pub fn search(
             "ORDER BY cp.cid, cp.book_id, cp.rowid".to_string(),
         )
     } else {
-        // 非中文用 FTS5
+        // Non-CJK: use FTS5
         let match_str = build_fts_match(q);
         let mut where_sql = format!(
             "WHERE cp.lang_code = ?{} AND chapter_paragraphs_fts MATCH ?{}",
@@ -575,7 +637,7 @@ pub fn search(
         params_vec.len() + 2
     );
 
-    // 先查总数
+    // Query total count first
     let count_sql = format!(
         "SELECT COUNT(*) FROM chapter_paragraphs cp {} {}",
         if is_cjk {
@@ -593,7 +655,7 @@ pub fn search(
         stmt.query_row(params_refs.as_slice(), |row| row.get(0))?
     };
 
-    // 查结果
+    // Query paginated results
     let mut stmt = conn.prepare(&full_sql)?;
     let params_refs: Vec<&dyn rusqlite::types::ToSql> = {
         let mut p: Vec<&dyn rusqlite::types::ToSql> =
@@ -627,14 +689,14 @@ pub fn search(
     Ok((results, total))
 }
 
-/// 获取数据库文件大小（字节）
+/// Get the database file size in bytes
 pub fn get_db_size(db_path: &std::path::Path) -> Result<u64, String> {
     std::fs::metadata(db_path)
         .map(|m| m.len())
         .map_err(|e| format!("{e}"))
 }
 
-/// 格式化文件大小
+/// Format file size as a human-readable string
 pub fn format_size(bytes: u64) -> String {
     if bytes < 1024 {
         return format!("{bytes} B");
@@ -645,4 +707,149 @@ pub fn format_size(bytes: u64) -> String {
     }
     let mb = kb / 1024.0;
     format!("{:.1} MB", mb)
+}
+
+// ── Annotations ──────────────────────────────────────────────────
+
+pub fn save_annotation(conn: &Connection, ann: &Annotation) -> Result<i64, String> {
+    let sql = "INSERT INTO annotations (cid, book_id, chapter_id, lang_code, p_index, start_offset, length, text, ann_type, color)
+               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)";
+    conn.execute(
+        sql,
+        params![
+            ann.cid,
+            ann.book_id,
+            ann.chapter_id,
+            ann.lang_code,
+            ann.p_index,
+            ann.start_offset,
+            ann.length,
+            ann.text,
+            ann.ann_type,
+            ann.color
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(conn.last_insert_rowid())
+}
+
+pub fn delete_annotation(conn: &Connection, id: i64) -> Result<(), String> {
+    conn.execute("DELETE FROM annotations WHERE id = ?1", params![id])
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn get_annotations(
+    conn: &Connection,
+    cid: i64,
+    book_id: i64,
+    chapter_id: i64,
+    lang_code: &str,
+) -> Result<Vec<Annotation>, String> {
+    let sql = "SELECT id, cid, book_id, chapter_id, lang_code, p_index, start_offset, length, text, ann_type, color, created_at
+               FROM annotations
+               WHERE cid = ?1 AND book_id = ?2 AND chapter_id = ?3 AND lang_code = ?4
+               ORDER BY id";
+    let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params![cid, book_id, chapter_id, lang_code], |row| {
+            Ok(Annotation {
+                id: Some(row.get(0)?),
+                cid: row.get(1)?,
+                book_id: row.get(2)?,
+                chapter_id: row.get(3)?,
+                lang_code: row.get(4)?,
+                p_index: row.get(5)?,
+                start_offset: row.get(6)?,
+                length: row.get(7)?,
+                text: row.get(8)?,
+                ann_type: row.get(9)?,
+                color: row.get(10)?,
+                created_at: row.get(11)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    let mut result = Vec::new();
+    for row in rows {
+        result.push(row.map_err(|e| e.to_string())?);
+    }
+    Ok(result)
+}
+
+// ── Reading Progress ────────────────────────────────────────────
+
+pub fn save_reading_progress(conn: &Connection, rp: &ReadingProgress) -> Result<(), String> {
+    let sql =
+        "INSERT INTO reading_progress (cid, book_id, lang_code, chapter_id, scroll_percentage)
+               VALUES (?1, ?2, ?3, ?4, ?5)
+               ON CONFLICT(cid, book_id, lang_code) DO UPDATE SET
+                   chapter_id = excluded.chapter_id,
+                   scroll_percentage = excluded.scroll_percentage,
+                   updated_at = datetime('now')";
+    conn.execute(
+        sql,
+        params![
+            rp.cid,
+            rp.book_id,
+            rp.lang_code,
+            rp.chapter_id,
+            rp.scroll_percentage
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn get_reading_progress(
+    conn: &Connection,
+    cid: i64,
+    book_id: i64,
+    lang_code: &str,
+) -> Result<Option<ReadingProgress>, String> {
+    let sql = "SELECT id, cid, book_id, lang_code, chapter_id, scroll_percentage, updated_at
+               FROM reading_progress
+               WHERE cid = ?1 AND book_id = ?2 AND lang_code = ?3";
+    let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
+    let mut rows = stmt
+        .query_map(params![cid, book_id, lang_code], |row| {
+            Ok(ReadingProgress {
+                id: Some(row.get(0)?),
+                cid: row.get(1)?,
+                book_id: row.get(2)?,
+                lang_code: row.get(3)?,
+                chapter_id: row.get(4)?,
+                scroll_percentage: row.get(5)?,
+                updated_at: row.get(6)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    match rows.next() {
+        Some(Ok(rp)) => Ok(Some(rp)),
+        Some(Err(e)) => Err(e.to_string()),
+        None => Ok(None),
+    }
+}
+
+pub fn get_all_reading_progress(conn: &Connection) -> Result<Vec<ReadingProgress>, String> {
+    let sql = "SELECT id, cid, book_id, lang_code, chapter_id, scroll_percentage, updated_at
+               FROM reading_progress ORDER BY updated_at DESC";
+    let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(ReadingProgress {
+                id: Some(row.get(0)?),
+                cid: row.get(1)?,
+                book_id: row.get(2)?,
+                lang_code: row.get(3)?,
+                chapter_id: row.get(4)?,
+                scroll_percentage: row.get(5)?,
+                updated_at: row.get(6)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    let mut result = Vec::new();
+    for row in rows {
+        result.push(row.map_err(|e| e.to_string())?);
+    }
+    Ok(result)
 }
