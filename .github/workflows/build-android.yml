@@ -261,10 +261,9 @@ jobs:
             | sort)
 
           # Keep the 2 most recent versioned APKs (last 2 after sorting)
-          KEEP=$(echo "$VERSIONED" | tail -2)
+          KEEP_VERSIONED=$(echo "$VERSIONED" | tail -2)
           # Always keep stone-latest.apk
-          KEEP="$KEEP
-$LATEST"
+          KEEP=$(printf '%s\n%s' "$KEEP_VERSIONED" "$LATEST")
 
           echo ""
           echo "Files to keep:"
