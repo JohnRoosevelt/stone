@@ -1,5 +1,10 @@
 import { json } from "@sveltejs/kit";
 import { getDB } from "$lib/server/db";
+import {
+  buildCacheKey,
+  getFromCache,
+  setToCache,
+} from "$lib/server/searchCache.js";
 
 /** Check if text contains CJK Chinese characters */
 function hasCJK(str) {
@@ -80,6 +85,8 @@ function buildFtsMatch(raw) {
 export async function GET({ url, platform }) {
   try {
     const db = getDB(platform);
+    const kv = platform?.env?.STONE_SEARCH_CACHE;
+
     const q = url.searchParams.get("q") || "";
     const lang = url.searchParams.get("lang") || "zh";
     const cidParam = url.searchParams.get("cid");
@@ -97,6 +104,16 @@ export async function GET({ url, platform }) {
     const cid = cidParam ? parseInt(cidParam) : undefined;
     const bookId = bookIdParam ? parseInt(bookIdParam) : undefined;
     const isCJKQuery = hasCJK(q);
+
+    // ── Try KV cache first ──
+    if (kv) {
+      const cacheKey = buildCacheKey({ q, lang, cid, bookId, limit, offset });
+      const cached = await getFromCache(kv, cacheKey);
+      if (cached) {
+        console.log("[search] KV cache hit:", cacheKey);
+        return json(cached);
+      }
+    }
 
     const params = [];
     const joins = [];
@@ -193,7 +210,19 @@ export async function GET({ url, platform }) {
     const hasMore = offset + limit < total;
     // Remove redundant _total field from each row
     for (const r of results) delete r._total;
-    return json({ total, results, hasMore });
+
+    const response = { total, results, hasMore };
+
+    // ── Store in KV cache (fire-and-forget; don't block response) ──
+    if (kv) {
+      const cacheKey = buildCacheKey({ q, lang, cid, bookId, limit, offset });
+      // Write asynchronously to not delay response
+      setToCache(kv, cacheKey, response).catch((e) =>
+        console.warn("[search] KV cache write error:", e.message),
+      );
+    }
+
+    return json(response);
   } catch (e) {
     return json(
       { error: "Search failed", details: e.message },

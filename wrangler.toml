@@ -11,3 +11,8 @@ PUBLIC_R2 = "https://r2.lelexue.cn"
 binding = "DB"
 database_name = "stone-db"
 database_id = "8aa5dbac-b20e-47dd-96af-79a493e5638f"
+
+[[kv_namespaces]]
+binding = "STONE_SEARCH_CACHE"
+id = "a47185b8d89f47e89e85f4a981e2ae13"
+preview_id = "472b3327834b4c3a8243ea31e6e40b5f"
