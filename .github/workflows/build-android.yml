@@ -251,7 +251,13 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_KEY }}
         run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
+          CURRENT="apk/stone-${SHORT_SHA}-${TIMESTAMP}.apk"
           LATEST="apk/stone-latest.apk"
+          MANIFEST="apk/update.json"
+
+          echo "Current build: $CURRENT"
 
           echo "Listing existing APKs in R2 bucket (${{ env.R2_BUCKET }}/apk/)..."
           OBJECTS=$(aws s3api list-objects --bucket "${{ env.R2_BUCKET }}" \
@@ -268,15 +274,17 @@ jobs:
           # Convert tab-separated output to newline-separated list
           ALL_KEYS=$(echo "$OBJECTS" | tr '\t' '\n')
 
-          # Filter versioned APKs (stone-<sha>-<timestamp>.apk), sort ascending
+          # Filter versioned APKs, sort by timestamp fields (date=field3, time=field4)
+          # Filename: apk/stone-<sha>-YYYYmmdd-HHMMSS.apk
+          # Splitting by '-' gives: apk/stone | <sha> | YYYYmmdd | HHMMSS.apk
           VERSIONED=$(echo "$ALL_KEYS" \
             | grep -E '^apk/stone-[a-z0-9]+-[0-9]{8}-[0-9]{6}\.apk$' \
-            | sort)
+            | sort -t- -k3,3 -k4,4)
 
-          # Keep the 2 most recent versioned APKs (last 2 after sorting)
+          # Keep the 2 most recent versioned APKs (last 2 after sorting by timestamp)
           KEEP_VERSIONED=$(echo "$VERSIONED" | tail -2)
-          # Always keep stone-latest.apk and update.json
-          KEEP=$(printf '%s\n%s\n%s' "$KEEP_VERSIONED" "$LATEST" "apk/update.json")
+          # Always include the current build's file (in case listing is eventually consistent)
+          KEEP=$(printf '%s\n%s\n%s\n%s' "$KEEP_VERSIONED" "$CURRENT" "$LATEST" "$MANIFEST")
 
           echo ""
           echo "Files to keep:"
