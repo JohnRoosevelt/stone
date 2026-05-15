@@ -2,5 +2,5 @@
   "identifier": "default",
   "description": "Default permissions for all platforms",
   "windows": ["main"],
-  "permissions": ["core:default", "updater:default"]
+  "permissions": ["core:default"]
 }
