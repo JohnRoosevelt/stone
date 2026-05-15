@@ -7,7 +7,6 @@
   import { setTheme } from "$lib/setTheme.svelte";
   import { handleVisibilityChange, wakeLock } from "$lib/wakeLock";
   import { SvelteToast } from "@zerodevx/svelte-toast";
-  import Updater from "$lib/global/Updater.svelte";
   import { onMount } from "svelte";
 
   // $inspect(DATAS).with(console.trace);
@@ -117,8 +116,6 @@
 <InitialImport />
 <RouteLoading />
 <Dialog />
-<Updater />
-
 <svelte:window bind:online={DATAS.online} bind:innerWidth />
 <svelte:document onvisibilitychange={handleVisibilityChange} />
 

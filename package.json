@@ -47,8 +47,6 @@
     "@aws-sdk/s3-request-presigner": "^3.1030.0",
     "@dweb-browser/zstd-wasm": "^1.2.1",
     "@tauri-apps/api": "^2.11.0",
-    "@tauri-apps/plugin-process": "^2.0.0",
-    "@tauri-apps/plugin-updater": "^2.0.0",
     "apache-arrow": "^21.1.0",
     "parquet-wasm": "^0.7.1",
     "ua-parser-js": "^2.0.4"
