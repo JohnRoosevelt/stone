@@ -3,6 +3,7 @@
   import { CID } from "$lib/config";
   import { info } from "$lib/global/Toast";
   import { slide } from "svelte/transition";
+  import { saveAnnotation, isTauri as isTauriEnv } from "$lib/tauri";
 
   let { isShowLongpressCtrl = $bindable(false) } = $props();
   let colors2 = $state({
@@ -149,7 +150,10 @@
     selection.addRange(newRange);
   }
 
-  function saveHighlight(text, range) {
+  async function saveHighlight(text, range) {
+    // Only persist annotations in Tauri mode
+    if (!isTauriEnv()) return;
+
     let parent = range.commonAncestorContainer;
 
     if (parent.nodeType === Node.TEXT_NODE) {
@@ -158,11 +162,10 @@
 
     const pIndex = parent.getAttribute("data-i");
 
+    // Calculate offset from start of paragraph text content
     const preRange = document.createRange();
     preRange.setStart(parent.firstChild, 0);
     preRange.setEnd(range.startContainer, range.startOffset);
-
-    // console.log(target.firstChild, range.startContainer, range.startOffset, preRange);
     const startOffset = preRange.toString().length;
 
     const highlight = {
@@ -174,10 +177,24 @@
 
     console.log({ highlight });
 
-    // Get existing highlights from localStorage or initialize empty array
-    // let highlights = JSON.parse(localStorage.getItem("highlights") || "[]");
-    // highlights.push(highlight);
-    // localStorage.setItem("highlights", JSON.stringify(highlights));
+    // Persist to database via Tauri
+    try {
+      await saveAnnotation({
+        cid: Number(page.params.cid),
+        book_id: Number(page.params.bookId),
+        chapter_id: Number(page.params.chapterId),
+        lang_code: "zh",
+        p_index: Number(pIndex),
+        start_offset: startOffset,
+        length: text.length,
+        text: text,
+        ann_type: type,
+        color: color,
+      });
+      console.log("Annotation saved to DB");
+    } catch (err) {
+      console.error("Failed to save annotation:", err);
+    }
   }
 </script>
 

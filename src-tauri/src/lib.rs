@@ -185,6 +185,69 @@ fn reset_initial_import(state: tauri::State<DbState>) -> Result<(), String> {
 }
 
 // ═══════════════════════════════════════════════════════════
+// Annotation commands — read (read_conn)
+// ═══════════════════════════════════════════════════════════
+
+#[tauri::command]
+fn get_annotations(
+    state: tauri::State<DbState>,
+    cid: i64,
+    book_id: i64,
+    chapter_id: i64,
+    lang: String,
+) -> Result<Vec<db::Annotation>, String> {
+    let conn = state.read_conn.lock().map_err(|e| e.to_string())?;
+    db::get_annotations(&conn, cid, book_id, chapter_id, &lang).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn save_annotation(
+    state: tauri::State<DbState>,
+    annotation: db::Annotation,
+) -> Result<i64, String> {
+    let conn = state.write_conn.lock().map_err(|e| e.to_string())?;
+    db::save_annotation(&conn, &annotation).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn delete_annotation(state: tauri::State<DbState>, id: i64) -> Result<(), String> {
+    let conn = state.write_conn.lock().map_err(|e| e.to_string())?;
+    db::delete_annotation(&conn, id).map_err(|e| e.to_string())
+}
+
+// ═══════════════════════════════════════════════════════════
+// Reading Progress commands
+// ═══════════════════════════════════════════════════════════
+
+#[tauri::command]
+fn save_reading_progress(
+    state: tauri::State<DbState>,
+    progress: db::ReadingProgress,
+) -> Result<(), String> {
+    let conn = state.write_conn.lock().map_err(|e| e.to_string())?;
+    db::save_reading_progress(&conn, &progress).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_reading_progress(
+    state: tauri::State<DbState>,
+    cid: i64,
+    book_id: i64,
+    lang: String,
+) -> Result<Option<db::ReadingProgress>, String> {
+    let conn = state.read_conn.lock().map_err(|e| e.to_string())?;
+    db::get_reading_progress(&conn, cid, book_id, &lang).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_all_reading_progress(
+    state: tauri::State<DbState>,
+) -> Result<Vec<db::ReadingProgress>, String> {
+    let conn = state.read_conn.lock().map_err(|e| e.to_string())?;
+    db::get_all_reading_progress(&conn).map_err(|e| e.to_string())
+}
+
+// ═══════════════════════════════════════════════════════════
 // App entry point
 // ═══════════════════════════════════════════════════════════
 
@@ -204,10 +267,10 @@ pub fn run() {
             let db_path = get_db_path(&app.handle());
             log::info!("Database path: {:?}", db_path);
 
-            // 初始化读写分离连接
+            // Initialize read-write split connections
             let (write_conn, read_conn) = init_database(&db_path).expect("Failed to init DB");
 
-            // 种子数据仍然使用写连接
+            // Seed data uses the write connection
             if seed::needs_seed(&write_conn) {
                 if let Err(e) = seed::seed_database(&write_conn) {
                     log::error!("Seed failed: {}", e);
@@ -238,6 +301,14 @@ pub fn run() {
             delete_book_data,
             mark_import_complete,
             reset_initial_import,
+            // Annotations
+            get_annotations,
+            save_annotation,
+            delete_annotation,
+            // Reading Progress
+            save_reading_progress,
+            get_reading_progress,
+            get_all_reading_progress,
         ])
         .run(tauri::generate_context!())
         .expect("error running tauri");

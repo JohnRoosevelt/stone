@@ -3,12 +3,15 @@
   import { onMount } from "svelte";
   import { DATAS } from "$lib/data.svelte";
   import { showId } from "$lib";
+  import { getAllReadingProgress, isTauri } from "$lib/tauri";
 
   let { bookList = page.data.books || [] } = $props();
 
   let clientHeight = $state(0);
   let activeId = $state("");
   let selectId = $state("");
+  /** Map of "cid-bookId" -> reading progress record */
+  let progressMap = $state({});
 
   const fav = $derived(bookList.filter((b) => b.featured));
 
@@ -25,6 +28,26 @@
   const sortedTags = $derived(
     Object.entries(groupByTag).sort(([a], [b]) => a.localeCompare(b)),
   );
+
+  // Load reading progress for all books
+  async function loadProgress() {
+    if (!isTauri()) return;
+    try {
+      const list = await getAllReadingProgress();
+      const map = {};
+      for (const rp of list) {
+        const key = rp.cid + "-" + rp.book_id;
+        map[key] = rp;
+      }
+      progressMap = map;
+    } catch (err) {
+      console.error("Failed to load reading progress:", err);
+    }
+  }
+
+  onMount(() => {
+    loadProgress();
+  });
 
   function observeHeaders() {
     const observer = new IntersectionObserver(
@@ -145,11 +168,33 @@
 </article>
 
 {#snippet Rbook(book)}
+  {@const key = page.params.cid + "-" + book.book_id}
+  {@const rp = progressMap[key]}
+  {@const chapterLink = rp
+    ? `/${page.params.cid}/${book.book_id}/${rp.chapter_id}`
+    : `/${page.params.cid}/${book.book_id}/1`}
   <div class="flex-bc h-12 px-3 pr-12 bg-gray-100 dark:bg-gray-700">
-    <a class="flex-1" href="/{page.params.cid}/{book.book_id}/1">
+    <a
+      class="flex-1 flex-bc gap-2"
+      href={chapterLink}
+      onclick={() => {
+        // Store scroll percentage for restoration on the chapter page
+        if (rp && rp.scroll_percentage > 0) {
+          sessionStorage.setItem(
+            "restoreScroll_" + book.book_id,
+            String(rp.scroll_percentage),
+          );
+        }
+      }}
+    >
       <p class:text-green={page.params.bookId == book.book_id}>
         {book.name}
       </p>
+      {#if rp}
+        <span class="text-2 text-gray-400 ml-auto">
+          {rp.chapter_id}˼ {rp.scroll_percentage}%
+        </span>
+      {/if}
     </a>
   </div>
 {/snippet}
