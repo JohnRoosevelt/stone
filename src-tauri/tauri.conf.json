@@ -39,9 +39,8 @@
   },
   "plugins": {
     "updater": {
-      "endpoints": ["https://r2.lelexue.cn/apk/update.json"],
-      "dialog": true,
-      "pubkey": ""
+      "active": true,
+      "endpoints": ["https://r2.lelexue.cn/apk/update.json"]
     }
   }
 }

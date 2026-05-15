@@ -1,22 +1,42 @@
 <script>
   import { onMount } from "svelte";
   import { DATAS } from "$lib/data.svelte.js";
+  import { toast } from "@zerodevx/svelte-toast";
 
-  let checking = $state(true);
+  let checking = $state(false);
   let updateInfo = $state(null); // { version, notes, date }
   let downloading = $state(false);
   let downloadProgress = $state(0);
   let error = $state("");
+  let appVersion = $state("");
 
   onMount(async () => {
-    if (!DATAS.isTauri) {
-      checking = false;
-      return;
-    }
+    if (!DATAS.isTauri) return;
+
+    // Get current app version from Tauri
+    try {
+      const { getVersion } = await import("@tauri-apps/api/app");
+      appVersion = await getVersion();
+      console.log("[updater] current version:", appVersion);
+    } catch (_) {}
+
+    // Check for updates on startup
+    await checkForUpdate();
+
+    // Also periodically check every 6 hours
+    setInterval(() => checkForUpdate(true), 6 * 60 * 60 * 1000);
+  });
+
+  async function checkForUpdate(silent = false) {
+    if (checking) return;
+    checking = true;
+    error = "";
 
     try {
       const { check } = await import("@tauri-apps/plugin-updater");
       const update = await check();
+
+      console.log("[updater] check result:", update);
 
       if (update?.available) {
         updateInfo = {
@@ -24,14 +44,23 @@
           notes: update.body || "新版本已发布，包含改进和修复。",
           date: update.date,
         };
+      } else if (!silent) {
+        toast.push("已是最新版本", {
+          theme: { classes: "toast-success" },
+        });
       }
     } catch (e) {
-      // Updater may fail in dev mode or if network is unavailable — that's fine
-      console.log("[updater] check failed:", e);
+      console.error("[updater] check failed:", e);
+      if (!silent) {
+        error = `检查更新失败: ${e?.message || e}`;
+        toast.push("检查更新失败，请检查网络连接", {
+          theme: { classes: "toast-error" },
+        });
+      }
     } finally {
       checking = false;
     }
-  });
+  }
 
   async function installUpdate() {
     if (!updateInfo) return;
@@ -44,7 +73,6 @@
       const { check } = await import("@tauri-apps/plugin-updater");
       const update = await check();
       if (update?.available) {
-        // Listen for download progress events
         update.on("download-progress", (progress) => {
           downloadProgress = Math.round(
             (progress.downloadedBytes / progress.totalBytes) * 100,
@@ -53,18 +81,17 @@
 
         await update.downloadAndInstall();
 
-        // After installation, relaunch the app
+        // Relaunch on desktop; on Android the system installer takes over
         try {
           const { relaunch } = await import("@tauri-apps/plugin-process");
           await relaunch();
         } catch {
-          // If process plugin is not available, prompt user to manually restart
-          alert("更新已安装，请重启应用以完成更新。");
+          alert("更新已下载，正在启动安装...");
         }
       }
     } catch (e) {
       console.error("[updater] install failed:", e);
-      error = "更新失败，请稍后重试。";
+      error = `更新失败: ${e?.message || e}`;
     } finally {
       downloading = false;
     }
@@ -95,17 +122,22 @@
       </div>
 
       <div class="text-sm text-gray-500 dark:text-gray-400 space-y-1">
-        <p>版本：<span class="font-mono">{updateInfo.version}</span></p>
+        <p>当前版本：<span class="font-mono">{appVersion || "?"}</span></p>
+        <p>新版本：<span class="font-mono">{updateInfo.version}</span></p>
         {#if updateInfo.date}
           <p>
             发布：
-            <span class="font-mono">{new Date(updateInfo.date).toLocaleDateString("zh-CN")}</span>
+            <span class="font-mono"
+              >{new Date(updateInfo.date).toLocaleDateString("zh-CN")}</span
+            >
           </p>
         {/if}
       </div>
 
       {#if updateInfo.notes}
-        <div class="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 max-h-32 overflow-y-auto">
+        <div
+          class="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 max-h-32 overflow-y-auto"
+        >
           {updateInfo.notes}
         </div>
       {/if}
@@ -135,23 +167,21 @@
       class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-6 space-y-4"
     >
       <div class="flex-cc gap-3">
-        <span
-          class="i-carbon-circle-dash text-3xl text-blue animate-spin"
+        <span class="i-carbon-circle-dash text-3xl text-blue animate-spin"
         ></span>
         <h2 class="text-xl font-bold">正在下载更新...</h2>
       </div>
 
-      <!-- Progress bar -->
-      <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+      <div
+        class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden"
+      >
         <div
           class="h-full bg-blue rounded-full transition-all duration-300"
           style="width: {downloadProgress}%"
         ></div>
       </div>
 
-      <div class="text-center text-sm text-gray-500">
-        {downloadProgress}%
-      </div>
+      <div class="text-center text-sm text-gray-500">{downloadProgress}%</div>
 
       {#if error}
         <div class="text-center text-sm text-red p-2 bg-red/5 rounded-lg">
