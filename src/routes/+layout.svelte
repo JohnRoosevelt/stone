@@ -6,6 +6,7 @@
   import { isTauri } from "$lib/tauri";
   import { setTheme } from "$lib/setTheme.svelte";
   import { handleVisibilityChange, wakeLock } from "$lib/wakeLock";
+  import Updater from "$lib/global/Updater.svelte";
   import { SvelteToast } from "@zerodevx/svelte-toast";
   import { onMount } from "svelte";
 
@@ -116,6 +117,7 @@
 <InitialImport />
 <RouteLoading />
 <Dialog />
+<Updater />
 <svelte:window bind:online={DATAS.online} bind:innerWidth />
 <svelte:document onvisibilitychange={handleVisibilityChange} />
 
