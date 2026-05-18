@@ -151,6 +151,7 @@
           aria-label="切换到深色模式"
           class="px-3 py-1 rounded-md text-sm transition300"
           class:bg-white={DATAS.themeMode === "dark"}
+          class:text-black={DATAS.themeMode === "dark"}
           class:shadow-sm={DATAS.themeMode === "dark"}
           class:text-gray-400={DATAS.themeMode !== "dark"}
           onclick={() => (DATAS.themeMode = "dark")}
@@ -161,6 +162,7 @@
           aria-label="切换到系统模式"
           class="px-3 py-1 rounded-md text-sm transition300"
           class:bg-white={DATAS.themeMode === "system"}
+          class:text-black={DATAS.themeMode === "system"}
           class:shadow-sm={DATAS.themeMode === "system"}
           class:text-gray-400={DATAS.themeMode !== "system"}
           onclick={() => (DATAS.themeMode = "system")}

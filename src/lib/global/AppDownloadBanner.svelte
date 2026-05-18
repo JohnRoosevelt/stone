@@ -52,7 +52,7 @@
   ];
 </script>
 
-{#if !DATAS.isTauri && !dismissed}
+{#if !DATAS.isTauri && isAndroid && !dismissed}
   <!--
     Outer wrapper uses max-height transition for a smooth slide-down entrance.
     The `enter` flag is set on the next frame after mount so the browser

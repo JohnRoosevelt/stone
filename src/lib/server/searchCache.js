@@ -4,10 +4,10 @@
  * Caches search results in Cloudflare KV to reduce D1 query load.
  * Cache key includes all query parameters (q, lang, cid, bookId, limit, offset),
  * so each search query + each pagination page is cached independently.
- * TTL is 30 days by default (maximum KV expiration).
+ * Keys persist indefinitely (no expiration) — content rarely changes,
+ * and cache can be manually cleared with `clearCache(kv)` after updates.
  *
  * Cache invalidation:
- * - Automatic: entries expire after TTL via KV's expiration mechanism.
  * - Manual: after content updates, call `clearCache(kv)` to flush all search caches.
  *
  * Hot search tracking:
@@ -15,8 +15,8 @@
  * The `/api/search/hot` endpoint returns the top N most searched terms.
  */
 
-/** Default cache TTL (seconds) — 30 days (KV maximum) */
-const DEFAULT_TTL = 60 * 60 * 24 * 30; // 30 days
+/** No expiration — keys persist until manually cleared */
+const DEFAULT_TTL = null;
 
 /** Cache key prefix — project-specific to avoid collisions across apps in the same KV namespace */
 const KEY_PREFIX = "stone:search:";
@@ -67,19 +67,19 @@ export async function getFromCache(kv, key) {
 }
 
 /**
- * Save search results to KV cache
+ * Save search results to KV cache (persists indefinitely by default)
  *
  * @param {import("@cloudflare/workers-types").KVNamespace} kv - Cloudflare KV namespace
  * @param {string} key - Cache key (from buildCacheKey)
  * @param {Object} data - Search result data to cache
- * @param {number} [ttl=DEFAULT_TTL] - Cache TTL in seconds
+ * @param {number|null} [ttl=DEFAULT_TTL] - TTL in seconds, or null for no expiration
  * @returns {Promise<void>}
  */
 export async function setToCache(kv, key, data, ttl = DEFAULT_TTL) {
   try {
-    await kv.put(key, JSON.stringify(data), {
-      expirationTtl: ttl,
-    });
+    const options = {};
+    if (ttl) options.expirationTtl = ttl;
+    await kv.put(key, JSON.stringify(data), options);
   } catch (e) {
     // Log but don't throw; cache write failure is non-critical
     console.warn("[searchCache] KV put error:", e.message);

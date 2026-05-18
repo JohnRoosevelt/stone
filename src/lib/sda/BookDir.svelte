@@ -156,10 +156,10 @@
         class={[
           "size-6 flex-cc p-1 rounded-1",
           activeId === tag
-            ? "text-green font-700 bg-gray-200 dark:(bg-gray-600)"
+            ? "text-green font-700 bg-gray-200 dark:bg-gray-600"
             : selectId == tag
-              ? "text-red bg-gray-300 dark:(bg-gray-800)"
-              : "bg-gray-300 dark:(bg-gray-800)",
+              ? "text-red bg-gray-300 dark:bg-gray-800"
+              : "bg-gray-300 dark:bg-gray-800",
         ]}
         >{tag}
       </button>
