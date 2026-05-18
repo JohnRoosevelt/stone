@@ -3,22 +3,16 @@
   import { DATAS } from "$lib/data.svelte.js";
   import { toast } from "@zerodevx/svelte-toast";
 
+  const R2_PUBLIC = "https://r2.lelexue.cn";
+  const MANIFEST_URL = `${R2_PUBLIC}/apk/update.json`;
+  const APK_URL = `${R2_PUBLIC}/apk/stone-latest.apk`;
+
   let checking = $state(false);
   let updateInfo = $state(null); // { version, notes, date }
-  let downloading = $state(false);
-  let downloadProgress = $state(0);
   let error = $state("");
-  let appVersion = $state("");
 
   onMount(async () => {
     if (!DATAS.isTauri) return;
-
-    // Get current app version from Tauri
-    try {
-      const { getVersion } = await import("@tauri-apps/api/app");
-      appVersion = await getVersion();
-      console.log("[updater] current version:", appVersion);
-    } catch (_) {}
 
     // Check for updates on startup
     await checkForUpdate();
@@ -33,16 +27,34 @@
     error = "";
 
     try {
-      const { check } = await import("@tauri-apps/plugin-updater");
-      const update = await check();
+      const res = await fetch(MANIFEST_URL);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const manifest = await res.json();
 
-      console.log("[updater] check result:", update);
+      // Get current app version from tauri.conf.json (built-in)
+      let currentVersion;
+      try {
+        const { getVersion } = await import("@tauri-apps/api/app");
+        currentVersion = await getVersion();
+      } catch (_) {
+        currentVersion = "0.0.0";
+      }
 
-      if (update?.available) {
+      console.log(
+        "[updater] current:",
+        currentVersion,
+        "remote:",
+        manifest.version,
+      );
+
+      if (
+        manifest.version &&
+        compareVersions(manifest.version, currentVersion) > 0
+      ) {
         updateInfo = {
-          version: update.version,
-          notes: update.body || "新版本已发布，包含改进和修复。",
-          date: update.date,
+          version: manifest.version,
+          notes: manifest.notes || "新版本已发布，包含改进和修复。",
+          date: manifest.pub_date,
         };
       } else if (!silent) {
         toast.push("已是最新版本", {
@@ -52,7 +64,6 @@
     } catch (e) {
       console.error("[updater] check failed:", e);
       if (!silent) {
-        error = `检查更新失败: ${e?.message || e}`;
         toast.push("检查更新失败，请检查网络连接", {
           theme: { classes: "toast-error" },
         });
@@ -64,42 +75,48 @@
 
   async function installUpdate() {
     if (!updateInfo) return;
-
-    downloading = true;
-    downloadProgress = 0;
     error = "";
 
     try {
-      const { check } = await import("@tauri-apps/plugin-updater");
-      const update = await check();
-      if (update?.available) {
-        update.on("download-progress", (progress) => {
-          downloadProgress = Math.round(
-            (progress.downloadedBytes / progress.totalBytes) * 100,
-          );
-        });
+      // Use Tauri shell plugin to open the APK URL in the system handler
+      // On Android, this triggers the browser to download the APK,
+      // then the user can tap to install.
+      const { open } = await import("@tauri-apps/plugin-shell");
+      await open(APK_URL);
 
-        await update.downloadAndInstall();
-
-        // On Android the system package installer takes over automatically.
-        // The user just needs to reopen the app after installation.
-        alert("更新已安装完成！请手动重启应用以使用新版本。");
-      }
+      // Reset dialog after triggering download
+      updateInfo = null;
     } catch (e) {
       console.error("[updater] install failed:", e);
       error = `更新失败: ${e?.message || e}`;
-    } finally {
-      downloading = false;
+
+      // Fallback: open in new window
+      try {
+        window.open(APK_URL, "_blank");
+      } catch (_) {}
     }
   }
 
   function dismiss() {
     updateInfo = null;
   }
+
+  // Simple semver comparison (positive = a > b)
+  function compareVersions(a, b) {
+    const pa = a.split(".").map(Number);
+    const pb = b.split(".").map(Number);
+    for (let i = 0; i < 3; i++) {
+      const na = pa[i] || 0;
+      const nb = pb[i] || 0;
+      if (na > nb) return 1;
+      if (na < nb) return -1;
+    }
+    return 0;
+  }
 </script>
 
 <!-- ─── Update Dialog ─────────────────────────────────────────── -->
-{#if updateInfo && !downloading}
+{#if updateInfo}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
@@ -118,7 +135,6 @@
       </div>
 
       <div class="text-sm text-gray-500 dark:text-gray-400 space-y-1">
-        <p>当前版本：<span class="font-mono">{appVersion || "?"}</span></p>
         <p>新版本：<span class="font-mono">{updateInfo.version}</span></p>
         {#if updateInfo.date}
           <p>
@@ -138,6 +154,16 @@
         </div>
       {/if}
 
+      {#if error}
+        <div class="text-sm text-red p-2 bg-red/5 rounded-lg text-center">
+          {error}
+        </div>
+      {/if}
+
+      <p class="text-xs text-gray-400 text-center">
+        点击「立即更新」将跳转至浏览器下载 APK，下载完成后点击通知安装。
+      </p>
+
       <div class="flex gap-3 pt-2">
         <button
           onclick={dismiss}
@@ -152,38 +178,6 @@
           立即更新
         </button>
       </div>
-    </div>
-  </div>
-{/if}
-
-<!-- ─── Download Progress Dialog ──────────────────────────── -->
-{#if downloading}
-  <div class="fixed inset-0 z-50 flex-cc bg-black/40 backdrop-blur-sm">
-    <div
-      class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-6 space-y-4"
-    >
-      <div class="flex-cc gap-3">
-        <span class="i-carbon-circle-dash text-3xl text-blue animate-spin"
-        ></span>
-        <h2 class="text-xl font-bold">正在下载更新...</h2>
-      </div>
-
-      <div
-        class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden"
-      >
-        <div
-          class="h-full bg-blue rounded-full transition-all duration-300"
-          style="width: {downloadProgress}%"
-        ></div>
-      </div>
-
-      <div class="text-center text-sm text-gray-500">{downloadProgress}%</div>
-
-      {#if error}
-        <div class="text-center text-sm text-red p-2 bg-red/5 rounded-lg">
-          {error}
-        </div>
-      {/if}
     </div>
   </div>
 {/if}

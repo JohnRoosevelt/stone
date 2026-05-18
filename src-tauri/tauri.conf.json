@@ -36,11 +36,5 @@
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }
-  },
-  "plugins": {
-    "updater": {
-      "active": true,
-      "endpoints": ["https://r2.lelexue.cn/apk/update.json"]
-    }
   }
 }
