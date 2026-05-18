@@ -4,7 +4,9 @@
   import { toast } from "@zerodevx/svelte-toast";
 
   const R2_PUBLIC = "https://r2.lelexue.cn";
-  const MANIFEST_URL = `${R2_PUBLIC}/apk/update.json`;
+  function manifestUrl() {
+    return `${R2_PUBLIC}/apk/update.json?t=${Date.now()}`;
+  }
   const APK_URL = `${R2_PUBLIC}/apk/stone-latest.apk`;
 
   let checking = $state(false);
@@ -27,7 +29,7 @@
     error = "";
 
     try {
-      const res = await fetch(MANIFEST_URL);
+      const res = await fetch(manifestUrl());
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const manifest = await res.json();
 
