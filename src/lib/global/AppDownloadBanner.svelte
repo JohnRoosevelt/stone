@@ -4,6 +4,7 @@
 
   let dismissed = $state(true);
   let enter = $state(false);
+  let isAndroid = $state(false);
 
   /** localStorage key for dismiss timestamp */
   const LS_KEY = "stone_app_download_dismissed_at";
@@ -14,6 +15,10 @@
   onMount(() => {
     // Never show banner inside the Tauri app itself
     if (DATAS.isTauri) return;
+
+    // Only show on Android devices (currently only Android is supported)
+    isAndroid = /Android/i.test(navigator.userAgent);
+    if (!isAndroid) return;
 
     // Time-based dismiss: if dismissed within the duration, keep hidden
     const dismissedAt = localStorage.getItem(LS_KEY);

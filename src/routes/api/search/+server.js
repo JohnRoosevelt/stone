@@ -4,6 +4,7 @@ import {
   buildCacheKey,
   getFromCache,
   setToCache,
+  recordSearchTerm,
 } from "$lib/server/searchCache.js";
 
 /** Check if text contains CJK Chinese characters */
@@ -216,10 +217,16 @@ export async function GET({ url, platform }) {
     // ── Store in KV cache (fire-and-forget; don't block response) ──
     if (kv) {
       const cacheKey = buildCacheKey({ q, lang, cid, bookId, limit, offset });
-      // Write asynchronously to not delay response
+      // Write search results to KV cache asynchronously
       setToCache(kv, cacheKey, response).catch((e) =>
         console.warn("[search] KV cache write error:", e.message),
       );
+      // Record search term for trending keywords (first page only to avoid dupes)
+      if (offset === 0) {
+        recordSearchTerm(kv, q.trim()).catch((e) =>
+          console.warn("[search] KV record term error:", e.message),
+        );
+      }
     }
 
     return json(response);

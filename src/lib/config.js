@@ -67,7 +67,7 @@ export const NAV_ITEMS = [
     icon: "i-carbon-search",
     label: "搜索",
     matchPrefix: "/search",
-    appOnly: true,
+    appOnly: false,
   },
   {
     href: `/${CID.BIBLE}`,

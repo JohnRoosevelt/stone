@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from "svelte";
   import { DATAS } from "$lib/data.svelte";
   import {
     getDbSize,
@@ -57,7 +58,7 @@
     {
       title: "搜索优化 + KV",
       desc: "引入 Cloudflare KV 缓存，优化关键字查找性能",
-      done: false,
+      done: true,
     },
     {
       title: "App 发布",
@@ -66,6 +67,8 @@
     },
   ];
 
+  let isAndroid = $state(false);
+  let appVersion = $state("");
   let showRoadmap = $state(false);
   let showDebug = $state(false);
   let loadingUa = $state(false);
@@ -85,6 +88,23 @@
       }
     }
   }
+
+  onMount(async () => {
+    // Detect Android device for download link
+    if (!DATAS.isTauri) {
+      isAndroid = /Android/i.test(navigator.userAgent);
+    }
+
+    // Get app version in Tauri (Android) mode
+    if (DATAS.isTauri) {
+      try {
+        const { getVersion } = await import("@tauri-apps/api/app");
+        appVersion = await getVersion();
+      } catch (_) {
+        appVersion = "";
+      }
+    }
+  });
 </script>
 
 <svelte:head>
@@ -209,7 +229,7 @@
   </a>
 
   <!-- Download App (Web only) -->
-  {#if !DATAS.isTauri}
+  {#if !DATAS.isTauri && isAndroid}
     <a
       href="/download"
       class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 no-underline"
@@ -218,7 +238,7 @@
         <span class="i-carbon-download text-green"></span>
         下载 App
       </span>
-      <span class="text-xs text-gray-400">Android/iOS/Mac/Windows</span>
+      <span class="text-xs text-gray-400">Android</span>
       <span class="i-carbon-chevron-right text-gray-400"></span>
     </a>
   {/if}
@@ -453,8 +473,14 @@
           <span text-gray-400>DB: </span>{dbSize || "..."}
         </div>
 
+        {#if appVersion}
+          <div>
+            <span text-gray-400>app: </span>
+            <span class="text-green font-600">v{appVersion}</span>
+          </div>
+        {/if}
         <div>
-          <span text-gray-400>version: </span>
+          <span text-gray-400>build: </span>
           {__GIT_COMMIT__}
           <span text-gray-400>
             ({formatBuildTime(__BUILD_TIME__)})

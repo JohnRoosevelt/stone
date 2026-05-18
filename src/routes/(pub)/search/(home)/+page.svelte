@@ -12,6 +12,15 @@
   /** Scope selection options */
   const SCOPE_OPTIONS = SCOPES;
 
+  /**
+   * Hot search keywords — fetched from KV-backed API on mount.
+   * Only shows when users have actually searched (data exists in KV).
+   * Each entry includes a search count.
+   */
+  let hotKeywords = $state(
+    /** @type {Array<{text: string, count: number}>} */ ([]),
+  );
+
   /** Local reference to ensure reactivity */
   let historyItems = $state(searchHistory);
 
@@ -46,17 +55,33 @@
     inputEl?.focus();
   }
 
-  /** Click history tag to quickly search */
+  /** Click a hot keyword or history item to search */
   function searchKeyword(keyword) {
     query = keyword;
     submitSearch();
   }
 
-  // Auto focus after mount
+  /** Fetch hot keywords from KV-backed API */
+  async function fetchHotKeywords() {
+    try {
+      const res = await fetch("/api/search/hot");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          hotKeywords = data;
+        }
+      }
+    } catch (e) {
+      console.warn("[search] Failed to fetch hot keywords:", e.message);
+    }
+  }
+
+  // Auto focus after mount, fetch hot keywords
   onMount(() => {
     requestAnimationFrame(() => {
       inputEl?.focus();
     });
+    fetchHotKeywords();
   });
 </script>
 
@@ -135,21 +160,30 @@
       </button>
     </div>
 
-    <!-- Scope selection tabs -->
-    <div flex-cc gap-1.5 mt-2 ml-9>
+    <!-- Category navigation tabs (same style as results page) -->
+    <div
+      w-full
+      flex-shrink-0
+      flex
+      gap-1
+      mt-2
+      ml-9
+      scrollbar-hide
+      overflow-x-auto
+    >
       {#each SCOPE_OPTIONS as { cid, label }}
         <button
-          px-2.5
-          py-1
-          text-xs
-          rounded-full
+          px-3
+          py-1.5
+          text-sm
           font-500
+          rounded-2
           whitespace-nowrap
           transition300
           class:bg-green={scopeCid === cid}
           class:text-white={scopeCid === cid}
-          class:bg-gray-100={scopeCid !== cid}
           class:text-gray-500={scopeCid !== cid}
+          class:bg-gray-100={scopeCid !== cid}
           class="dark:bg-gray-800 dark:text-gray-400"
           onclick={() => (scopeCid = cid)}
         >
@@ -161,6 +195,55 @@
 
   <!-- Content area -->
   <section w-full flex-1 h-full flex-col overflow-y-auto>
+    <!-- ── Hot Search Keywords (only shows when there's data) ── -->
+    {#if hotKeywords.length > 0}
+      <div
+        w-full
+        flex
+        items-center
+        px-5
+        py-2.5
+        text-xs
+        text-gray-400
+        flex-shrink-0
+      >
+        <span i-carbon-fire mr-1.5></span>
+        <span flex-1>热搜关键词</span>
+      </div>
+      <div
+        w-full
+        px-3
+        pb-3
+        grid
+        grid-cols-2
+        sm="flex flex-row flex-wrap"
+        gap-1.5
+      >
+        {#each hotKeywords as { text, count } (text)}
+          <button
+            text-left
+            px-3
+            py-2
+            flex
+            items-center
+            gap-1.5
+            rounded-lg
+            sm="w-auto"
+            class="bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 active:bg-orange-200 dark:active:bg-orange-900/40 transition-colors"
+            onclick={() => searchKeyword(text)}
+          >
+            <span i-carbon-fire text-orange-400 text-3 flex-shrink-0></span>
+            <span class="text-gray-700 dark:text-gray-200">{text}</span>
+            <span
+              class="text-xs text-orange-400/70 dark:text-orange-500/70 font-mono"
+            >
+              {count}
+            </span>
+          </button>
+        {/each}
+      </div>
+    {/if}
+
     {#if historyItems.length > 0}
       <!-- Search history -->
       <div
@@ -172,6 +255,7 @@
         text-xs
         text-gray-400
         flex-shrink-0
+        b-t="1px solid gray-100 dark:gray-800"
       >
         <span i-streamline-flex-search-history-browser mr-1.5></span>
         <span flex-1>搜索历史</span>
