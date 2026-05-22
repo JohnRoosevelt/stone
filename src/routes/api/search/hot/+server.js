@@ -32,13 +32,13 @@ export async function GET({ platform }) {
     }
 
     // KV not available
-    console.warn(
+    console.log(
       "[hotKeywords] KV namespace 'STONE_SEARCH_CACHE' is NOT available on platform.env",
     );
     return json([]);
   } catch (e) {
-    console.warn("[hotKeywords] Error:", e.message);
-    console.warn("[hotKeywords] Error stack:", e.stack);
+    console.log("[hotKeywords] Error:", e.message);
+    console.log("[hotKeywords] Error stack:", e.stack);
     return json([]);
   }
 }
