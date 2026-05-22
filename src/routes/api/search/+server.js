@@ -107,13 +107,22 @@ export async function GET({ url, platform }) {
     const isCJKQuery = hasCJK(q);
 
     // ── Try KV cache first ──
+    console.log("[search] KV available:", !!kv);
     if (kv) {
       const cacheKey = buildCacheKey({ q, lang, cid, bookId, limit, offset });
+      console.log("[search] KV cache lookup: key =", cacheKey);
       const cached = await getFromCache(kv, cacheKey);
+      console.log("[search] KV cache result:", cached ? "HIT" : "MISS");
       if (cached) {
-        console.log("[search] KV cache hit:", cacheKey);
+        console.log(
+          "[search] KV cache hit: returning cached data, total =",
+          cached.total,
+        );
         return json(cached);
       }
+      console.log("[search] KV cache miss — will query D1");
+    } else {
+      console.log("[search] KV not available, querying D1 directly");
     }
 
     const params = [];
@@ -213,18 +222,36 @@ export async function GET({ url, platform }) {
     for (const r of results) delete r._total;
 
     const response = { total, results, hasMore };
+    console.log(
+      "[search] D1 query done: total =",
+      total,
+      ", results length =",
+      results.length,
+      ", hasMore =",
+      hasMore,
+    );
 
     // ── Store in KV cache (fire-and-forget; don't block response) ──
     if (kv) {
       const cacheKey = buildCacheKey({ q, lang, cid, bookId, limit, offset });
+      console.log("[search] Writing D1 result to KV cache: key =", cacheKey);
       // Write search results to KV cache asynchronously
       setToCache(kv, cacheKey, response).catch((e) =>
         console.warn("[search] KV cache write error:", e.message),
       );
       // Record search term for trending keywords (first page only to avoid dupes)
       if (offset === 0) {
+        console.log(
+          "[search] Recording search term for hot keywords:",
+          q.trim(),
+        );
         recordSearchTerm(kv, q.trim()).catch((e) =>
           console.warn("[search] KV record term error:", e.message),
+        );
+      } else {
+        console.log(
+          "[search] Skipping hot keyword recording (offset > 0):",
+          offset,
         );
       }
     }

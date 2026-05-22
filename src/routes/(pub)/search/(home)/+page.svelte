@@ -64,12 +64,45 @@
   /** Fetch hot keywords from KV-backed API */
   async function fetchHotKeywords() {
     try {
+      console.log("[search] fetchHotKeywords: fetching /api/search/hot...");
       const res = await fetch("/api/search/hot");
+      console.log(
+        "[search] fetchHotKeywords: response status:",
+        res.status,
+        res.statusText,
+      );
       if (res.ok) {
         const data = await res.json();
+        console.log(
+          "[search] fetchHotKeywords: response data:",
+          JSON.stringify(data),
+        );
+        console.log(
+          "[search] fetchHotKeywords: isArray:",
+          Array.isArray(data),
+          "length:",
+          Array.isArray(data) ? data.length : "N/A",
+        );
         if (Array.isArray(data)) {
           hotKeywords = data;
+          console.log(
+            "[search] fetchHotKeywords: set hotKeywords to",
+            data.length,
+            "items",
+          );
+        } else {
+          console.warn(
+            "[search] fetchHotKeywords: response is not an array:",
+            typeof data,
+          );
         }
+      } else {
+        console.warn(
+          "[search] fetchHotKeywords: response not OK, status:",
+          res.status,
+        );
+        const body = await res.text().catch(() => "(failed to read body)");
+        console.warn("[search] fetchHotKeywords: response body:", body);
       }
     } catch (e) {
       console.warn("[search] Failed to fetch hot keywords:", e.message);

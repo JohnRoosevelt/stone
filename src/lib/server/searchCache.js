@@ -98,22 +98,48 @@ export async function setToCache(kv, key, data, ttl = DEFAULT_TTL) {
  * @returns {Promise<void>}
  */
 export async function recordSearchTerm(kv, term) {
-  if (!term) return;
+  if (!term) {
+    console.log("[searchCache] recordSearchTerm: skipping, empty term");
+    return;
+  }
   // Normalize: lowercase, trim whitespace
   const normalized = term.trim().toLowerCase().slice(0, 40);
-  if (!normalized) return;
+  if (!normalized) {
+    console.log(
+      "[searchCache] recordSearchTerm: skipping, normalized is empty, original:",
+      term,
+    );
+    return;
+  }
+
+  console.log("[searchCache] recordSearchTerm: recording term:", normalized);
 
   // Read current frequency map
   const data = await kv.get(HOT_TERMS_KEY, "json");
+  console.log(
+    "[searchCache] recordSearchTerm: raw data from KV for key",
+    HOT_TERMS_KEY,
+    ":",
+    JSON.stringify(data),
+  );
+
   /** @type {Record<string, number>} */
   const counts =
     data && typeof data === "object" && !Array.isArray(data) ? data : {};
 
   // Increment count
-  counts[normalized] = (counts[normalized] || 0) + 1;
+  const newCount = (counts[normalized] || 0) + 1;
+  counts[normalized] = newCount;
+  console.log(
+    "[searchCache] recordSearchTerm: incremented",
+    normalized,
+    "to",
+    newCount,
+  );
 
   // Write back (no expiration — persists until manually reset)
   await kv.put(HOT_TERMS_KEY, JSON.stringify(counts));
+  console.log("[searchCache] recordSearchTerm: successfully wrote back to KV");
 }
 
 /**
@@ -125,21 +151,59 @@ export async function recordSearchTerm(kv, term) {
  */
 export async function getTopSearchTerms(kv, limit = 16) {
   try {
+    console.log("[searchCache] getTopSearchTerms: reading key", HOT_TERMS_KEY);
     const data = await kv.get(HOT_TERMS_KEY, "json");
-    if (!data || typeof data !== "object" || Array.isArray(data)) {
+    console.log(
+      "[searchCache] getTopSearchTerms: raw data type =",
+      typeof data,
+      ", value =",
+      JSON.stringify(data),
+    );
+
+    if (!data) {
+      console.log(
+        "[searchCache] getTopSearchTerms: data is null/undefined — no search terms recorded yet",
+      );
+      return [];
+    }
+    if (typeof data !== "object") {
+      console.log(
+        "[searchCache] getTopSearchTerms: data is not an object, type =",
+        typeof data,
+      );
+      return [];
+    }
+    if (Array.isArray(data)) {
+      console.log(
+        "[searchCache] getTopSearchTerms: data is an array instead of object — unexpected format",
+      );
       return [];
     }
 
     const entries = Object.entries(data);
+    console.log(
+      "[searchCache] getTopSearchTerms: found",
+      entries.length,
+      "entries",
+    );
+
     // Sort by count descending, then alphabetically
     entries.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 
-    return entries.slice(0, limit).map(([text, count]) => ({
+    const result = entries.slice(0, limit).map(([text, count]) => ({
       text,
       count,
     }));
+    console.log(
+      "[searchCache] getTopSearchTerms: returning",
+      result.length,
+      "terms:",
+      JSON.stringify(result),
+    );
+    return result;
   } catch (e) {
     console.warn("[searchCache] getTopSearchTerms error:", e.message);
+    console.warn("[searchCache] getTopSearchTerms error stack:", e.stack);
     return [];
   }
 }
