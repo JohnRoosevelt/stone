@@ -149,7 +149,9 @@
   function backToInput() {
     const cidParam =
       searchState.scopeCid !== undefined ? `&cid=${searchState.scopeCid}` : "";
-    goto(`/search?q=${encodeURIComponent(searchState.query)}${cidParam}`);
+    goto(`/search?q=${encodeURIComponent(searchState.query)}${cidParam}`, {
+      replaceState: true,
+    });
   }
 
   // ── Save current state (for restoration when returning) ──

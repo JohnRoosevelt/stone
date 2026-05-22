@@ -3,7 +3,9 @@
 >
   <!-- Origin -->
   <section space-y-3>
-    <blockquote class="border-l-3 border-green pl-3 text-green italic text-xs">
+    <blockquote
+      class="border-l-3 border-green pl-3 text-green font-medium text-xs"
+    >
       "我比我的师傅更通达。因我思想你的法度。"
     </blockquote>
 
@@ -58,7 +60,7 @@
     <p>以下是我个人就这个题目所得到观点和感悟：</p>
 
     <blockquote
-      class="border-l-3 border-green/50 pl-3 text-xs text-gray-500 dark:text-gray-400 space-y-2 italic"
+      class="border-l-3 border-green/50 pl-3 text-xs text-gray-500 dark:text-gray-400 space-y-2"
     >
       <p>
         在我们地球被造之前，在天上就有了战争（启12：9），地球和人类的被造是有背景的，地是空虚混沌渊面黑暗（创1：1）。
