@@ -61,7 +61,7 @@ export async function getFromCache(kv, key) {
     return cached || null;
   } catch (e) {
     // Log but don't throw; fall through to D1 query
-    console.log("[searchCache] KV get error:", e.message, e.stack);
+    console.warn("[searchCache] KV get error:", e.message);
     return null;
   }
 }
@@ -82,7 +82,7 @@ export async function setToCache(kv, key, data, ttl = DEFAULT_TTL) {
     await kv.put(key, JSON.stringify(data), options);
   } catch (e) {
     // Log but don't throw; cache write failure is non-critical
-    console.log("[searchCache] KV put error:", e.message, e.stack);
+    console.warn("[searchCache] KV put error:", e.message);
   }
 }
 
@@ -98,57 +98,48 @@ export async function setToCache(kv, key, data, ttl = DEFAULT_TTL) {
  * @returns {Promise<void>}
  */
 export async function recordSearchTerm(kv, term) {
-  try {
-    if (!term) {
-      console.log("[searchCache] recordSearchTerm: skipping, empty term");
-      return;
-    }
-    // Normalize: lowercase, trim whitespace
-    const normalized = term.trim().toLowerCase().slice(0, 40);
-    if (!normalized) {
-      console.log(
-        "[searchCache] recordSearchTerm: skipping, normalized is empty, original:",
-        term,
-      );
-      return;
-    }
-
-    console.log("[searchCache] recordSearchTerm: recording term:", normalized);
-
-    // Read current frequency map
-    console.log("[searchCache] recordSearchTerm: about to kv.get...");
-    const data = await kv.get(HOT_TERMS_KEY, "json");
-    console.log(
-      "[searchCache] recordSearchTerm: raw data from KV for key",
-      HOT_TERMS_KEY,
-      ":",
-      JSON.stringify(data),
-    );
-
-    /** @type {Record<string, number>} */
-    const counts =
-      data && typeof data === "object" && !Array.isArray(data) ? data : {};
-
-    // Increment count
-    const newCount = (counts[normalized] || 0) + 1;
-    counts[normalized] = newCount;
-    console.log(
-      "[searchCache] recordSearchTerm: incremented",
-      normalized,
-      "to",
-      newCount,
-    );
-
-    // Write back (no expiration — persists until manually reset)
-    console.log("[searchCache] recordSearchTerm: about to kv.put...");
-    await kv.put(HOT_TERMS_KEY, JSON.stringify(counts));
-    console.log(
-      "[searchCache] recordSearchTerm: successfully wrote back to KV",
-    );
-  } catch (e) {
-    console.log("[searchCache] recordSearchTerm: UNEXPECTED ERROR:", e.message);
-    console.log("[searchCache] recordSearchTerm: error stack:", e.stack);
+  if (!term) {
+    console.log("[searchCache] recordSearchTerm: skipping, empty term");
+    return;
   }
+  // Normalize: lowercase, trim whitespace
+  const normalized = term.trim().toLowerCase().slice(0, 40);
+  if (!normalized) {
+    console.log(
+      "[searchCache] recordSearchTerm: skipping, normalized is empty, original:",
+      term,
+    );
+    return;
+  }
+
+  console.log("[searchCache] recordSearchTerm: recording term:", normalized);
+
+  // Read current frequency map
+  const data = await kv.get(HOT_TERMS_KEY, "json");
+  console.log(
+    "[searchCache] recordSearchTerm: raw data from KV for key",
+    HOT_TERMS_KEY,
+    ":",
+    JSON.stringify(data),
+  );
+
+  /** @type {Record<string, number>} */
+  const counts =
+    data && typeof data === "object" && !Array.isArray(data) ? data : {};
+
+  // Increment count
+  const newCount = (counts[normalized] || 0) + 1;
+  counts[normalized] = newCount;
+  console.log(
+    "[searchCache] recordSearchTerm: incremented",
+    normalized,
+    "to",
+    newCount,
+  );
+
+  // Write back (no expiration — persists until manually reset)
+  await kv.put(HOT_TERMS_KEY, JSON.stringify(counts));
+  console.log("[searchCache] recordSearchTerm: successfully wrote back to KV");
 }
 
 /**
@@ -211,8 +202,8 @@ export async function getTopSearchTerms(kv, limit = 16) {
     );
     return result;
   } catch (e) {
-    console.log("[searchCache] getTopSearchTerms error:", e.message);
-    console.log("[searchCache] getTopSearchTerms error stack:", e.stack);
+    console.warn("[searchCache] getTopSearchTerms error:", e.message);
+    console.warn("[searchCache] getTopSearchTerms error stack:", e.stack);
     return [];
   }
 }

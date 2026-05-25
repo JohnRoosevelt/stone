@@ -3,7 +3,10 @@ import {
   presetIcons,
   presetMini,
   presetWind4,
+  transformerAttributifyJsx,
+  transformerVariantGroup,
   toEscapedSelector,
+  transformerDirectives,
 } from "unocss";
 import { FileSystemIconLoader } from "@iconify/utils/lib/loader/node-loaders";
 import path from "path";
@@ -47,8 +50,11 @@ export default defineConfig({
       },
     ],
   },
-  // Note: transformers are not supported by @unocss/svelte-scoped/vite.
-  // They are ignored in this config and intentionally omitted.
+  transformers: [
+    transformerAttributifyJsx(),
+    transformerVariantGroup(),
+    transformerDirectives(),
+  ],
   preflights: [
     {
       getCSS: ({ theme }) => {

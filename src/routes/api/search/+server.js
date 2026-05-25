@@ -231,54 +231,28 @@ export async function GET({ url, platform }) {
       hasMore,
     );
 
-    // ── Store in KV cache (use waitUntil so Pages Functions don't kill these) ──
-    //
-    // CRITICAL: Cloudflare Pages Functions terminate execution immediately
-    // after the response is returned, unlike Workers which wait for pending
-    // promises. Without waitUntil, fire-and-forget KV writes are silently
-    // killed and data is never persisted. This is why hot keywords and
-    // search result caches work locally (bun dev / wrangler pages dev)
-    // but fail in production (Cloudflare Pages Functions).
+    // ── Store in KV cache (fire-and-forget; don't block response) ──
     if (kv) {
       const cacheKey = buildCacheKey({ q, lang, cid, bookId, limit, offset });
       console.log("[search] Writing D1 result to KV cache: key =", cacheKey);
-
-      const ctx = platform?.context;
-      const writePromise = setToCache(kv, cacheKey, response);
-
+      // Write search results to KV cache asynchronously
+      setToCache(kv, cacheKey, response).catch((e) =>
+        console.warn("[search] KV cache write error:", e.message),
+      );
       // Record search term for trending keywords (first page only to avoid dupes)
       if (offset === 0) {
         console.log(
           "[search] Recording search term for hot keywords:",
           q.trim(),
         );
-        const recordPromise = recordSearchTerm(kv, q.trim());
-
-        if (ctx?.waitUntil) {
-          ctx.waitUntil(writePromise);
-          ctx.waitUntil(recordPromise);
-        } else {
-          // Fallback for local dev without waitUntil
-          writePromise.catch((e) =>
-            console.log("[search] KV cache write error:", e.message, e.stack),
-          );
-          recordPromise.catch((e) =>
-            console.log("[search] KV record term error:", e.message, e.stack),
-          );
-        }
+        recordSearchTerm(kv, q.trim()).catch((e) =>
+          console.warn("[search] KV record term error:", e.message),
+        );
       } else {
         console.log(
           "[search] Skipping hot keyword recording (offset > 0):",
           offset,
         );
-
-        if (ctx?.waitUntil) {
-          ctx.waitUntil(writePromise);
-        } else {
-          writePromise.catch((e) =>
-            console.log("[search] KV cache write error:", e.message, e.stack),
-          );
-        }
       }
     }
 
