@@ -3,7 +3,12 @@
   import { CID } from "$lib/config";
   import { info } from "$lib/global/Toast";
   import { slide } from "svelte/transition";
-  import { saveAnnotation, isTauri as isTauriEnv } from "$lib/tauri";
+  import {
+    saveAnnotation,
+    replaceAnnotation,
+    deleteAnnotation,
+    isTauri as isTauriEnv,
+  } from "$lib/tauri";
 
   let { isShowLongpressCtrl = $bindable(false) } = $props();
   let colors2 = $state({
@@ -38,21 +43,42 @@
   let isShowColor = $state(false);
 
   $effect(() => {
-    if (isShowLongpressCtrl) {
-      const selection = window.getSelection();
-      const range = selection.getRangeAt(0);
-      const parent = range.commonAncestorContainer;
-      // console.log(parent.nodeName, parent.nodeType, parent.parentNode);
-      if (parent.nodeType === Node.TEXT_NODE) {
-        type = "";
-        return;
+    if (!isShowLongpressCtrl) return;
+
+    // Walk from a node up the ancestor chain looking for a `data-type` attribute
+    // (e.g. a previously-saved underline / wavy / bg / text span). Used to keep
+    // the toolbar's "selected type" in sync with what the user is currently
+    // touching — both for newly-created spans and for spans reloaded from DB
+    // by Article.svelte.
+    function findDataType(node) {
+      let el = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentNode;
+      while (el && el !== document.body) {
+        const dt = el.getAttribute?.("data-type");
+        if (dt) return dt;
+        el = el.parentElement;
       }
-      return;
+      return null;
     }
-    // isShowColor = false;
+
+    function syncTypeFromSelection() {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      if (sel.toString().length === 0) return;
+      const range = sel.getRangeAt(0);
+      const dt =
+        findDataType(range.startContainer) ?? findDataType(range.endContainer);
+      if (dt) type = dt;
+    }
+
+    // Run once immediately (in case LongpressCtrl opens on top of an existing
+    // selection that already has a data-type), then keep in sync while open.
+    syncTypeFromSelection();
+    document.addEventListener("selectionchange", syncTypeFromSelection);
+    return () =>
+      document.removeEventListener("selectionchange", syncTypeFromSelection);
   });
 
-  function selectionEdit(event) {
+  async function selectionEdit(event) {
     event.stopPropagation();
 
     const dataType = event.target.getAttribute("data-type");
@@ -102,9 +128,15 @@
 
       if (dataType !== type) {
         console.log(".... change", dataType, "to ", type);
+        // Switch the type of an existing annotation. Just rewrite the DOM
+        // span's data-type + cssText; the DB side is handled by
+        // `replaceAnnotation` (used inside saveHighlight) which atomically
+        // deletes any prior row at the same (p_index, start_offset, length)
+        // and inserts the new one. So no manual delete here.
         parent.setAttribute("data-type", type);
         parent.style.cssText = cssText;
 
+        await saveHighlight(selection.toString(), range, parent);
         return;
       }
       console.log(".... remove");
@@ -115,10 +147,28 @@
       target.removeChild(parent);
       target.normalize();
 
+      // Also delete the DB row for the removed span, if it had one.
+      const removedAnnId = parent.getAttribute("data-ann-id");
+      if (isTauriEnv() && removedAnnId && !removedAnnId.startsWith("local-")) {
+        deleteAnnotation(Number(removedAnnId)).catch((e) => {
+          console.warn("[annotation] failed to delete removed ann", e);
+        });
+      }
+
       return;
     }
 
     console.log("set new ...");
+
+    // Capture the selected text BEFORE surroundContents. On Android WebView,
+    // clicking the toolbar button can fire `selectionchange` and clear the
+    // selection between the click and the `selection.toString()` read below,
+    // so the value we'd otherwise persist is an empty string.
+    const selectedText = selection.toString();
+    if (!selectedText) {
+      console.warn("[annotation] empty selection, skipping save");
+      return;
+    }
 
     const span = document.createElement("span");
     span.style.cssText = cssText;
@@ -142,7 +192,7 @@
     // removeEdit(span)
     range.surroundContents(span);
 
-    saveHighlight(selection.toString(), range);
+    await saveHighlight(selectedText, range, span);
 
     const newRange = document.createRange();
     newRange.selectNodeContents(span);
@@ -150,36 +200,44 @@
     selection.addRange(newRange);
   }
 
-  async function saveHighlight(text, range) {
+  async function saveHighlight(text, range, targetSpan) {
     // Only persist annotations in Tauri mode
     if (!isTauriEnv()) return;
 
-    let parent = range.commonAncestorContainer;
+    // Walk up from the selection to find the paragraph element (`<p data-i="...">`).
+    // The common ancestor may be a previously-saved <span> inside a paragraph
+    // (e.g. selecting text inside an existing wavy underline), so reading
+    // `data-i` off the immediate parent returns null and the annotation is
+    // persisted with a null p_index → it can never be re-applied when the
+    // chapter reloads.
+    let node = range.commonAncestorContainer;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+    const pEl = node.closest?.("[data-i]");
+    const pIndex = pEl ? pEl.getAttribute("data-i") : null;
 
-    if (parent.nodeType === Node.TEXT_NODE) {
-      parent = parent.parentNode;
+    if (!pIndex) {
+      console.warn("[annotation] could not locate paragraph for save", { node });
+      info("保存失败：找不到段落");
+      return;
     }
 
-    const pIndex = parent.getAttribute("data-i");
-
-    // Calculate offset from start of paragraph text content
+    // Offset from the start of the paragraph (not from the firstChild, which
+    // may itself be a SPAN if there are existing annotations).
     const preRange = document.createRange();
-    preRange.setStart(parent.firstChild, 0);
+    preRange.setStart(pEl, 0);
     preRange.setEnd(range.startContainer, range.startOffset);
     const startOffset = preRange.toString().length;
 
-    const highlight = {
-      pIndex,
-      text,
-      startOffset,
-      length: text.length,
-    };
+    console.log({ pIndex, startOffset, length: text.length });
 
-    console.log({ highlight });
-
-    // Persist to database via Tauri
     try {
-      await saveAnnotation({
+      // Use replaceAnnotation instead of saveAnnotation so that an
+      // existing row at the same (p_index, start_offset, length) is
+      // atomically replaced. This way the toolbar never produces
+      // duplicate rows, even if the user picks the exact same span twice
+      // (which can happen when the selection parent is a freshly-split
+      // text node, not the span itself).
+      const id = await replaceAnnotation({
         cid: Number(page.params.cid),
         book_id: Number(page.params.bookId),
         chapter_id: Number(page.params.chapterId),
@@ -191,7 +249,12 @@
         ann_type: type,
         color: color,
       });
-      console.log("Annotation saved to DB");
+      // Stamp the new DB id back onto the span so the next time the user
+      // changes / removes this annotation we know which row to delete.
+      if (targetSpan) {
+        targetSpan.setAttribute("data-ann-id", String(id));
+      }
+      console.log("Annotation saved to DB, id:", id);
       info("标记已保存");
     } catch (err) {
       console.error("Failed to save annotation:", err);

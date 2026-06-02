@@ -101,9 +101,23 @@ export async function saveAnnotation(annotation) {
   return tauriInvoke("save_annotation", { annotation });
 }
 
+/// Atomically replace any existing annotation at the same
+/// (p_index, start_offset, length) with the new one. Preferred over
+/// saveAnnotation in the toolbar flow — guarantees that "tapping the
+/// toolbar a second time" can't leave two rows for the same span.
+export async function replaceAnnotation(annotation) {
+  if (!isTauri()) return -1;
+  return tauriInvoke("replace_annotation", { annotation });
+}
+
 export async function deleteAnnotation(id) {
   if (!isTauri()) return;
   return tauriInvoke("delete_annotation", { id });
+}
+
+export async function clearAnnotations() {
+  if (!isTauri()) return 0;
+  return tauriInvoke("clear_annotations", {});
 }
 
 // ── Reading Progress ───────────────────────────────────────────────

@@ -174,20 +174,26 @@
         <div
           class="i-line-md-loading-twotone-loop text-5 mx-auto text-green animate-spin"
         ></div>
-        <h1 class="text-xl font-bold">Stone Bible</h1>
-        <p class="text-sm text-gray-500">Preparing...</p>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+          Stone Bible
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Preparing...</p>
       {:else if phase === "ready"}
         <div class="i-carbon-download text-5 mx-auto text-green"></div>
-        <h1 class="text-xl font-bold">First-time Setup</h1>
-        <p class="text-sm text-gray-500">
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+          First-time Setup
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
           Downloading all books to your device. This may take a while...
         </p>
       {:else if phase === "importing"}
         <div
           class="i-line-md-loading-twotone-loop text-4 mx-auto text-green animate-spin"
         ></div>
-        <h1 class="text-lg font-bold">Downloading Data</h1>
-        <p class="text-xs text-gray-500">
+        <h1 class="text-lg font-bold text-gray-900 dark:text-white">
+          Downloading Data
+        </h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
           Batch {currentBatch}/{totalBatches}
           &middot; DL {Engine.getDownloaded()}/{Engine.getTotal()}
           &middot; DB {Engine.getWritten()}
@@ -203,14 +209,15 @@
                 : 0}%"
             ></div>
           </div>
-          <span class="text-xs text-gray-400 w-14 text-right flex-shrink-0"
+          <span
+            class="text-xs text-gray-400 dark:text-gray-500 w-14 text-right flex-shrink-0"
             >{Engine.getWritten()}/{Engine.getTotal()}</span
           >
         </div>
       {:else if phase === "done"}
         <div class="i-carbon-checkmark-filled text-5 mx-auto text-green"></div>
-        <h1 class="text-xl font-bold">Ready!</h1>
-        <p class="text-sm text-gray-500">
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">Ready!</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
           {importedCount} books imported
           {failedCount > 0 ? `, ${failedCount} failed` : ""}
         </p>
@@ -231,12 +238,13 @@
         >
           {#each logs as log (log.time + log.text)}
             <div class="flex gap-2 items-start">
-              <span class="text-gray-400 w-16 flex-shrink-0 select-none"
+              <span
+                class="text-gray-400 dark:text-gray-500 w-16 flex-shrink-0 select-none"
                 >{log.time}</span
               >
               <span
                 class:opacity-70={log.type === "info"}
-                class="whitespace-pre-wrap break-all"
+                class="whitespace-pre-wrap break-all text-gray-700 dark:text-gray-200"
               >
                 {log.text}
               </span>

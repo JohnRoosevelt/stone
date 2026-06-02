@@ -42,8 +42,15 @@ export async function checkForUpdate(silent = false) {
   updater.checking = true;
   updater.error = "";
 
+  // Tauri Android WebView's fetch can hang indefinitely on flaky networks
+  // (no built-in timeout, and once a request stalls the "finally" never runs,
+  // which leaves `updater.checking` stuck at true → button permanently
+  // shows the spinner). 10s is generous for a small JSON manifest.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
   try {
-    const res = await fetch(manifestUrl());
+    const res = await fetch(manifestUrl(), { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const manifest = await res.json();
 
@@ -65,7 +72,8 @@ export async function checkForUpdate(silent = false) {
 
     if (
       manifest.version &&
-      compareVersions(manifest.version, currentVersion) > 0
+      compareVersions(manifest.version, currentVersion) > 0 &&
+      manifest.version !== getDismissedVersion()
     ) {
       updater.updateInfo = {
         version: manifest.version,
@@ -79,7 +87,11 @@ export async function checkForUpdate(silent = false) {
       });
     }
   } catch (e) {
-    console.error("[updater] check failed:", e);
+    if (e?.name === "AbortError") {
+      console.warn("[updater] check timeout after 10s");
+    } else {
+      console.error("[updater] check failed:", e);
+    }
     if (!silent) {
       const { toast } = await import("@zerodevx/svelte-toast");
       toast.push("检查更新失败，请检查网络连接", {
@@ -87,6 +99,7 @@ export async function checkForUpdate(silent = false) {
       });
     }
   } finally {
+    clearTimeout(timeoutId);
     updater.checking = false;
   }
 }
@@ -109,6 +122,23 @@ export async function installUpdate() {
   }
 }
 
+// Persist dismissed version across sessions so a user who tapped "稍后再说"
+// doesn't get the same version re-prompted on next launch / 6h interval tick.
+const DISMISS_KEY = "stone:updater:dismissedVersion";
+
+function getDismissedVersion() {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem(DISMISS_KEY);
+}
+
+function setDismissedVersion(version) {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(DISMISS_KEY, version);
+}
+
 export function dismiss() {
+  if (updater.updateInfo) {
+    setDismissedVersion(updater.updateInfo.version);
+  }
   updater.updateInfo = null;
 }

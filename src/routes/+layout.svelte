@@ -69,21 +69,29 @@
     wakeLock();
 
     // ── Network Information ──
-    connection =
-      navigator.connection ||
-      navigator.mozConnection ||
-      navigator.webkitConnection ||
-      null;
-
-    if (connection) {
-      updateNetworkInfo(connection);
-      // Listen for network changes
-      connection.addEventListener("change", () => {
-        updateNetworkInfo(connection);
-      });
+    // Tauri (Android WebView) has no `navigator.connection` — only `navigator.onLine`,
+    // which Svelte binds automatically via `<svelte:window bind:online>` below.
+    // Tag Tauri mode so DebugInfo / Footer can render "在线/离线" without trying
+    // to show wifi/cellular details that aren't available.
+    if (DATAS.isTauri) {
+      DATAS.networkType = "online";
+      DATAS.connectionType = "online";
     } else {
-      DATAS.networkType = "unknown";
-      DATAS.connectionType = "unknown";
+      connection =
+        navigator.connection ||
+        navigator.mozConnection ||
+        navigator.webkitConnection ||
+        null;
+
+      if (connection) {
+        updateNetworkInfo(connection);
+        connection.addEventListener("change", () => {
+          updateNetworkInfo(connection);
+        });
+      } else {
+        DATAS.networkType = "unknown";
+        DATAS.connectionType = "unknown";
+      }
     }
   });
 

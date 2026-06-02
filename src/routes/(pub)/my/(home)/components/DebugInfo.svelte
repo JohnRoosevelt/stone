@@ -66,15 +66,15 @@
       <div class="flex items-center gap-1">
         <span text-gray-400>network: </span>
         {#if DATAS.online}
-          {#if DATAS.connectionType === "wifi"}
+          {#if !DATAS.isTauri && DATAS.connectionType === "wifi"}
             <span i-carbon-wifi class="text-green"></span>
             <span class="text-green">WiFi</span>
-          {:else if DATAS.connectionType === "cellular"}
+          {:else if !DATAS.isTauri && DATAS.connectionType === "cellular"}
             <span i-carbon-radio></span>
             <span>{DATAS.networkType}</span>
           {:else}
             <span i-carbon-network-3 class="text-green"></span>
-            <span>{DATAS.networkType || "在线"}</span>
+            <span>在线</span>
           {/if}
         {:else}
           <span i-carbon-wifi-off class="text-gray-400"></span>

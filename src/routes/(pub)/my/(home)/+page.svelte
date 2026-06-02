@@ -3,6 +3,7 @@
   import { DATAS } from "$lib/data.svelte";
   import { isDesktop } from "$lib/tauri";
   import CheckUpdate from "./components/CheckUpdate.svelte";
+  import ClearAnnotations from "./components/ClearAnnotations.svelte";
   import DebugInfo from "./components/DebugInfo.svelte";
   import DevtoolsCard from "./components/DevtoolsCard.svelte";
   import InitCheck from "./components/InitCheck.svelte";
@@ -93,4 +94,8 @@
 
   <Roadmap />
   <DebugInfo {appVersion} />
+
+  {#if DATAS.isTauri}
+    <ClearAnnotations />
+  {/if}
 </article>

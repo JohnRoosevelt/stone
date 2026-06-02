@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from "svelte";
+  import { untrack } from "svelte";
   import { DATAS } from "$lib/data.svelte.js";
   import {
     updater,
@@ -8,14 +8,23 @@
     dismiss,
   } from "$lib/updater.svelte.js";
 
-  onMount(async () => {
+  // NOTE: Svelte mounts children before parents, so on first run `DATAS.isTauri`
+  // is still `false` (the layout sets it in its own onMount, which fires after
+  // ours). Use `$effect` so we react to the false → true transition and kick
+  // off the startup check + 6h interval only on Tauri.
+  // Both calls use `silent=true` so the auto-check never toasts; only the
+  // explicit "检查更新" button on the settings page surfaces a toast.
+  //
+  // `checkForUpdate` synchronously reads/writes `updater.checking`. If we
+  // let `$effect` track that, the write would re-trigger us in an infinite
+  // loop (check finishes → checking:false → effect re-runs → check starts →
+  // checking:true → effect re-runs, etc.). `untrack` runs the call without
+  // subscribing to any reactive deps it touches synchronously.
+  $effect(() => {
     if (!DATAS.isTauri) return;
-
-    // Check for updates on startup
-    await checkForUpdate();
-
-    // Also periodically check every 6 hours
-    setInterval(() => checkForUpdate(true), 6 * 60 * 60 * 1000);
+    untrack(() => checkForUpdate(true));
+    const id = setInterval(() => checkForUpdate(true), 6 * 60 * 60 * 1000);
+    return () => clearInterval(id);
   });
 </script>
 

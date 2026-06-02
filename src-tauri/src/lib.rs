@@ -206,13 +206,28 @@ fn save_annotation(
     annotation: db::Annotation,
 ) -> Result<i64, String> {
     let conn = state.write_conn.lock().map_err(|e| e.to_string())?;
-    db::save_annotation(&conn, &annotation).map_err(|e| e.to_string())
+    db::save_annotation(&conn, &annotation)
+}
+
+#[tauri::command]
+fn replace_annotation(
+    state: tauri::State<DbState>,
+    annotation: db::Annotation,
+) -> Result<i64, String> {
+    let conn = state.write_conn.lock().map_err(|e| e.to_string())?;
+    db::replace_annotation(&conn, &annotation)
 }
 
 #[tauri::command]
 fn delete_annotation(state: tauri::State<DbState>, id: i64) -> Result<(), String> {
     let conn = state.write_conn.lock().map_err(|e| e.to_string())?;
     db::delete_annotation(&conn, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn clear_annotations(state: tauri::State<DbState>) -> Result<usize, String> {
+    let conn = state.write_conn.lock().map_err(|e| e.to_string())?;
+    db::clear_annotations(&conn)
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -323,7 +338,9 @@ pub fn run() {
             // Annotations
             get_annotations,
             save_annotation,
+            replace_annotation,
             delete_annotation,
+            clear_annotations,
             // Reading Progress
             save_reading_progress,
             get_reading_progress,

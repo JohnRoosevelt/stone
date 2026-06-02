@@ -6,6 +6,28 @@
   import { searchState } from "$lib/bible/searchStore.svelte.js";
   import { getAnnotations } from "$lib/tauri";
 
+  /**
+   * Locate the text node (and offset within it) that contains the
+   * `targetOffset`-th character of `root`'s concatenated text content.
+   * Returns `{ node, offset }` or null if out of range.
+   *
+   * This is needed because each `surroundContents` call splits the paragraph
+   * into multiple text nodes, so the start of an annotation is no longer
+   * necessarily in `pEl.firstChild` once earlier annotations have been
+   * applied.
+   */
+  function locateTextOffset(root, targetOffset) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let remaining = targetOffset;
+    let node;
+    while ((node = walker.nextNode())) {
+      const len = node.textContent.length;
+      if (remaining <= len) return { node, offset: remaining };
+      remaining -= len;
+    }
+    return null;
+  }
+
   /** Load and apply saved annotations for the current chapter */
   async function loadAnnotations() {
     if (!DATAS.isTauri) return;
@@ -29,22 +51,53 @@
         const pEl = document.querySelector(`[data-i="${pIdx}"]`);
         if (!pEl) continue;
 
-        // Sort annotations by start_offset descending so we don't mess up offsets
+        // Sort annotations by start_offset descending so we apply back-to-front
+        // — later (higher-offset) annotations get wrapped first, so they don't
+        // shift the offsets of the ones still to come.
         anns.sort((a, b) => b.start_offset - a.start_offset);
 
         for (const ann of anns) {
-          // Find the text node range for this annotation
-          const textNode = pEl.firstChild;
-          if (!textNode || textNode.nodeType !== Node.TEXT_NODE) continue;
+          // Skip degenerate records up front. A length=0 annotation produces
+          // a collapsed range and `surroundContents` throws InvalidStateError
+          // on those (regardless of how the record ended up in the DB).
+          if (!ann.length || ann.length <= 0) {
+            console.warn(
+              "[loadAnnotations] zero/negative length, skipping",
+              ann,
+            );
+            continue;
+          }
+
+          const startLoc = locateTextOffset(pEl, ann.start_offset);
+          const endLoc = locateTextOffset(pEl, ann.start_offset + ann.length);
+          if (!startLoc || !endLoc) {
+            console.warn(
+              "[loadAnnotations] offset out of range, skipping",
+              ann,
+            );
+            continue;
+          }
 
           const range = document.createRange();
-          range.setStart(textNode, ann.start_offset);
-          range.setEnd(textNode, ann.start_offset + ann.length);
+          try {
+            range.setStart(startLoc.node, startLoc.offset);
+            range.setEnd(endLoc.node, endLoc.offset);
+          } catch (e) {
+            console.warn(
+              "[loadAnnotations] range setup failed, skipping",
+              ann,
+              e,
+            );
+            continue;
+          }
 
-          // Build CSS based on annotation type
+          // Build CSS based on annotation type. NOTE: `ann_type` is whatever
+          // string was passed in at save time — LongpressCtrl's toolbar
+          // buttons all use underscores (`underline_wavy`, etc.), so the
+          // case labels here must match exactly.
           let cssText = "";
           switch (ann.ann_type) {
-            case "underline-wavy":
+            case "underline_wavy":
               cssText = `text-decoration-line: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; text-decoration-style: wavy; text-decoration-color: ${ann.color};`;
               break;
             case "underline":
@@ -56,6 +109,11 @@
             case "text":
               cssText = `color: ${ann.color};`;
               break;
+            default:
+              console.warn(
+                "[loadAnnotations] unknown ann_type, no CSS applied",
+                ann,
+              );
           }
 
           const span = document.createElement("span");
@@ -63,7 +121,6 @@
           span.setAttribute("data-type", ann.ann_type);
           span.setAttribute("data-ann-id", ann.id);
 
-          // Add click handler for re-selecting
           span.addEventListener("click", (e) => {
             e.stopPropagation();
             const selection = window.getSelection();
@@ -71,16 +128,34 @@
             selRange.selectNodeContents(e.target);
             selection.removeAllRanges();
             selection.addRange(selRange);
-
-            // Trigger LongpressCtrl by setting type
-            const dt = e.target.getAttribute("data-type");
-            document.querySelector("[data-type='" + dt + "']");
+            // LongpressCtrl's $effect watches selectionchange and picks up
+            // the data-type from the new selection automatically.
           });
 
           try {
             range.surroundContents(span);
           } catch (e) {
-            console.warn("Could not surround annotation contents:", e);
+            // surroundContents throws InvalidStateError when:
+            //   (1) the range is collapsed (filtered out by the length check
+            //       above, but still possible if a previous surround split
+            //       a text node under us)
+            //   (2) startContainer/endContainer is detached
+            //   (3) the range crosses element boundaries (e.g. overlaps
+            //       a span an earlier annotation just inserted)
+            // Try a more permissive extract-and-reinsert path first; only
+            // skip if that also fails.
+            try {
+              const fragment = range.extractContents();
+              span.appendChild(fragment);
+              range.insertNode(span);
+            } catch (e2) {
+              console.warn(
+                "[loadAnnotations] surround+extract both failed, skipping",
+                ann,
+                e?.message,
+                e2?.message,
+              );
+            }
           }
         }
       }
@@ -206,7 +281,7 @@
       data-lang="zh"
       data-pp={p}
       data-p={(page.params.cid !== CID.BOOKS ? p : p - 1) + "˼"}
-      data-i={i}
+      data-i={id}
       class:flex-cc={t == 2 || (i === 0 && page.params.cid !== CID.BIBLE)}
       class:font-700={t == 2 || (i === 0 && page.params.cid !== CID.BIBLE)}
       class:font-500={t == 4}

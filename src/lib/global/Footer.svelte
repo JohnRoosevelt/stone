@@ -17,15 +17,15 @@
   <div class="flex-cc gap-4">
     <div class="flex-cc gap-1">
       {#if DATAS.online}
-        {#if DATAS.connectionType === "wifi"}
+        {#if !DATAS.isTauri && DATAS.connectionType === "wifi"}
           <span class="i-carbon-wifi text-green"></span>
           <span>WiFi</span>
-        {:else if DATAS.connectionType === "cellular"}
+        {:else if !DATAS.isTauri && DATAS.connectionType === "cellular"}
           <span class="i-carbon-radio"></span>
           <span>{DATAS.networkType}</span>
         {:else}
           <span class="i-carbon-network-3 text-green"></span>
-          <span>{DATAS.networkType}</span>
+          <span>在线</span>
         {/if}
       {:else}
         <span class="i-carbon-wifi-off text-gray-400"></span>
