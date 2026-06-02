@@ -1,13 +1,25 @@
 /**
  * Shared updater state for checking and installing app updates.
  * Both Updater.svelte and the settings page use this module.
+ *
+ * Release artifact URLs come from GitHub Releases (see
+ * docs/release-pipeline-plan.md). VITE_GITHUB_REPO is injected by CI
+ * at build time from $GITHUB_REPOSITORY. The default below is for
+ * local dev only.
  */
 
+const GITHUB_REPO = import.meta.env.VITE_GITHUB_REPO || "stone-releases/placeholder";
+// R2 kept as a last-resort fallback if GitHub URL ever fails to resolve.
+// (Removed in step 6 of the plan.)
 const R2_PUBLIC = "https://r2.lelexue.cn";
+
 function manifestUrl() {
-  return `${R2_PUBLIC}/apk/update.json?t=${Date.now()}`;
+  return `https://github.com/${GITHUB_REPO}/releases/latest/download/update.json?t=${Date.now()}`;
 }
-export const APK_URL = `${R2_PUBLIC}/apk/stone-latest.apk`;
+// "latest" alias tracks the highest semver release, not necessarily the one
+// the user is on. The Updater.svelte install path opens the URL via the
+// system browser, which will 404 if the tag has been deleted.
+export const APK_URL = `https://github.com/${GITHUB_REPO}/releases/latest/download/stone.apk`;
 
 /**
  * Wrap state in a single object so we can mutate properties,
@@ -81,10 +93,8 @@ export async function checkForUpdate(silent = false) {
         date: manifest.pub_date,
       };
     } else if (!silent) {
-      const { toast } = await import("@zerodevx/svelte-toast");
-      toast.push("已是最新版本", {
-        theme: { classes: "toast-success" },
-      });
+      const { success } = await import("$lib/global/Toast");
+      success("已是最新版本");
     }
   } catch (e) {
     if (e?.name === "AbortError") {

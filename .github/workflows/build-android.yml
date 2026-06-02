@@ -2,18 +2,22 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       debug:
         description: "Skip build, only validate secrets"
         type: boolean
         default: false
+      version:
+        description: "Override version (workflow_dispatch only; tag builds read from tag name)"
+        type: string
+        default: ""
 
 env:
-  # Global environment variables for R2 storage
-  R2_ENDPOINT: https://76f91d4a19eb310b8a1eee846a8d807b.r2.cloudflarestorage.com
-  R2_BUCKET: holy
+  # R2 kept only as a legacy fallback reference. We do NOT upload here
+  # anymore — release artifacts go to GitHub Releases (see
+  # docs/release-pipeline-plan.md). These vars are not used by the build.
   R2_PUBLIC: https://r2.lelexue.cn
 
 jobs:
@@ -26,40 +30,30 @@ jobs:
         uses: actions/checkout@v4
 
       # ── Debug: validate all secrets before spending time on build ──
-      - name: Validate all secrets
+      - name: Validate keystore secret
         env:
           TEST_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
           TEST_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          TEST_R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
-          TEST_R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
         run: |
           ALL_OK=true
-          secrets_status=""
           for entry in \
             "ANDROID_KEYSTORE_B64|TEST_KEYSTORE_B64" \
-            "KEYSTORE_PASSWORD|TEST_KEYSTORE_PASSWORD" \
-            "R2_ACCESS_KEY|TEST_R2_ACCESS_KEY" \
-            "R2_SECRET_KEY|TEST_R2_SECRET_KEY"; do
+            "KEYSTORE_PASSWORD|TEST_KEYSTORE_PASSWORD"; do
             NAME="${entry%%|*}"
             VAR="${entry##*|}"
             VAL="${!VAR}"
             if [ -z "$VAL" ]; then
               echo "::error::$NAME → EMPTY (not set in GitHub Secrets)"
               ALL_OK=false
-              secrets_status="${secrets_status}❌ ${NAME}  "
             else
               echo "✅ $NAME → ${#VAL} chars"
-              secrets_status="${secrets_status}✅ ${NAME}  "
             fi
           done
-          echo ""
-          echo "Secrets summary: $secrets_status"
-          echo ""
           if [ "$ALL_OK" = false ]; then
             echo "::error::Some secrets are missing. Fix them before running the build."
             exit 1
           fi
-          echo "All 4 secrets are properly configured!"
+          echo "Keystore secrets are properly configured!"
 
       # ── Debug mode: stop here if debug=true ──
       - name: Stop early in debug mode
@@ -107,20 +101,30 @@ jobs:
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
 
-      - name: Patch version in tauri.conf.json
+      - name: Set version
+        id: version
         run: |
-          VERSION="0.1.${{ github.run_number }}"
-          echo "Patching version to ${VERSION}"
-          # Use jq to update the version field in tauri.conf.json
-          jq --arg v "${VERSION}" '.version = $v' src-tauri/tauri.conf.json > src-tauri/tauri.conf.json.tmp
-          mv src-tauri/tauri.conf.json.tmp src-tauri/tauri.conf.json
+          # Tag push: read version from tag name (strip leading 'v').
+          # workflow_dispatch: use input.version override, or fall back
+          # to 0.0.0-<run_number> for ad-hoc builds.
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${${{ github.ref_name }}#v}"
+          elif [[ -n "${{ inputs.version }}" ]]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="0.0.0-${{ github.run_number }}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Patching tauri.conf.json to version ${VERSION}"
+          jq --arg v "${VERSION}" '.version = $v' src-tauri/tauri.conf.json > tmp
+          mv tmp src-tauri/tauri.conf.json
           echo "Patched version: $(jq -r '.version' src-tauri/tauri.conf.json)"
 
       - name: Build Android APK
         env:
-          # Injected for frontend frameworks (Svelte/Nuxt)
-          PUBLIC_R2: ${{ env.R2_PUBLIC }}
-          VITE_PUBLIC_R2: ${{ env.R2_PUBLIC }}
+          # Injected for frontend frameworks (Svelte/Nuxt) so the
+          # updater / download page can resolve GitHub Release URLs.
+          VITE_GITHUB_REPO: ${{ github.repository }}
           # Absolute path ensures Gradle finds the keystore regardless of working directory
           KEYSTORE_PATH: ${{ github.workspace }}/src-tauri/gen/android/keystore.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -173,8 +177,11 @@ jobs:
           echo "APK signed successfully: $SIGNED_APK"
 
       - name: Locate and prepare APK
+        id: prepare
         run: |
           mkdir -p dist
+          VERSION="${{ steps.version.outputs.version }}"
+
           # Prefer signed APK (without "unsigned" in name)
           APK=$(find src-tauri/gen/android -name "*.apk" -type f ! -name "*unsigned*" ! -name "*unaligned*" | head -1)
 
@@ -190,141 +197,38 @@ jobs:
           fi
 
           echo "Found APK at: $APK"
+          # Versioned name for the GitHub Release asset
+          cp "$APK" "dist/stone-${VERSION}.apk"
+          # Stable name for fallback artifact uploads
           cp "$APK" dist/stone.apk
+          echo "apk_path=dist/stone-${VERSION}.apk" >> "$GITHUB_OUTPUT"
 
       - name: Generate updater manifest
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          # Read the version from the (already patched) tauri.conf.json
-          APK_VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
-          NOTES="Build #${{ github.run_number }} from ${{ github.sha }}"
-          bash scripts/update/generate-manifest.sh "${APK_VERSION}" "${NOTES}"
+          VERSION="${{ steps.version.outputs.version }}"
+          NOTES="Build $VERSION from ${{ github.sha }}"
+          bash scripts/update/generate-manifest.sh "${VERSION}" "${NOTES}"
           cp update.json dist/update.json
 
-      - name: Upload to Cloudflare R2
-        if: success()
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_KEY }}
-        run: |
-          # Validate secrets are non-empty
-          if [ -z "$AWS_ACCESS_KEY_ID" ]; then
-            echo "::error::Secret R2_ACCESS_KEY is empty or not set."
-            echo "::error::Please go to GitHub repo → Settings → Secrets and variables → Actions → Secrets"
-            echo "::error::and add: R2_ACCESS_KEY = 85ac4a675838688f09e61e8e52ca24bc"
-            exit 1
-          fi
-          if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
-            echo "::error::Secret R2_SECRET_KEY is empty or not set."
-            echo "::error::Please go to GitHub repo → Settings → Secrets and variables → Actions → Secrets"
-            echo "::error::and add: R2_SECRET_KEY = dd28cc17212f27ebd63fe8bd597671369877f9bf31d0aad4c636b26a7cfa0b3f"
-            exit 1
-          fi
-          echo "R2 secrets are properly configured."
-
-          # Install AWS CLI if not present
-          if ! command -v aws &> /dev/null; then
-            echo "Installing AWS CLI..."
-            curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
-            unzip -q /tmp/awscliv2.zip -d /tmp
-            sudo /tmp/aws/install --update
-          fi
-
-          # Configure credentials via env vars (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY)
-          # The AWS CLI reads these automatically, no need for aws configure set
-
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
-
-          # Upload unique versioned APK
-          aws s3 cp dist/stone.apk "s3://${{ env.R2_BUCKET }}/apk/stone-${SHORT_SHA}-${TIMESTAMP}.apk" \
-            --endpoint-url "${{ env.R2_ENDPOINT }}" \
-            --region auto
-
-          # Update the latest pointer
-          aws s3 cp dist/stone.apk "s3://${{ env.R2_BUCKET }}/apk/stone-latest.apk" \
-            --endpoint-url "${{ env.R2_ENDPOINT }}" \
-            --region auto
-
-          # Upload updater manifest
-          aws s3 cp dist/update.json "s3://${{ env.R2_BUCKET }}/apk/update.json" \
-            --endpoint-url "${{ env.R2_ENDPOINT }}" \
-            --region auto
-
-          echo "Public Link: ${{ env.R2_PUBLIC }}/apk/stone-latest.apk"
-          echo "Manifest:    ${{ env.R2_PUBLIC }}/apk/update.json"
-
-      - name: Clean up old APKs from R2
-        if: success()
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_KEY }}
-        run: |
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
-          CURRENT="apk/stone-${SHORT_SHA}-${TIMESTAMP}.apk"
-          LATEST="apk/stone-latest.apk"
-          MANIFEST="apk/update.json"
-
-          echo "Current build: $CURRENT"
-
-          echo "Listing existing APKs in R2 bucket (${{ env.R2_BUCKET }}/apk/)..."
-          OBJECTS=$(aws s3api list-objects --bucket "${{ env.R2_BUCKET }}" \
-            --prefix "apk/" \
-            --endpoint-url "${{ env.R2_ENDPOINT }}" \
-            --region auto \
-            --query 'Contents[].Key' --output text 2>/dev/null || true)
-
-          if [ -z "$OBJECTS" ] || [ "$OBJECTS" = "None" ]; then
-            echo "No existing files to clean up."
-            exit 0
-          fi
-
-          # Convert tab-separated output to newline-separated list
-          ALL_KEYS=$(echo "$OBJECTS" | tr '\t' '\n')
-
-          # Filter versioned APKs, sort by timestamp fields (date=field3, time=field4)
-          # Filename: apk/stone-<sha>-YYYYmmdd-HHMMSS.apk
-          # Splitting by '-' gives: apk/stone | <sha> | YYYYmmdd | HHMMSS.apk
-          VERSIONED=$(echo "$ALL_KEYS" \
-            | grep -E '^apk/stone-[a-z0-9]+-[0-9]{8}-[0-9]{6}\.apk$' \
-            | sort -t- -k3,3 -k4,4)
-
-          # Keep the 2 most recent versioned APKs (last 2 after sorting by timestamp)
-          KEEP_VERSIONED=$(echo "$VERSIONED" | tail -2)
-          # Always include the current build's file (in case listing is eventually consistent)
-          KEEP=$(printf '%s\n%s\n%s\n%s' "$KEEP_VERSIONED" "$CURRENT" "$LATEST" "$MANIFEST")
-
-          echo ""
-          echo "Files to keep:"
-          echo "$KEEP" | sed 's/^/  /'
-          echo ""
-
-          DELETED_COUNT=0
-          KEPT_COUNT=0
-          for key in $ALL_KEYS; do
-            # Skip directory markers (e.g., "apk/" itself)
-            if [ "$key" = "apk/" ]; then
-              continue
-            fi
-
-            if echo "$KEEP" | grep -qxF "$key"; then
-              echo "  Keeping:  $key"
-              KEPT_COUNT=$((KEPT_COUNT + 1))
-            else
-              echo "  Deleting: $key"
-              aws s3 rm "s3://${{ env.R2_BUCKET }}/$key" \
-                --endpoint-url "${{ env.R2_ENDPOINT }}" \
-                --region auto
-              DELETED_COUNT=$((DELETED_COUNT + 1))
-            fi
-          done
-
-          echo "Cleanup complete. Kept: $KEPT_COUNT, Deleted: $DELETED_COUNT"
+      - name: Upload APK + manifest to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            ${{ steps.prepare.outputs.apk_path }}
+            dist/update.json
 
       - name: Upload artifact fallback
-        # Always run if the file exists to help debugging if R2 upload fails
+        # Always run if the file exists to help debugging if Release upload fails
         if: always() && hashFiles('dist/stone.apk') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: stone-apk-${{ github.run_number }}
-          path: dist/stone.apk
+          name: stone-apk-${{ steps.version.outputs.version }}
+          path: |
+            dist/stone.apk
+            dist/update.json

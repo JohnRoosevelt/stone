@@ -4,9 +4,12 @@
   import { formatBuildTime } from "$lib/format.js";
   import { DATAS } from "$lib/data.svelte";
 
-  const R2_PUBLIC = "https://r2.lelexue.cn";
+  // Release artifacts now come from GitHub Releases (see
+  // docs/release-pipeline-plan.md). VITE_GITHUB_REPO is injected by CI.
+  const GITHUB_REPO = import.meta.env.VITE_GITHUB_REPO || "stone-releases/placeholder";
+  const R2_PUBLIC = "https://r2.lelexue.cn"; // legacy fallback
   const latestUrl = () =>
-    `${R2_PUBLIC}/apk/stone-latest.apk?date=${Date.now()}`;
+    `https://github.com/${GITHUB_REPO}/releases/latest/download/stone.apk?date=${Date.now()}`;
 
   // ─── Runtime state ──────────────────────────────────────────
   let isWeChat = $state(false);

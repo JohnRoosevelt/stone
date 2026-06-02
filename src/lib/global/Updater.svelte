@@ -39,7 +39,7 @@
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-6 space-y-4"
+      class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm mx-3 sm:mx-4 p-5 sm:p-6 space-y-4"
       onclick={(e) => e.stopPropagation()}
     >
       <div class="flex-cc gap-3">
