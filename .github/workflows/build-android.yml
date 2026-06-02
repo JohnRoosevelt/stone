@@ -108,7 +108,7 @@ jobs:
           # workflow_dispatch: use input.version override, or fall back
           # to 0.0.0-<run_number> for ad-hoc builds.
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            VERSION="${${{ github.ref_name }}#v}"
+            VERSION=$(echo "${{ github.ref_name }}" | sed 's/^v//')
           elif [[ -n "${{ inputs.version }}" ]]; then
             VERSION="${{ inputs.version }}"
           else
