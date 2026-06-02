@@ -59,7 +59,7 @@
     type = dataType;
 
     let cssText;
-    if (dataType === "underline-wavy") {
+    if (dataType === "underline_wavy") {
       cssText = `text-decoration-line: underline;
         text-underline-offset: 4px;
         text-decoration-thickness: 2px;
@@ -199,6 +199,7 @@
 </script>
 
 {#if isShowLongpressCtrl}
+  <!-- center -->
   {#if isShowColor}
     <section
       transition:slide
@@ -217,17 +218,18 @@
     </section>
   {/if}
 
+  <!-- right -->
   <section
     transition:slide
     class="absolute z-9 bottom-14 right-2 text-7 grid grid-cols-1 bg-gray-200 divide-y-2 divide-gray-100 rounded-4 overflow-hidden dark:bg-gray-800"
     style="--color: {color}"
   >
     <button
-      data-type="underline-wavy"
+      data-type="underline_wavy"
       aria-label="select-edit"
       class={[
         "underline underline-offset-4 decoration-2 decoration-wavy w-10 flex-cc",
-        type === "underline-wavy" ? "h-24" : "h-14",
+        type === "underline_wavy" ? "h-24" : "h-12",
       ]}
       style="text-decoration-color: var(--color);"
       onclick={selectionEdit}
@@ -240,7 +242,7 @@
       aria-label="select-edit"
       class={[
         "underline underline-offset-4 decoration-2 w-10 flex-cc",
-        type === "underline" ? "h-24" : "h-14",
+        type === "underline" ? "h-24" : "h-12",
       ]}
       style="text-decoration-color: var(--color);"
       onclick={selectionEdit}
@@ -251,7 +253,7 @@
     <button
       data-type="bg"
       aria-label="select-edit"
-      class={["bg w-10 flex-cc", type === "bg" ? "h-24" : "h-14"]}
+      class={["bg w-10 flex-cc", type === "bg" ? "h-24" : "h-12"]}
       style="background-color: var(--color);"
       onclick={selectionEdit}
     >
@@ -261,7 +263,7 @@
     <button
       data-type="text"
       aria-label="select-edit"
-      class={["text w-10 flex-cc", type === "text" ? "h-24" : "h-14"]}
+      class={["text w-10 flex-cc", type === "text" ? "h-24" : "h-12"]}
       style="color: var(--color);"
       onclick={selectionEdit}
     >
@@ -269,6 +271,7 @@
     </button>
   </section>
 
+  <!-- bottom -->
   <section
     class="
     absolute

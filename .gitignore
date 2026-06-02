@@ -32,3 +32,4 @@ bun.lock
 *.jks
 *.p12
 *.key
+docs/superpowers/plans/2026-05-27-cloudflare-data-services-skill.md
