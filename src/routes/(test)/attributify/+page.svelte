@@ -8,12 +8,17 @@
 
 <section flex-cc flex-col gap-4 p-4>
   <!-- Class merge test -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     w-40 h-10 rounded-2
     bg-green text-white
     flex-cc
     class="text-sm font-500"
+    role="button"
+    tabindex="0"
     onclick={() => count++}
+    onkeydown={(e) => (e.key === "Enter" || e.key === " ") && count++}
   >
     点击计数: {count}
   </div>

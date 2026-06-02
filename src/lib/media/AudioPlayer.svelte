@@ -92,6 +92,7 @@
 		class="player select-none flex-bc gap-4 px-4 py-2"
 		class:paused
 	>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			absolute
 			top-0
@@ -100,6 +101,7 @@
 			h-1
 			overflow-hidden
 			style="background: var(--bg-2, gray)"
+			role="presentation"
 			onpointerdown={(e) => {
 				const div = e.currentTarget;
 

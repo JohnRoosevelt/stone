@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "脚前的灯",
   "version": "0.0.1",
-  "identifier": "com.stone.app",
+  "identifier": "com.stone.lamp",
   "build": {
     "frontendDist": "../build",
     "devUrl": "http://localhost:5175",

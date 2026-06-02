@@ -92,7 +92,7 @@
     : 'space-y-4 overflow-y-auto'}"
 >
   <div class="flex items-center gap-3 mb-2">
-    <a href="/my" class="text-gray-400 hover:text-green"
+    <a href="/my" class="text-gray-400 hover:text-green" aria-label="Back to my page"
       ><span class="i-carbon-arrow-left text-xl"></span></a
     >
     <h1 class="text-lg sm:text-xl font-bold">📦 书籍导入</h1>
