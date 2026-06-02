@@ -1,4 +1,4 @@
-mod db;
+pub mod db;
 mod seed;
 
 use db::{init_database, DbState};
