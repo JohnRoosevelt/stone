@@ -192,8 +192,10 @@
         color: color,
       });
       console.log("Annotation saved to DB");
+      info("标记已保存");
     } catch (err) {
       console.error("Failed to save annotation:", err);
+      info("保存失败");
     }
   }
 </script>
