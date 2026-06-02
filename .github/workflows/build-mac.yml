@@ -19,6 +19,12 @@ on:
         type: string
         default: ""
 
+env:
+  # R2 is still used for runtime content delivery (music, parquet, etc.)
+  # even though release artifacts now ship via GitHub Releases. SvelteKit
+  # reads PUBLIC_* at build time via $env/static/public.
+  R2_PUBLIC: https://r2.lelexue.cn
+
 jobs:
   build:
     runs-on: macos-latest
@@ -74,6 +80,9 @@ jobs:
       - name: Build macOS (universal)
         env:
           VITE_GITHUB_REPO: ${{ github.repository }}
+          # SvelteKit $env/static/public reads PUBLIC_* at build time.
+          # Music / parquet / book data on R2 is still served from R2.
+          PUBLIC_R2: ${{ env.R2_PUBLIC }}
         # universal-apple-darwin ships both x86_64 and aarch64 in one
         # binary. The bundle produces .app + .dmg; we ship the .dmg.
         run: |

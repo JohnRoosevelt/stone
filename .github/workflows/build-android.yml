@@ -129,6 +129,9 @@ jobs:
           # Injected for frontend frameworks (Svelte/Nuxt) so the
           # updater / download page can resolve GitHub Release URLs.
           VITE_GITHUB_REPO: ${{ github.repository }}
+          # SvelteKit $env/static/public reads PUBLIC_* at build time.
+          # Music / parquet / book data on R2 is still served from R2.
+          PUBLIC_R2: ${{ env.R2_PUBLIC }}
           # Absolute path ensures Gradle finds the keystore regardless of working directory
           KEYSTORE_PATH: ${{ github.workspace }}/src-tauri/gen/android/keystore.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
