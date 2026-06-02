@@ -96,8 +96,8 @@ export async function installUpdate() {
   updater.error = "";
 
   try {
-    const { open } = await import("@tauri-apps/plugin-shell");
-    await open(APK_URL);
+    const { openUrl } = await import("@tauri-apps/plugin-opener");
+    await openUrl(APK_URL);
     updater.updateInfo = null;
   } catch (e) {
     console.error("[updater] install failed:", e);

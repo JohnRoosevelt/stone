@@ -248,13 +248,33 @@ fn get_all_reading_progress(
 }
 
 // ═══════════════════════════════════════════════════════════
+// Devtools
+// ═══════════════════════════════════════════════════════════
+
+#[tauri::command]
+fn is_desktop() -> bool {
+    !cfg!(mobile)
+}
+
+#[tauri::command]
+fn open_devtools(window: tauri::WebviewWindow) -> Result<(), String> {
+    // Compiled in only for debug builds or when the `devtools` feature is on.
+    // Android/iOS wry backends implement this as a no-op, so it's safe to call.
+    #[cfg(any(debug_assertions, feature = "devtools"))]
+    {
+        window.open_devtools();
+    }
+    Ok(())
+}
+
+// ═══════════════════════════════════════════════════════════
 // App entry point
 // ═══════════════════════════════════════════════════════════
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -308,6 +328,9 @@ pub fn run() {
             save_reading_progress,
             get_reading_progress,
             get_all_reading_progress,
+            // Devtools
+            is_desktop,
+            open_devtools,
         ])
         .run(tauri::generate_context!())
         .expect("error running tauri");

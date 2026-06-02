@@ -123,6 +123,24 @@ export async function getAllReadingProgress() {
   return tauriInvoke("get_all_reading_progress", {});
 }
 
+// ── Devtools ───────────────────────────────────────────────────
+
+export async function isDesktop() {
+  if (!isTauri()) return false;
+  return tauriInvoke("is_desktop", {});
+}
+
+export async function openDevtools() {
+  if (!isTauri()) return;
+  // Tauri 2 has no JS-side openDevtools(); we route through a Rust command.
+  // No-op on Android/iOS, opens web inspector on desktop.
+  try {
+    await tauriInvoke("open_devtools", {});
+  } catch (e) {
+    console.warn("[devtools] open failed:", e);
+  }
+}
+
 // ── Search ────────────────────────────────────────────────────
 
 export async function searchAPI(
