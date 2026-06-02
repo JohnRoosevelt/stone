@@ -63,8 +63,12 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Patching tauri.conf.json to version ${VERSION}"
-          jq --arg v "${VERSION}" '.version = $v' src-tauri/tauri.conf.json > tmp
-          mv tmp src-tauri/tauri.conf.json
+          # Use a uniquely-named tmp file — GH Actions runners have a real
+          # 'tmp' directory at the workspace root that would shadow a
+          # bare 'tmp' filename.
+          TMPFILE=$(mktemp "${RUNNER_TEMP}/tauri-conf.XXXXXX.json")
+          jq --arg v "${VERSION}" '.version = $v' src-tauri/tauri.conf.json > "$TMPFILE"
+          mv "$TMPFILE" src-tauri/tauri.conf.json
           echo "Patched version: $(jq -r '.version' src-tauri/tauri.conf.json)"
 
       - name: Build macOS (universal)
