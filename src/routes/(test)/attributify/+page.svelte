@@ -30,6 +30,7 @@
   </div>
 
   <!-- Variant test -->
+  <!-- svelte-ignore attribute_illegal_colon -->
   <div
     w-60 h-12 rounded-3
     bg-purple text-white flex-cc
@@ -40,6 +41,7 @@
   </div>
 
   <!-- Flex shortcuts test -->
+  <!-- svelte-ignore attribute_illegal_colon -->
   <div w-80 h-20 rounded-4 bg-gray-200 dark="bg-gray-800" flex-cc>
     <span text-gray-600 dark="text-gray-300">
       flex-cc / dark 变体测试
@@ -47,6 +49,7 @@
   </div>
 
   <!-- Responsive test -->
+  <!-- svelte-ignore attribute_illegal_colon -->
   <div
     w-full sm="w-80" h-16
     rounded-2 bg-orange text-white flex-cc
@@ -77,9 +80,13 @@
       </div>
     </div>
 
+    <!-- svelte-ignore attribute_illegal_colon -->
     <div divide-y="1 gray-300" rounded-lg>
+      <!-- svelte-ignore attribute_illegal_colon -->
       <div p-3 hover:bg-gray-100>第一行</div>
+      <!-- svelte-ignore attribute_illegal_colon -->
       <div p-3 hover:bg-gray-100>第二行</div>
+      <!-- svelte-ignore attribute_illegal_colon -->
       <div p-3 hover:bg-gray-100>第三行</div>
     </div>
   </article>

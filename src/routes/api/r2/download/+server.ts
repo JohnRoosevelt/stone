@@ -4,11 +4,13 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "$env/dynamic/private";
 
 /** GET /api/r2/download?Key=1/en/1/1.parquet.zst */
-export async function GET({ url }) {
+export async function GET({ url }: { url: URL }) {
   const Key = url.searchParams.get("Key");
   if (!Key) throw error(400, "Key required");
 
-  const [accountId, accessKeyId, secretAccessKey, Bucket] = env.R2.split(",");
+  if (!env.R2) throw error(500, "R2 env not configured");
+  const [accountId, accessKeyId, secretAccessKey, Bucket] =
+    env.R2.split(",");
 
   const client = new S3Client({
     region: "auto",

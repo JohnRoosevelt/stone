@@ -1,5 +1,4 @@
 <script>
-  import AppDownloadBanner from "$lib/global/AppDownloadBanner.svelte";
   import Footer from "$lib/global/Footer.svelte";
   import Header from "$lib/global/Header.svelte";
   import Nav from "$lib/global/Nav.svelte";
@@ -9,8 +8,6 @@
 </script>
 
 <Header />
-
-<AppDownloadBanner />
 
 <article
   data-layout="pub"

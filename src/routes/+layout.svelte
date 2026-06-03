@@ -135,6 +135,7 @@
   {@render children()}
 </main>
 
+<!-- svelte-ignore css_unused_selector -->
 <style uno-preflights uno-global uno-safelist="rounded-xl space-y-5">
   :global(body) {
     margin: 0;
