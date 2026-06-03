@@ -124,8 +124,12 @@
           totalSegments++;
         }
       }
+      const perRow = rows
+        .filter((r) => r.segments && r.segments.length > 0)
+        .map((r) => `p=${r.p_index}:${r.segments.length}`)
+        .join(", ");
       console.log(
-        `Loaded ${rows.length} annotation rows (${totalSegments} segments)`,
+        `[anno] load: rows=${rows.length} applied_segments=${totalSegments} per_row=[${perRow || "—"}]`,
       );
     } catch (err) {
       console.error("Failed to load annotations:", err);

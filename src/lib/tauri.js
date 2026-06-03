@@ -96,19 +96,30 @@ export async function resetInitialImport() {
 /// in-progress edits into that array before saving.
 export async function getParagraphAnnotations(cid, bookId, chapterId, lang = "zh") {
   if (!isTauri()) return [];
-  return tauriInvoke("get_paragraph_annotations", {
+  const t0 = performance.now();
+  const out = await tauriInvoke("get_paragraph_annotations", {
     cid,
     bookId,
     chapterId,
     lang,
   });
+  const totalSegs = (out || []).reduce((n, r) => n + r.segments.length, 0);
+  console.log(
+    `[anno] get: cid=${cid} book=${bookId} chapter=${chapterId} rows=${out?.length ?? 0} total_segments=${totalSegs} (${(performance.now() - t0).toFixed(1)}ms)`,
+  );
+  return out;
 }
 
 /// Upsert the segment list for one paragraph. The DB stores whatever
 /// `segments` array is passed; dedup and merge logic lives in the toolbar.
 export async function saveParagraphAnnotations(annotations) {
   if (!isTauri()) return -1;
-  return tauriInvoke("save_paragraph_annotations", { annotations });
+  const t0 = performance.now();
+  const id = await tauriInvoke("save_paragraph_annotations", { annotations });
+  console.log(
+    `[anno] save: cid=${annotations.cid} book=${annotations.book_id} chapter=${annotations.chapter_id} p=${annotations.p_index} segments=${annotations.segments.length} id=${id} (${(performance.now() - t0).toFixed(1)}ms)`,
+  );
+  return id;
 }
 
 /// Clear every segment for a single paragraph.
@@ -120,6 +131,9 @@ export async function clearParagraphAnnotations(
   pIndex,
 ) {
   if (!isTauri()) return;
+  console.log(
+    `[anno] clear_paragraph: cid=${cid} book=${bookId} chapter=${chapterId} p=${pIndex}`,
+  );
   return tauriInvoke("clear_paragraph_annotations", {
     cid,
     bookId,

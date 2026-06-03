@@ -25,6 +25,11 @@ pub fn save_paragraph_annotations(
 ) -> Result<i64, String> {
     let segments_json =
         serde_json::to_string(&pa.segments).map_err(|e| e.to_string())?;
+    log::info!(
+        "[anno] save: cid={} book={} chapter={} lang={} p={} segments={} payload={}",
+        pa.cid, pa.book_id, pa.chapter_id, pa.lang_code, pa.p_index,
+        pa.segments.len(), segments_json,
+    );
 
     let tx = conn
         .unchecked_transaction()
@@ -100,6 +105,11 @@ pub fn get_paragraph_annotations(
     for row in rows {
         result.push(row.map_err(|e| e.to_string())?);
     }
+    let total_segs: usize = result.iter().map(|r| r.segments.len()).sum();
+    log::info!(
+        "[anno] get: cid={} book={} chapter={} lang={} rows={} total_segments={}",
+        cid, book_id, chapter_id, lang_code, result.len(), total_segs,
+    );
     Ok(result)
 }
 
@@ -112,12 +122,17 @@ pub fn clear_paragraph_annotations(
     lang_code: &str,
     p_index: i64,
 ) -> Result<(), String> {
-    conn.execute(
-        "DELETE FROM annotations
-         WHERE cid=?1 AND book_id=?2 AND chapter_id=?3 AND lang_code=?4 AND p_index=?5",
-        params![cid, book_id, chapter_id, lang_code, p_index],
-    )
-    .map_err(|e| e.to_string())?;
+    let n = conn
+        .execute(
+            "DELETE FROM annotations
+             WHERE cid=?1 AND book_id=?2 AND chapter_id=?3 AND lang_code=?4 AND p_index=?5",
+            params![cid, book_id, chapter_id, lang_code, p_index],
+        )
+        .map_err(|e| e.to_string())?;
+    log::info!(
+        "[anno] clear_paragraph: cid={} book={} chapter={} lang={} p={} rows_deleted={}",
+        cid, book_id, chapter_id, lang_code, p_index, n,
+    );
     Ok(())
 }
 
@@ -126,5 +141,6 @@ pub fn clear_all_annotations(conn: &Connection) -> Result<usize, String> {
     let n = conn
         .execute("DELETE FROM annotations", [])
         .map_err(|e| e.to_string())?;
+    log::info!("[anno] clear_all: rows_deleted={}", n);
     Ok(n)
 }

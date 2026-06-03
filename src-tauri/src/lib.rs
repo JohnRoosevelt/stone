@@ -196,6 +196,10 @@ fn get_paragraph_annotations(
     chapter_id: i64,
     lang: String,
 ) -> Result<Vec<db::ParagraphAnnotations>, String> {
+    log::info!(
+        "[anno] cmd get_paragraph_annotations: cid={} book={} chapter={} lang={}",
+        cid, book_id, chapter_id, lang,
+    );
     let conn = state.read_conn.lock().map_err(|e| e.to_string())?;
     db::get_paragraph_annotations(&conn, cid, book_id, chapter_id, &lang)
         .map_err(|e| e.to_string())
@@ -206,6 +210,11 @@ fn save_paragraph_annotations(
     state: tauri::State<DbState>,
     annotations: db::ParagraphAnnotations,
 ) -> Result<i64, String> {
+    log::info!(
+        "[anno] cmd save_paragraph_annotations: cid={} book={} chapter={} lang={} p={} segments={}",
+        annotations.cid, annotations.book_id, annotations.chapter_id,
+        annotations.lang_code, annotations.p_index, annotations.segments.len(),
+    );
     let conn = state.write_conn.lock().map_err(|e| e.to_string())?;
     db::save_paragraph_annotations(&conn, &annotations)
 }
