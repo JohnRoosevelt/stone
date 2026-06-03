@@ -152,12 +152,33 @@ jobs:
             --region auto \
             --content-type "application/x-apple-diskimage"
 
-          # Merge DMG entry into the existing update.json (written by
-          # android job) so /my + /download show both platforms with
-          # their real sizes.
-          if aws s3 cp "s3://${{ env.R2_BUCKET }}/apk/update.json" /tmp/update-existing.json \
-              --endpoint-url "${{ env.R2_ENDPOINT }}" --region auto 2>/dev/null; then
-            echo "Existing update.json found, merging DMG entry."
+          # Wait for the android job to write its update.json first.
+          # The two jobs run in parallel; if macOS wrote the file
+          # first and android overwrote it, the DMG entry would be
+          # lost. Polling up to 20 min for android's manifest.
+          echo "Waiting for android job's update.json..."
+          UPDATE_FOUND=""
+          for i in $(seq 1 40); do
+            if aws s3api head-object \
+                --bucket "${{ env.R2_BUCKET }}" \
+                --key "apk/update.json" \
+                --endpoint-url "${{ env.R2_ENDPOINT }}" \
+                --region auto >/dev/null 2>&1; then
+              echo "  [$i/40] android's update.json found, proceeding to merge."
+              UPDATE_FOUND="yes"
+              break
+            fi
+            echo "  [$i/40] update.json not yet written, waiting 30s..."
+            sleep 30
+          done
+
+          # Merge DMG entry into the existing update.json. If android
+          # never wrote (CI bug, network, etc.) fall back to a fresh
+          # manifest with just DMG info — at least the macOS download
+          # will be available.
+          if [ -n "$UPDATE_FOUND" ]; then
+            aws s3 cp "s3://${{ env.R2_BUCKET }}/apk/update.json" /tmp/update-existing.json \
+              --endpoint-url "${{ env.R2_ENDPOINT }}" --region auto
             jq --argjson sz "$DMG_SIZE" \
               '.platforms["darwin-universal"] = {url: "https://r2.lelexue.cn/apk/stone-latest.dmg", size: $sz, signature: ""}' \
               /tmp/update-existing.json > /tmp/update-merged.json
@@ -167,7 +188,7 @@ jobs:
               --region auto \
               --content-type "application/json"
           else
-            echo "No existing update.json, generating fresh one with just DMG."
+            echo "::warning::android's update.json never appeared (timed out after 20 min). Writing fresh manifest with just DMG — android entry will be missing until next release."
             bash scripts/update/generate-manifest.sh \
               "${{ steps.version.outputs.version }}" \
               "Build ${{ steps.version.outputs.version }} from ${{ github.sha }}" \
