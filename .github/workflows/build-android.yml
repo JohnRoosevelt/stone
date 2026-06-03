@@ -221,14 +221,24 @@ jobs:
 
       - name: Upload APK + manifest to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
-          generate_release_notes: true
-          files: |
-            ${{ steps.prepare.outputs.apk_path }}
-            dist/update.json
+        # Use `gh release create` (rather than softprops/action-gh-release)
+        # because the repo's GITHUB_TOKEN doesn't grant third-party
+        # actions permission to manage releases (403 "Resource not
+        # accessible by integration"). `gh` ships with the runner and
+        # inherits the same token, so the permission model is consistent.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          # --generate-notes: GitHub auto-generates a changelog from
+          # commits since the last tag. --fail-on-no-commits keeps it
+          # quiet on the first release.
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes \
+            --target "${{ github.sha }}" \
+            "dist/stone-${VERSION}.apk" \
+            "dist/update.json"
 
       - name: Upload artifact fallback
         # Always run if the file exists to help debugging if Release upload fails
