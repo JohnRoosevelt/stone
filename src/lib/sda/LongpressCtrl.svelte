@@ -4,11 +4,16 @@
   import { info } from "$lib/global/Toast";
   import { slide } from "svelte/transition";
   import {
-    saveAnnotation,
-    replaceAnnotation,
-    deleteAnnotation,
+    saveParagraphAnnotations,
+    clearParagraphAnnotations,
     isTauri as isTauriEnv,
   } from "$lib/tauri";
+  import {
+    buildSegmentCss,
+    collectSegmentsFromDom,
+    appendSegment,
+    removeSegment,
+  } from "$lib/sda/annotationUtil";
 
   let { isShowLongpressCtrl = $bindable(false) } = $props();
   let colors2 = $state({
@@ -21,8 +26,8 @@
     MediumSpringGreen: false, // 	Medium Spring Green
 
     MediumBlue: false, // Medium Blue
-    RoyalBlue: false, // Royal Blue
-    MediumSlateBlue: false, // Medium Slate Blue
+    RoyalBlue: false, // 	Royal Blue
+    MediumSlateBlue: false, // 	Medium Slate Blue
   });
 
   let colors = $state([
@@ -45,15 +50,13 @@
   $effect(() => {
     if (!isShowLongpressCtrl) return;
 
-    // Walk from a node up the ancestor chain looking for a `data-type` attribute
-    // (e.g. a previously-saved underline / wavy / bg / text span). Used to keep
-    // the toolbar's "selected type" in sync with what the user is currently
-    // touching — both for newly-created spans and for spans reloaded from DB
-    // by Article.svelte.
+    // Keep the toolbar's selected style in sync with whatever segment the
+    // user's selection currently overlaps. Each segment <span> has
+    // `data-style` set, so we just walk up from the selection endpoints.
     function findDataType(node) {
       let el = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentNode;
       while (el && el !== document.body) {
-        const dt = el.getAttribute?.("data-type");
+        const dt = el.getAttribute?.("data-style");
         if (dt) return dt;
         el = el.parentElement;
       }
@@ -70,50 +73,37 @@
       if (dt) type = dt;
     }
 
-    // Run once immediately (in case LongpressCtrl opens on top of an existing
-    // selection that already has a data-type), then keep in sync while open.
     syncTypeFromSelection();
     document.addEventListener("selectionchange", syncTypeFromSelection);
     return () =>
       document.removeEventListener("selectionchange", syncTypeFromSelection);
   });
 
+  /**
+   * Compute the (start, end) character offsets of `range` within `pEl`'s
+   * plain text. Returns null if the range crosses outside the paragraph
+   * (which shouldn't happen because we bail on `parent.nodeName === "ARTICLE"`
+   * above, but defensive).
+   */
+  function rangeOffsetsInParagraph(pEl, range) {
+    const pre = document.createRange();
+    pre.setStart(pEl, 0);
+    pre.setEnd(range.startContainer, range.startOffset);
+    const start = pre.toString().length;
+    const length = range.toString().length;
+    return { start, end: start + length, length };
+  }
+
   async function selectionEdit(event) {
     event.stopPropagation();
 
-    const dataType = event.target.getAttribute("data-type");
-    type = dataType;
-
-    let cssText;
-    if (dataType === "underline_wavy") {
-      cssText = `text-decoration-line: underline;
-        text-underline-offset: 4px;
-        text-decoration-thickness: 2px;
-        text-decoration-style: wavy;
-        text-decoration-color: ${color};`;
-    }
-
-    if (dataType === "underline") {
-      cssText = `text-decoration-line: underline;
-        text-underline-offset: 4px;
-        text-decoration-thickness: 2px;
-        text-decoration-color: ${color};`;
-    }
-
-    if (dataType === "bg") {
-      cssText = `background-color: ${color};`;
-    }
-
-    if (dataType === "text") {
-      cssText = `color: ${color};`;
-    }
-
-    console.log({ cssText });
+    const pickedStyle = event.target.getAttribute("data-type");
+    type = pickedStyle;
 
     const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
     const range = selection.getRangeAt(0);
     const parent = range.commonAncestorContainer;
-    console.log(parent.nodeName, parent.nodeType, Node.TEXT_NODE);
 
     if (parent.nodeName === "ARTICLE") {
       info("只能在一段内处理标记");
@@ -121,145 +111,162 @@
       return;
     }
 
-    if (parent.nodeType !== Node.TEXT_NODE) {
-      const dataType = parent.getAttribute("data-type");
-
-      // console.log("has style", parent, parent.nodeName, dataType, type);
-
-      if (dataType !== type) {
-        console.log(".... change", dataType, "to ", type);
-        // Switch the type of an existing annotation. Just rewrite the DOM
-        // span's data-type + cssText; the DB side is handled by
-        // `replaceAnnotation` (used inside saveHighlight) which atomically
-        // deletes any prior row at the same (p_index, start_offset, length)
-        // and inserts the new one. So no manual delete here.
-        parent.setAttribute("data-type", type);
-        parent.style.cssText = cssText;
-
-        await saveHighlight(selection.toString(), range, parent);
-        return;
-      }
-      console.log(".... remove");
-      const target = parent.parentNode;
-      while (parent.firstChild) {
-        target.insertBefore(parent.firstChild, parent);
-      }
-      target.removeChild(parent);
-      target.normalize();
-
-      // Also delete the DB row for the removed span, if it had one.
-      const removedAnnId = parent.getAttribute("data-ann-id");
-      if (isTauriEnv() && removedAnnId && !removedAnnId.startsWith("local-")) {
-        deleteAnnotation(Number(removedAnnId)).catch((e) => {
-          console.warn("[annotation] failed to delete removed ann", e);
-        });
-      }
-
-      return;
-    }
-
-    console.log("set new ...");
-
-    // Capture the selected text BEFORE surroundContents. On Android WebView,
-    // clicking the toolbar button can fire `selectionchange` and clear the
-    // selection between the click and the `selection.toString()` read below,
-    // so the value we'd otherwise persist is an empty string.
-    const selectedText = selection.toString();
-    if (!selectedText) {
-      console.warn("[annotation] empty selection, skipping save");
-      return;
-    }
-
-    const span = document.createElement("span");
-    span.style.cssText = cssText;
-    span.setAttribute("data-type", dataType);
-
-    span.addEventListener("click", (e) => {
-      e.stopPropagation();
-
-      // const target = e.currentTarget;
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(e.target);
-      selection.removeAllRanges();
-      selection.addRange(range);
-
-      const dataType = e.target.getAttribute("data-type");
-      // console.log("set type", dataType);
-      type = dataType;
-    });
-
-    // removeEdit(span)
-    range.surroundContents(span);
-
-    await saveHighlight(selectedText, range, span);
-
-    const newRange = document.createRange();
-    newRange.selectNodeContents(span);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-  }
-
-  async function saveHighlight(text, range, targetSpan) {
-    // Only persist annotations in Tauri mode
-    if (!isTauriEnv()) return;
-
-    // Walk up from the selection to find the paragraph element (`<p data-i="...">`).
-    // The common ancestor may be a previously-saved <span> inside a paragraph
-    // (e.g. selecting text inside an existing wavy underline), so reading
-    // `data-i` off the immediate parent returns null and the annotation is
-    // persisted with a null p_index → it can never be re-applied when the
-    // chapter reloads.
-    let node = range.commonAncestorContainer;
+    // Locate the paragraph that owns this selection.
+    let node = parent;
     if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
     const pEl = node.closest?.("[data-i]");
-    const pIndex = pEl ? pEl.getAttribute("data-i") : null;
-
-    if (!pIndex) {
-      console.warn("[annotation] could not locate paragraph for save", { node });
+    if (!pEl) {
       info("保存失败：找不到段落");
       return;
     }
+    const pIndex = pEl.getAttribute("data-i");
 
-    // Offset from the start of the paragraph (not from the firstChild, which
-    // may itself be a SPAN if there are existing annotations).
-    const preRange = document.createRange();
-    preRange.setStart(pEl, 0);
-    preRange.setEnd(range.startContainer, range.startOffset);
-    const startOffset = preRange.toString().length;
+    const { start, end } = rangeOffsetsInParagraph(pEl, range);
+    if (end <= start) {
+      console.warn("[annotation] empty range, skipping save");
+      return;
+    }
 
-    console.log({ pIndex, startOffset, length: text.length });
+    // Re-collect the paragraph's segments from the DOM (this is the source
+    // of truth for what's currently shown). Then either:
+    //   (a) toggle a same-(start,end,style) segment off
+    //   (b) add a new segment for the picked style
+    let segments = collectSegmentsFromDom(pEl);
 
-    try {
-      // Use replaceAnnotation instead of saveAnnotation so that an
-      // existing row at the same (p_index, start_offset, length) is
-      // atomically replaced. This way the toolbar never produces
-      // duplicate rows, even if the user picks the exact same span twice
-      // (which can happen when the selection parent is a freshly-split
-      // text node, not the span itself).
-      const id = await replaceAnnotation({
-        cid: Number(page.params.cid),
-        book_id: Number(page.params.bookId),
-        chapter_id: Number(page.params.chapterId),
-        lang_code: "zh",
-        p_index: Number(pIndex),
-        start_offset: startOffset,
-        length: text.length,
-        text: text,
-        ann_type: type,
-        color: color,
+    const isToggleOff = segments.some(
+      (s) =>
+        s.start === start &&
+        s.end === end &&
+        s.style === pickedStyle &&
+        s.color === color,
+    );
+
+    if (isToggleOff) {
+      // User re-tapped the same style on the same span → remove it.
+      segments = removeSegment(segments, {
+        start,
+        end,
+        style: pickedStyle,
+        color,
       });
-      // Stamp the new DB id back onto the span so the next time the user
-      // changes / removes this annotation we know which row to delete.
-      if (targetSpan) {
-        targetSpan.setAttribute("data-ann-id", String(id));
+    } else {
+      // Add a new segment. (If the same range already has a different style,
+      // this becomes a second segment on the same range — the renderer will
+      // layer it on top of the existing span via a nested or sibling <span>.)
+      segments = appendSegment(segments, {
+        start,
+        end,
+        style: pickedStyle,
+        color,
+      });
+    }
+
+    // Persist the merged segments list.
+    await persistSegments(pEl, pIndex, segments, range, pickedStyle);
+  }
+
+  /**
+   * Update the DOM to reflect the new segments list, then push the full
+   * list to the DB. The DOM update is "rebuild this paragraph's spans from
+   * scratch" — simpler than mutating in place and the article re-renders
+   * fast enough that the flicker is invisible.
+   */
+  async function persistSegments(pEl, pIndex, segments, sourceRange, pickedStyle) {
+    if (!isTauriEnv()) return;
+
+    // 1) Rebuild the DOM: strip all existing annotation spans, then apply
+    //    the new segments back-to-front (descending start) so earlier
+    //    inserts don't shift the offsets of later ones.
+    pEl.querySelectorAll("span[data-start]").forEach((sp) => {
+      const parent = sp.parentNode;
+      while (sp.firstChild) parent.insertBefore(sp.firstChild, sp);
+      parent.removeChild(sp);
+      parent.normalize();
+    });
+
+    const sorted = [...segments].sort((a, b) => b.start - a.start);
+    for (const seg of sorted) {
+      const startLoc = locateTextOffset(pEl, seg.start);
+      const endLoc = locateTextOffset(pEl, seg.end);
+      if (!startLoc || !endLoc) continue;
+      const r = document.createRange();
+      try {
+        r.setStart(startLoc.node, startLoc.offset);
+        r.setEnd(endLoc.node, endLoc.offset);
+      } catch {
+        continue;
       }
-      console.log("Annotation saved to DB, id:", id);
+      const sp = document.createElement("span");
+      sp.style.cssText = buildSegmentCss(seg.style, seg.color);
+      sp.setAttribute("data-start", String(seg.start));
+      sp.setAttribute("data-end", String(seg.end));
+      sp.setAttribute("data-style", seg.style);
+      sp.setAttribute("data-color", seg.color);
+      sp.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        const rr = document.createRange();
+        rr.selectNodeContents(e.target);
+        sel.addRange(rr);
+      });
+      try {
+        r.surroundContents(sp);
+      } catch {
+        // Range crosses an element boundary (overlapping with another
+        // segment we just inserted). Extract-and-reinsert as a fallback.
+        try {
+          const frag = r.extractContents();
+          sp.appendChild(frag);
+          r.insertNode(sp);
+        } catch {
+          /* give up on this segment */
+        }
+      }
+    }
+
+    // 2) Push the merged list to the DB. Empty list → delete the row.
+    try {
+      if (segments.length === 0) {
+        await clearParagraphAnnotations(
+          Number(page.params.cid),
+          Number(page.params.bookId),
+          Number(page.params.chapterId),
+          "zh",
+          Number(pIndex),
+        );
+      } else {
+        await saveParagraphAnnotations({
+          cid: Number(page.params.cid),
+          book_id: Number(page.params.bookId),
+          chapter_id: Number(page.params.chapterId),
+          lang_code: "zh",
+          p_index: Number(pIndex),
+          segments,
+        });
+      }
       info("标记已保存");
     } catch (err) {
-      console.error("Failed to save annotation:", err);
+      console.error("Failed to save annotations:", err);
       info("保存失败");
     }
+  }
+
+  /**
+   * Locate the text node (and offset within it) that contains the
+   * `targetOffset`-th character of `root`'s concatenated text content.
+   * Returns `{ node, offset }` or null if out of range.
+   */
+  function locateTextOffset(root, targetOffset) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let remaining = targetOffset;
+    let n;
+    while ((n = walker.nextNode())) {
+      const len = n.textContent.length;
+      if (remaining <= len) return { node: n, offset: remaining };
+      remaining -= len;
+    }
+    return null;
   }
 </script>
 

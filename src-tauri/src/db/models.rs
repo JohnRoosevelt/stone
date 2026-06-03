@@ -63,20 +63,37 @@ pub struct BookForImport {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Annotation {
+/// A single highlight/annotation segment within a paragraph.
+///
+/// One record per (cid, book_id, chapter_id, lang_code, p_index) **paragraph**,
+/// not per marked span. All the segments of a paragraph live in one row's
+/// `segments` JSON column as an array of these structs.
+///
+/// `start` and `end` are character offsets into the paragraph's text
+/// (0-based, half-open — `end` is exclusive), so `end - start` is the length.
+/// `style` is one of `"underline"`, `"underline_wavy"`, `"bg"`, `"text"`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AnnotationSegment {
+    pub start: i64,
+    pub end: i64,
+    pub style: String,
+    pub color: String,
+}
+
+/// All annotation segments for one paragraph. UNIQUE on
+/// (cid, book_id, chapter_id, lang_code, p_index).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParagraphAnnotations {
     pub id: Option<i64>,
     pub cid: i64,
     pub book_id: i64,
     pub chapter_id: i64,
     pub lang_code: String,
     pub p_index: i64,
-    pub start_offset: i64,
-    pub length: i64,
-    pub text: String,
-    pub ann_type: String, // "underline_wavy", "underline", "bg", "text"
-    pub color: String,
-    pub created_at: Option<String>,
+    /// JSON-encoded array of `AnnotationSegment` — see the helper
+    /// `serde_json::to_string(&pa.segments)` at the call site.
+    pub segments: Vec<AnnotationSegment>,
+    pub updated_at: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

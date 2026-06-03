@@ -185,49 +185,49 @@ fn reset_initial_import(state: tauri::State<DbState>) -> Result<(), String> {
 }
 
 // ═══════════════════════════════════════════════════════════
-// Annotation commands — read (read_conn)
+// Annotation commands — per-paragraph, JSON `segments` column
 // ═══════════════════════════════════════════════════════════
 
 #[tauri::command]
-fn get_annotations(
+fn get_paragraph_annotations(
     state: tauri::State<DbState>,
     cid: i64,
     book_id: i64,
     chapter_id: i64,
     lang: String,
-) -> Result<Vec<db::Annotation>, String> {
+) -> Result<Vec<db::ParagraphAnnotations>, String> {
     let conn = state.read_conn.lock().map_err(|e| e.to_string())?;
-    db::get_annotations(&conn, cid, book_id, chapter_id, &lang).map_err(|e| e.to_string())
+    db::get_paragraph_annotations(&conn, cid, book_id, chapter_id, &lang)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn save_annotation(
+fn save_paragraph_annotations(
     state: tauri::State<DbState>,
-    annotation: db::Annotation,
+    annotations: db::ParagraphAnnotations,
 ) -> Result<i64, String> {
     let conn = state.write_conn.lock().map_err(|e| e.to_string())?;
-    db::save_annotation(&conn, &annotation)
+    db::save_paragraph_annotations(&conn, &annotations)
 }
 
 #[tauri::command]
-fn replace_annotation(
+fn clear_paragraph_annotations(
     state: tauri::State<DbState>,
-    annotation: db::Annotation,
-) -> Result<i64, String> {
+    cid: i64,
+    book_id: i64,
+    chapter_id: i64,
+    lang: String,
+    p_index: i64,
+) -> Result<(), String> {
     let conn = state.write_conn.lock().map_err(|e| e.to_string())?;
-    db::replace_annotation(&conn, &annotation)
-}
-
-#[tauri::command]
-fn delete_annotation(state: tauri::State<DbState>, id: i64) -> Result<(), String> {
-    let conn = state.write_conn.lock().map_err(|e| e.to_string())?;
-    db::delete_annotation(&conn, id).map_err(|e| e.to_string())
+    db::clear_paragraph_annotations(&conn, cid, book_id, chapter_id, &lang, p_index)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn clear_annotations(state: tauri::State<DbState>) -> Result<usize, String> {
     let conn = state.write_conn.lock().map_err(|e| e.to_string())?;
-    db::clear_annotations(&conn)
+    db::clear_all_annotations(&conn)
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -335,11 +335,10 @@ pub fn run() {
             delete_book_data,
             mark_import_complete,
             reset_initial_import,
-            // Annotations
-            get_annotations,
-            save_annotation,
-            replace_annotation,
-            delete_annotation,
+            // Annotations (per-paragraph, JSON segments)
+            get_paragraph_annotations,
+            save_paragraph_annotations,
+            clear_paragraph_annotations,
             clear_annotations,
             // Reading Progress
             save_reading_progress,

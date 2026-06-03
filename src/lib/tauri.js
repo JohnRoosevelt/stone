@@ -89,30 +89,44 @@ export async function resetInitialImport() {
   if (isTauri()) return tauriInvoke("reset_initial_import", {});
 }
 
-// ── Annotations ────────────────────────────────────────────────────
+// ── Annotations (per-paragraph, JSON `segments` array) ──────────
 
-export async function getAnnotations(cid, bookId, chapterId, lang = "zh") {
+/// Fetch every paragraph's annotation row for a chapter. Each row carries
+/// a full `segments` array — the caller is expected to merge any
+/// in-progress edits into that array before saving.
+export async function getParagraphAnnotations(cid, bookId, chapterId, lang = "zh") {
   if (!isTauri()) return [];
-  return tauriInvoke("get_annotations", { cid, bookId, chapterId, lang });
+  return tauriInvoke("get_paragraph_annotations", {
+    cid,
+    bookId,
+    chapterId,
+    lang,
+  });
 }
 
-export async function saveAnnotation(annotation) {
+/// Upsert the segment list for one paragraph. The DB stores whatever
+/// `segments` array is passed; dedup and merge logic lives in the toolbar.
+export async function saveParagraphAnnotations(annotations) {
   if (!isTauri()) return -1;
-  return tauriInvoke("save_annotation", { annotation });
+  return tauriInvoke("save_paragraph_annotations", { annotations });
 }
 
-/// Atomically replace any existing annotation at the same
-/// (p_index, start_offset, length) with the new one. Preferred over
-/// saveAnnotation in the toolbar flow — guarantees that "tapping the
-/// toolbar a second time" can't leave two rows for the same span.
-export async function replaceAnnotation(annotation) {
-  if (!isTauri()) return -1;
-  return tauriInvoke("replace_annotation", { annotation });
-}
-
-export async function deleteAnnotation(id) {
+/// Clear every segment for a single paragraph.
+export async function clearParagraphAnnotations(
+  cid,
+  bookId,
+  chapterId,
+  lang,
+  pIndex,
+) {
   if (!isTauri()) return;
-  return tauriInvoke("delete_annotation", { id });
+  return tauriInvoke("clear_paragraph_annotations", {
+    cid,
+    bookId,
+    chapterId,
+    lang,
+    pIndex,
+  });
 }
 
 export async function clearAnnotations() {
