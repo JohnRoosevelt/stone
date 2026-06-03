@@ -12,7 +12,10 @@
 const GITHUB_REPO =
   import.meta.env.VITE_GITHUB_REPO || "JohnRoosevelt/stone";
 
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+/** Server-side cached proxy at /api/release (1h KV TTL in prod). */
+const SERVER_RELEASE_URL = "/api/release";
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes (in-memory, per session)
 let _cached = null;
 let _fetchedAt = 0;
 
@@ -36,10 +39,41 @@ export async function getLatestRelease({ force = false } = {}) {
   if (!force && _cached && now - _fetchedAt < CACHE_TTL_MS) {
     return _cached;
   }
+
+  // 1. Try the server-side proxy (KV-cached, dodges the 60/hr/IP GitHub limit).
+  try {
+    const res = await fetch(SERVER_RELEASE_URL);
+    if (res.ok) {
+      const data = await res.json();
+      _cached = data;
+      _fetchedAt = now;
+      return data;
+    }
+    console.warn(
+      `[release] server proxy returned HTTP ${res.status}, falling back to direct`,
+    );
+  } catch (e) {
+    console.warn(`[release] server proxy failed: ${e.message}, falling back to direct`);
+  }
+
+  // 2. Fallback: direct GitHub call. Same-origin rate limit applies, but
+  //    this path is what dev mode (no KV) and outages fall back on.
   const res = await fetch(
     `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`,
   );
   if (!res.ok) {
+    // 3. Last resort: a hardcoded recent release so dev mode (where the
+    //    /api/release proxy just relays and also hits the 60/hr limit)
+    //    still renders the /my and /download pages with real asset URLs.
+    //    Update this object when a new version ships.
+    if (HARDCODED_FALLBACK.tag) {
+      console.warn(
+        `[release] GitHub returned HTTP ${res.status}; using hardcoded v${HARDCODED_FALLBACK.tag} fallback`,
+      );
+      _cached = HARDCODED_FALLBACK;
+      _fetchedAt = now;
+      return HARDCODED_FALLBACK;
+    }
     throw new Error(`GitHub releases/latest: HTTP ${res.status}`);
   }
   const data = await res.json();
@@ -48,6 +82,33 @@ export async function getLatestRelease({ force = false } = {}) {
   _fetchedAt = now;
   return out;
 }
+
+/**
+ * Hardcoded fallback release. Used when both the server proxy and the
+ * direct GitHub call fail (dev-mode rate limit, transient outage, etc).
+ * Set `tag` to `""` to disable and let the error throw instead.
+ *
+ * Update this when releasing a new version, or rely on the GitHub API
+ * path in production where the KV cache absorbs almost all traffic.
+ */
+const HARDCODED_FALLBACK = {
+  tag: "0.2.0",
+  name: "stone 0.2.0",
+  publishedAt: "2026-06-03T00:00:00Z",
+  htmlUrl: `https://github.com/${GITHUB_REPO}/releases/tag/v0.2.0`,
+  assets: [
+    {
+      name: "stone-0.2.0.apk",
+      size: 11.2 * 1024 * 1024,
+      url: `https://github.com/${GITHUB_REPO}/releases/download/v0.2.0/stone-0.2.0.apk`,
+    },
+    {
+      name: "stone-0.2.0.dmg",
+      size: 10.5 * 1024 * 1024,
+      url: `https://github.com/${GITHUB_REPO}/releases/download/v0.2.0/stone-0.2.0.dmg`,
+    },
+  ],
+};
 
 export function findAsset(release, predicate) {
   if (!release || !release.assets) return null;
