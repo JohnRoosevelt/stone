@@ -82,19 +82,19 @@
       class="w-full flex items-center gap-3 px-4 py-3.5 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 no-underline"
     >
       <span class="i-carbon-download text-xl text-green"></span>
-      <div class="flex-1">
-        <div>下载 App</div>
-        <div class="text-xs text-gray-400 font-normal mt-0.5">
-          {#if releaseLoading}
-            正在获取版本…
-          {:else if releaseError}
-            点击查看下载方式
-          {:else if release}
-            v{release.tag?.replace(/^v/, "")} · Android + macOS
-          {/if}
-        </div>
+      <div class="flex-1 min-w-0">下载 App</div>
+      <div
+        class="text-xs text-gray-400 font-normal shrink-0 text-right whitespace-nowrap"
+      >
+        {#if releaseLoading}
+          正在获取…
+        {:else if releaseError}
+          点击查看
+        {:else if release}
+          v{release.tag?.replace(/^v/, "")} · Android + macOS
+        {/if}
       </div>
-      <span class="i-carbon-chevron-right text-gray-400"></span>
+      <span class="i-carbon-chevron-right text-gray-400 shrink-0"></span>
     </a>
   {/if}
 
