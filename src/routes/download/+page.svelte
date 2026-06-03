@@ -3,42 +3,62 @@
   import { onMount } from "svelte";
   import { formatBuildTime } from "$lib/format.js";
   import { DATAS } from "$lib/data.svelte";
-
-  // Release artifacts now come from GitHub Releases (see
-  // docs/release-pipeline-plan.md). VITE_GITHUB_REPO is injected by CI.
-  const GITHUB_REPO = import.meta.env.VITE_GITHUB_REPO || "stone-releases/placeholder";
-  const R2_PUBLIC = "https://r2.lelexue.cn"; // legacy fallback
-  const latestUrl = () =>
-    `https://github.com/${GITHUB_REPO}/releases/latest/download/stone.apk?date=${Date.now()}`;
+  import { getLatestRelease, androidAsset, formatSize } from "$lib/release";
 
   // ─── Runtime state ──────────────────────────────────────────
   let isWeChat = $state(false);
   let isAndroid = $state(false);
+  let isMac = $state(false);
   let isOtherPlatform = $state(false);
   let copying = $state(false);
   let ready = $state(false);
+  let release = $state(null);
+  let releaseError = $state("");
 
-  onMount(() => {
+  // The actual APK download URL — resolved from the latest GitHub release
+  // so the filename (`stone-0.2.0.apk`) and version stay in sync. The
+  // previous hard-coded `/releases/latest/download/stone.apk` 404'd because
+  // CI uploads the file with the version suffix.
+  let apkUrl = $derived.by(() => {
+    if (!release) return "";
+    const a = androidAsset(release);
+    return a?.url || "";
+  });
+  let apkSize = $derived.by(() => {
+    if (!release) return "";
+    const a = androidAsset(release);
+    return a ? formatSize(a.size) : "";
+  });
+  let versionLabel = $derived.by(() => {
+    if (!release) return "";
+    return release.tag?.replace(/^v/, "") || "";
+  });
+
+  onMount(async () => {
     // Only run device detection in web mode
     if (!DATAS.isTauri) {
       const ua = navigator.userAgent;
 
-      // WeChat detection
       isWeChat = /MicroMessenger/i.test(ua);
-
-      // Android detection
       isAndroid = /Android/i.test(ua);
+      isMac = /Macintosh|Mac OS X/i.test(ua) && !/iPhone|iPad/i.test(ua);
+      isOtherPlatform = !isAndroid && !isMac && !isWeChat;
 
-      // Other platforms (non-Android, non-WeChat)
-      isOtherPlatform = !isAndroid && !isWeChat;
+      try {
+        release = await getLatestRelease();
+      } catch (err) {
+        console.warn("[download] failed to load release info:", err);
+        releaseError = "无法获取最新版本，请稍后再试";
+      }
     }
 
     ready = true;
   });
 
   async function copyLink() {
+    if (!apkUrl) return;
     try {
-      await navigator.clipboard.writeText(latestUrl());
+      await navigator.clipboard.writeText(apkUrl);
       copying = true;
       setTimeout(() => (copying = false), 2000);
     } catch (_) {}
@@ -66,10 +86,12 @@
 
   {#if isWeChat}
     {@render WeChatGuide()}
-  {:else if isOtherPlatform}
-    {@render Unsupported()}
   {:else if isAndroid}
     {@render AndroidDownload()}
+  {:else if isMac}
+    {@render MacDownload()}
+  {:else}
+    {@render Unsupported()}
   {/if}
 {/if}
 
@@ -107,13 +129,13 @@
     <div class="i-carbon-warning text-7 text-orange"></div>
     <h1 class="text-3xl font-bold">暂不支持</h1>
     <p class="text-gray-500 text-base max-w-xs leading-relaxed">
-      当前只支持 Android 设备下载。<br />
-      请使用 Android 手机扫码或访问本页面。
+      当前支持 Android 和 macOS 设备。<br />
+      请使用 Android 手机或 Mac 访问本页面。
     </p>
     <div
       class="mt-4 p-5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm text-gray-400"
     >
-      <p>如果你是 iOS 用户，敬请期待后续版本 🙏</p>
+      <p>如果你是 iOS / Windows 用户，敬请期待后续版本 🙏</p>
     </div>
   </div>
 {/snippet}
@@ -127,29 +149,78 @@
       <p class="text-gray-500 text-base">直接在手机上安装</p>
     </div>
 
-    <a
-      href={latestUrl()}
-      download
-      class="px-10 py-5 rounded-2xl bg-green text-white text-xl font-bold hover:bg-green/80 transition300 flex-cc gap-3 shadow-lg active:scale-95"
-    >
-      <span class="i-carbon-download"></span>
-      下载 APK
-    </a>
+    {#if releaseError}
+      <div class="text-orange text-sm text-center max-w-xs">
+        {releaseError}
+      </div>
+    {:else if !apkUrl}
+      <div class="text-gray-400 text-sm">正在获取下载链接…</div>
+    {:else}
+      <a
+        href={apkUrl}
+        download
+        class="px-10 py-5 rounded-2xl bg-green text-white text-xl font-bold hover:bg-green/80 transition300 flex-cc gap-3 shadow-lg active:scale-95"
+      >
+        <span class="i-carbon-download"></span>
+        下载 APK
+      </a>
 
-    <div class="text-sm text-gray-400 space-y-1.5 text-center">
-      <p>
-        版本: {__GIT_COMMIT__}
-        <span class="text-gray-300">·</span>
-        构建: {formatBuildTime(__BUILD_TIME__)}
-      </p>
-      <p>首次安装可能提示"未知来源"，请允许后继续安装</p>
+      <div class="text-sm text-gray-400 space-y-1.5 text-center">
+        <p>
+          版本: v{versionLabel}
+          {#if apkSize}<span class="text-gray-300">·</span> {apkSize}{/if}
+        </p>
+        <p>首次安装可能提示"未知来源"，请允许后继续安装</p>
+      </div>
+
+      <button
+        onclick={copyLink}
+        class="text-base text-green hover:underline flex-cc gap-1"
+      >
+        {copying ? "✅ 已复制" : "📋 复制下载链接"}
+      </button>
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet MacDownload()}
+  <!-- ─── macOS download ────────────────────────────────── -->
+  <div class="w-full h-full flex-cc flex-col px-6 gap-8">
+    <div class="text-center space-y-3">
+      <span class="i-carbon-download text-7 text-green"></span>
+      <h1 class="text-3xl font-bold">💻 脚前的灯 · macOS</h1>
+      <p class="text-gray-500 text-base">Universal · Intel + Apple Silicon</p>
     </div>
 
-    <button
-      onclick={copyLink}
-      class="text-base text-green hover:underline flex-cc gap-1"
-    >
-      {copying ? "✅ 已复制" : "📋 复制下载链接"}
-    </button>
+    {#if releaseError}
+      <div class="text-orange text-sm text-center max-w-xs">
+        {releaseError}
+      </div>
+    {:else if !release}
+      <div class="text-gray-400 text-sm">正在获取下载链接…</div>
+    {:else}
+      {@const mac = release.assets.find((a) => /\.dmg$/i.test(a.name))}
+      {#if mac}
+        <a
+          href={mac.url}
+          download
+          class="px-10 py-5 rounded-2xl bg-green text-white text-xl font-bold hover:bg-green/80 transition300 flex-cc gap-3 shadow-lg active:scale-95"
+        >
+          <span class="i-carbon-download"></span>
+          下载 DMG
+        </a>
+        <div class="text-sm text-gray-400 space-y-1.5 text-center">
+          <p>
+            版本: v{versionLabel}
+            <span class="text-gray-300">·</span> {formatSize(mac.size)}
+          </p>
+          <p>下载后请先在「系统设置 → 隐私与安全性」允许打开</p>
+        </div>
+      {:else}
+        <div class="text-gray-500 text-sm text-center max-w-xs">
+          本次发布暂未提供 macOS 安装包，请稍后再试。
+        </div>
+      {/if}
+    {/if}
   </div>
 {/snippet}
