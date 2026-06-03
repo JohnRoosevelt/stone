@@ -81,6 +81,17 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache Rust build artifacts
+        # Re-uses src-tauri/target and ~/.cargo/registry across runs.
+        # Cuts ~5-10 min off repeat builds (Rust compilation is the
+        # biggest single cost in the Android pipeline). Keyed off the
+        # Cargo.lock hash so we don't serve stale binaries when deps
+        # change.
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri/target -> .rust-cache
+          shared-key: ${{ runner.os }}-android
+
       - name: Add Android Rust targets
         run: rustup target add aarch64-linux-android
 

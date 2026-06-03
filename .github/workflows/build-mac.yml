@@ -57,7 +57,8 @@ jobs:
       - name: Cache Rust target
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri/target
+          workspaces: src-tauri/target -> .rust-cache
+          shared-key: ${{ runner.os }}-mac
 
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
