@@ -2,11 +2,7 @@
   import { onMount } from "svelte";
   import { DATAS } from "$lib/data.svelte";
   import { isDesktop } from "$lib/tauri";
-  import {
-    getLatestRelease,
-    SUPPORTED_PLATFORMS,
-    formatSize,
-  } from "$lib/release";
+  import { getLatestRelease } from "$lib/release";
   import CheckUpdate from "./components/CheckUpdate.svelte";
   import ClearAnnotations from "./components/ClearAnnotations.svelte";
   import DebugInfo from "./components/DebugInfo.svelte";
@@ -18,10 +14,11 @@
   let isDesktopTauri = $state(false);
   let appVersion = $state("");
 
-  // Download section state (web only). Each supported platform is shown
-  // with its real GitHub-Releases asset URL once the release metadata
-  // loads. Platforms without a matching asset are still listed so users
-  // know what's planned.
+  // Web-only: latest version is shown as a subtitle on the single
+  // "下载 App" row. The platform-specific download UI lives on
+  // /download (which detects Android / macOS / iOS / WeChat and shows
+  // the right button + size). So /my only needs the version string,
+  // not the full release asset list.
   let release = $state(null);
   let releaseLoading = $state(true);
   let releaseError = $state("");
@@ -43,8 +40,8 @@
       return;
     }
 
-    // Web: load the latest release so the download links resolve to the
-    // real versioned asset URLs (the old hard-coded `stone.apk` 404'd).
+    // Web: fetch latest version (R2 update.json, cached 5 min in
+    // release.js). /download will refetch to get asset sizes/URLs.
     try {
       release = await getLatestRelease();
     } catch (err) {
@@ -54,20 +51,6 @@
       releaseLoading = false;
     }
   });
-
-  function platformSubtitle(asset) {
-    if (!asset) return "暂未提供";
-    return `${formatSize(asset.size)} · APK`.replace(
-      "APK",
-      asset.name.toLowerCase().endsWith(".apk")
-        ? "APK"
-        : asset.name.toLowerCase().endsWith(".dmg")
-          ? "DMG"
-          : asset.name.toLowerCase().endsWith(".exe")
-            ? "EXE"
-            : "",
-    );
-  }
 </script>
 
 <svelte:head>
@@ -89,85 +72,30 @@
   </a>
 
   {#if !DATAS.isTauri}
-    <!-- Web-only: download section listing every supported platform.
-         Each row links directly to the GitHub-Releases asset so the URL
-         stays correct across new versions (no hard-coded `stone.apk`). -->
-    <div
-      class="w-full bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+    <!-- Web-only: a single "下载 App" entry that links to /download.
+         /download does the platform detection (Android / macOS / iOS /
+         WeChat) and shows the right button + size. No more listing
+         every supported platform on /my — that was redundant with what
+         /download shows. -->
+    <a
+      href="/download"
+      class="w-full flex items-center gap-3 px-4 py-3.5 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 no-underline"
     >
-      <div
-        class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2 text-sm font-medium"
-      >
-        <span class="i-carbon-download text-green"></span>
-        下载 App
-        {#if release}
-          <span class="ml-auto text-xs text-gray-400 font-normal"
-            >v{release.tag?.replace(/^v/, "")}</span
-          >
-        {/if}
+      <span class="i-carbon-download text-xl text-green"></span>
+      <div class="flex-1">
+        <div>下载 App</div>
+        <div class="text-xs text-gray-400 font-normal mt-0.5">
+          {#if releaseLoading}
+            正在获取版本…
+          {:else if releaseError}
+            点击查看下载方式
+          {:else if release}
+            v{release.tag?.replace(/^v/, "")} · Android + macOS
+          {/if}
+        </div>
       </div>
-
-      {#if releaseLoading}
-        <div
-          class="px-4 py-3 text-sm text-gray-400 flex items-center gap-2"
-        >
-          <span class="i-line-md-loading-twotone-loop animate-spin"></span>
-          正在获取下载链接…
-        </div>
-      {:else if releaseError}
-        <div
-          class="px-4 py-3 text-sm text-orange flex items-center gap-2"
-        >
-          <span class="i-carbon-warning"></span>
-          {releaseError}
-        </div>
-      {:else}
-        <div class="divide-y divide-gray-100 dark:divide-gray-800">
-          {#each SUPPORTED_PLATFORMS as p (p.id)}
-            {@const asset = p.asset(release)}
-            {#if asset}
-              <a
-                href={asset.url}
-                class="flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 no-underline"
-              >
-                <span class="{p.icon} text-xl {p.iconColor}"></span>
-                <div class="flex-1">
-                  <div>{p.label}</div>
-                  <div class="text-xs text-gray-400 font-normal">
-                    {formatSize(asset.size)}
-                    {#if p.id === "macos"}<span class="text-gray-300">·</span> Universal{/if}
-                  </div>
-                </div>
-                <span class="i-carbon-download text-green"></span>
-              </a>
-            {:else}
-              <div
-                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-400"
-              >
-                <span class="{p.icon} text-xl {p.iconColor} opacity-40"
-                ></span>
-                <div class="flex-1">
-                  <div>{p.label}</div>
-                  <div class="text-xs text-gray-400">敬请期待</div>
-                </div>
-              </div>
-            {/if}
-          {/each}
-
-          <a
-            href="/download"
-            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition300 no-underline"
-          >
-            <span class="i-carbon-help text-lg text-gray-400"></span>
-            <div class="flex-1">
-              <div>下载指引</div>
-              <div class="text-xs text-gray-400">查看兼容性 / 微信中打开</div>
-            </div>
-            <span class="i-carbon-chevron-right text-gray-400"></span>
-          </a>
-        </div>
-      {/if}
-    </div>
+      <span class="i-carbon-chevron-right text-gray-400"></span>
+    </a>
   {/if}
 
   {#if DATAS.isTauri}

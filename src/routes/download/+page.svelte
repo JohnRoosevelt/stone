@@ -41,7 +41,12 @@
 
       isWeChat = /MicroMessenger/i.test(ua);
       isAndroid = /Android/i.test(ua);
-      isMac = /Macintosh|Mac OS X/i.test(ua) && !/iPhone|iPad/i.test(ua);
+      // Apple device family — Mac desktop, iPhone, iPad all qualify
+      // for the macOS download. iPhone/iPad users typically AirDrop
+      // or otherwise transfer the DMG to a Mac. The DMG is universal
+      // (Intel + Apple Silicon in one .dmg), so the same link works
+      // for both architectures.
+      isMac = /Macintosh|Mac OS X|iPhone|iPad|iPod/i.test(ua);
       isOtherPlatform = !isAndroid && !isMac && !isWeChat;
 
       try {
