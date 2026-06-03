@@ -3,7 +3,7 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "$env/dynamic/private";
 
-export async function GET({ url }) {
+export async function GET({ url }: { url: URL }) {
   const Key = url.searchParams.get("Key");
   const ContentType =
     url.searchParams.get("contentType") || "application/octet-stream";
@@ -12,7 +12,9 @@ export async function GET({ url }) {
     throw error(400, "fileName is required");
   }
 
-  const [accountId, accessKeyId, secretAccessKey, Bucket] = env.R2.split(",");
+  if (!env.R2) throw error(500, "R2 env not configured");
+  const [accountId, accessKeyId, secretAccessKey, Bucket] =
+    env.R2.split(",");
 
   const client = new S3Client({
     region: "auto",

@@ -99,23 +99,30 @@ pub fn init_database(db_path: &PathBuf) -> Result<(Connection, Connection)> {
         ) STRICT, WITHOUT ROWID;",
     )?;
 
-    // annotations: text marks (underline, highlight, background, text color)
+    // annotations: text marks (underline, highlight, background, text color).
+    //
+    // New schema (per-segment → per-paragraph): one row per paragraph. The
+    // `segments` column stores a JSON array of {start, end, style, color}
+    // entries, where start/end are character offsets into the paragraph text.
+    //
+    // Per the spec, we ignore previous "dirty" data and don't try to migrate
+    // it: the old `annotations` table (one row per marked span with ann_type
+    // as a string column) is dropped on init. Users will lose old highlights
+    // but keep the new clean shape.
     write_conn.execute_batch(
-        "CREATE TABLE IF NOT EXISTS annotations (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            cid         INTEGER NOT NULL,
-            book_id     INTEGER NOT NULL,
-            chapter_id  INTEGER NOT NULL,
-            lang_code   TEXT    NOT NULL,
-            p_index     INTEGER NOT NULL,
-            start_offset INTEGER NOT NULL,
-            length      INTEGER NOT NULL,
-            text        TEXT    NOT NULL,
-            ann_type    TEXT    NOT NULL,
-            color       TEXT    NOT NULL,
-            created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
-        ) STRICT;
-        CREATE INDEX IF NOT EXISTS idx_annotations_lookup ON annotations(cid, book_id, chapter_id, lang_code);",
+        "DROP TABLE IF EXISTS annotations;
+         CREATE TABLE annotations (
+             id          INTEGER PRIMARY KEY AUTOINCREMENT,
+             cid         INTEGER NOT NULL,
+             book_id     INTEGER NOT NULL,
+             chapter_id  INTEGER NOT NULL,
+             lang_code   TEXT    NOT NULL,
+             p_index     INTEGER NOT NULL,
+             segments    TEXT    NOT NULL DEFAULT '[]',
+             updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+             UNIQUE (cid, book_id, chapter_id, lang_code, p_index)
+         ) STRICT;
+         CREATE INDEX IF NOT EXISTS idx_annotations_lookup ON annotations(cid, book_id, chapter_id, lang_code);",
     )?;
 
     // reading_progress: reading progress per book

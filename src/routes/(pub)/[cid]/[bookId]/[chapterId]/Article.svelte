@@ -4,7 +4,8 @@
   import { CID } from "$lib/config";
   import { DATAS } from "$lib/data.svelte.js";
   import { searchState } from "$lib/bible/searchStore.svelte.js";
-  import { getAnnotations } from "$lib/tauri";
+  import { getParagraphAnnotations } from "$lib/tauri";
+  import { buildSegmentCss } from "$lib/sda/annotationUtil";
 
   /**
    * Locate the text node (and offset within it) that contains the
@@ -32,48 +33,40 @@
   async function loadAnnotations() {
     if (!DATAS.isTauri) return;
     try {
-      const annotations = await getAnnotations(
+      const rows = await getParagraphAnnotations(
         Number(page.params.cid),
         Number(page.params.bookId),
         Number(page.params.chapterId),
         "zh",
       );
-      if (!annotations || annotations.length === 0) return;
+      if (!rows || rows.length === 0) return;
 
-      // Group annotations by paragraph index
-      const byParagraph = {};
-      for (const ann of annotations) {
-        if (!byParagraph[ann.p_index]) byParagraph[ann.p_index] = [];
-        byParagraph[ann.p_index].push(ann);
-      }
-
-      for (const [pIdx, anns] of Object.entries(byParagraph)) {
-        const pEl = document.querySelector(`[data-i="${pIdx}"]`);
+      let totalSegments = 0;
+      for (const row of rows) {
+        if (!row.segments || row.segments.length === 0) continue;
+        const pEl = document.querySelector(`[data-i="${row.p_index}"]`);
         if (!pEl) continue;
 
-        // Sort annotations by start_offset descending so we apply back-to-front
-        // — later (higher-offset) annotations get wrapped first, so they don't
-        // shift the offsets of the ones still to come.
-        anns.sort((a, b) => b.start_offset - a.start_offset);
+        // Sort by start descending so we apply back-to-front: later
+        // (higher-offset) segments get wrapped first, so they don't shift
+        // the offsets of the ones still to come.
+        const sorted = [...row.segments].sort((a, b) => b.start - a.start);
 
-        for (const ann of anns) {
-          // Skip degenerate records up front. A length=0 annotation produces
-          // a collapsed range and `surroundContents` throws InvalidStateError
-          // on those (regardless of how the record ended up in the DB).
-          if (!ann.length || ann.length <= 0) {
+        for (const seg of sorted) {
+          if (!seg.end || seg.end <= seg.start) {
             console.warn(
-              "[loadAnnotations] zero/negative length, skipping",
-              ann,
+              "[loadAnnotations] zero/negative length segment, skipping",
+              seg,
             );
             continue;
           }
 
-          const startLoc = locateTextOffset(pEl, ann.start_offset);
-          const endLoc = locateTextOffset(pEl, ann.start_offset + ann.length);
+          const startLoc = locateTextOffset(pEl, seg.start);
+          const endLoc = locateTextOffset(pEl, seg.end);
           if (!startLoc || !endLoc) {
             console.warn(
-              "[loadAnnotations] offset out of range, skipping",
-              ann,
+              "[loadAnnotations] segment offset out of range, skipping",
+              seg,
             );
             continue;
           }
@@ -85,41 +78,18 @@
           } catch (e) {
             console.warn(
               "[loadAnnotations] range setup failed, skipping",
-              ann,
+              seg,
               e,
             );
             continue;
           }
 
-          // Build CSS based on annotation type. NOTE: `ann_type` is whatever
-          // string was passed in at save time — LongpressCtrl's toolbar
-          // buttons all use underscores (`underline_wavy`, etc.), so the
-          // case labels here must match exactly.
-          let cssText = "";
-          switch (ann.ann_type) {
-            case "underline_wavy":
-              cssText = `text-decoration-line: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; text-decoration-style: wavy; text-decoration-color: ${ann.color};`;
-              break;
-            case "underline":
-              cssText = `text-decoration-line: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; text-decoration-color: ${ann.color};`;
-              break;
-            case "bg":
-              cssText = `background-color: ${ann.color};`;
-              break;
-            case "text":
-              cssText = `color: ${ann.color};`;
-              break;
-            default:
-              console.warn(
-                "[loadAnnotations] unknown ann_type, no CSS applied",
-                ann,
-              );
-          }
-
           const span = document.createElement("span");
-          span.style.cssText = cssText;
-          span.setAttribute("data-type", ann.ann_type);
-          span.setAttribute("data-ann-id", ann.id);
+          span.style.cssText = buildSegmentCss(seg.style, seg.color);
+          span.setAttribute("data-start", String(seg.start));
+          span.setAttribute("data-end", String(seg.end));
+          span.setAttribute("data-style", seg.style);
+          span.setAttribute("data-color", seg.color);
 
           span.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -129,21 +99,15 @@
             selection.removeAllRanges();
             selection.addRange(selRange);
             // LongpressCtrl's $effect watches selectionchange and picks up
-            // the data-type from the new selection automatically.
+            // the data-style from the new selection automatically.
           });
 
           try {
             range.surroundContents(span);
           } catch (e) {
-            // surroundContents throws InvalidStateError when:
-            //   (1) the range is collapsed (filtered out by the length check
-            //       above, but still possible if a previous surround split
-            //       a text node under us)
-            //   (2) startContainer/endContainer is detached
-            //   (3) the range crosses element boundaries (e.g. overlaps
-            //       a span an earlier annotation just inserted)
-            // Try a more permissive extract-and-reinsert path first; only
-            // skip if that also fails.
+            // surroundContents throws InvalidStateError when the range
+            // crosses an element boundary (e.g. overlaps a span an earlier
+            // annotation just inserted). Fall back to extract+reinsert.
             try {
               const fragment = range.extractContents();
               span.appendChild(fragment);
@@ -151,15 +115,18 @@
             } catch (e2) {
               console.warn(
                 "[loadAnnotations] surround+extract both failed, skipping",
-                ann,
+                seg,
                 e?.message,
                 e2?.message,
               );
             }
           }
+          totalSegments++;
         }
       }
-      console.log(`Loaded ${annotations.length} annotations`);
+      console.log(
+        `Loaded ${rows.length} annotation rows (${totalSegments} segments)`,
+      );
     } catch (err) {
       console.error("Failed to load annotations:", err);
     }

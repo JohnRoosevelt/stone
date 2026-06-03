@@ -5,7 +5,7 @@
 //! - `schema` — `init_database` (DDL, indexes, triggers)
 //! - `books` — book/chapter/paragraph CRUD + initial import helpers
 //! - `search` — FTS5 + CJK LIKE search
-//! - `annotations` — text marks (save / replace / delete / list / clear)
+//! - `annotations` — per-paragraph segment list (save / list / clear)
 //! - `progress` — per-book reading position
 //!
 //! All query functions take a `&Connection` so callers can choose the
@@ -23,16 +23,17 @@ pub mod schema;
 pub mod search;
 
 // Re-export model types at the `db::` level so existing call sites
-// (`db::Annotation`, `db::Book`, ...) keep working after the split.
+// (`db::ParagraphAnnotations`, `db::Book`, ...) keep working after the split.
 pub use models::{
-    Annotation, Book, BookForImport, Chapter, FullChapter, FullParagraph, Paragraph,
-    ReadingProgress, SearchResult,
+    AnnotationSegment, Book, BookForImport, Chapter, FullChapter, FullParagraph, Paragraph,
+    ParagraphAnnotations, ReadingProgress, SearchResult,
 };
 // Re-export the most-used query functions at the `db::` level too, so the
-// lib.rs call sites (`db::replace_annotation`, `db::get_books`, ...) don't
-// need to know the internal layout.
+// lib.rs call sites (`db::save_paragraph_annotations`, `db::get_books`, ...)
+// don't need to know the internal layout.
 pub use annotations::{
-    clear_annotations, delete_annotation, get_annotations, replace_annotation, save_annotation,
+    clear_all_annotations, clear_paragraph_annotations, get_paragraph_annotations,
+    save_paragraph_annotations,
 };
 pub use books::{
     delete_book_data, format_size, get_all_books_for_import, get_books, get_chapters,

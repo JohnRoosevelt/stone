@@ -1,121 +1,98 @@
-//! Text annotations (underline, wavy underline, background, text color).
+//! Per-paragraph text annotations.
 //!
-//! `replace_annotation` is the dedup path used by LongpressCtrl.saveHighlight —
-//! see the doc comment on the function for the transactional contract.
+//! One row per `(cid, book_id, chapter_id, lang_code, p_index)` paragraph.
+//! Each row's `segments` column stores a JSON array of
+//! `{start, end, style, color}` entries. A paragraph can carry multiple
+//! distinct segments (e.g. two underlined words, plus a highlighted phrase),
+//! and a single (start, end) range can carry multiple styles via repeated
+//! entries with different `style` values.
+//!
+//! `save_paragraph_annotations` is an upsert keyed on the paragraph
+//! composite UNIQUE — the frontend sends the *full* segments list for a
+//! paragraph and the DB stores it as-is. This keeps the DB layer dumb
+//! (a single store) and the merge logic in one place (the toolbar).
 
 use rusqlite::{params, Connection};
 
-use super::models::Annotation;
+use super::models::{AnnotationSegment, ParagraphAnnotations};
 
-pub fn save_annotation(conn: &Connection, ann: &Annotation) -> Result<i64, String> {
-    let sql = "INSERT INTO annotations (cid, book_id, chapter_id, lang_code, p_index, start_offset, length, text, ann_type, color)
-               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)";
-    conn.execute(
-        sql,
-        params![
-            ann.cid,
-            ann.book_id,
-            ann.chapter_id,
-            ann.lang_code,
-            ann.p_index,
-            ann.start_offset,
-            ann.length,
-            ann.text,
-            ann.ann_type,
-            ann.color
-        ],
-    )
-    .map_err(|e| e.to_string())?;
-    Ok(conn.last_insert_rowid())
-}
+/// Upsert the segments list for one paragraph. Replaces whatever was
+/// previously stored for the same (cid, book, chapter, lang, p_index).
+/// Returns the row id.
+pub fn save_paragraph_annotations(
+    conn: &Connection,
+    pa: &ParagraphAnnotations,
+) -> Result<i64, String> {
+    let segments_json =
+        serde_json::to_string(&pa.segments).map_err(|e| e.to_string())?;
 
-/// Atomically replace any annotation at the same (p_index, start_offset, length)
-/// in the same chapter with the new one. Returns the new row id. This is the
-/// path LongpressCtrl uses to save — it guarantees that two consecutive
-/// "mark this same span" actions (whether the UI thinks it's a "new" or a
-/// "type-change") can't produce duplicate rows.
-pub fn replace_annotation(conn: &Connection, ann: &Annotation) -> Result<i64, String> {
     let tx = conn
         .unchecked_transaction()
         .map_err(|e| e.to_string())?;
+
+    // UPSERT — first save inserts, subsequent saves overwrite segments.
+    // ON CONFLICT requires SQLite ≥ 3.24 (universally available now).
     tx.execute(
-        "DELETE FROM annotations
-         WHERE cid=?1 AND book_id=?2 AND chapter_id=?3 AND lang_code=?4
-           AND p_index=?5 AND start_offset=?6 AND length=?7",
+        "INSERT INTO annotations (cid, book_id, chapter_id, lang_code, p_index, segments, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'))
+         ON CONFLICT(cid, book_id, chapter_id, lang_code, p_index) DO UPDATE SET
+             segments = excluded.segments,
+             updated_at = excluded.updated_at",
         params![
-            ann.cid,
-            ann.book_id,
-            ann.chapter_id,
-            ann.lang_code,
-            ann.p_index,
-            ann.start_offset,
-            ann.length
+            pa.cid,
+            pa.book_id,
+            pa.chapter_id,
+            pa.lang_code,
+            pa.p_index,
+            segments_json
         ],
     )
     .map_err(|e| e.to_string())?;
-    tx.execute(
-        "INSERT INTO annotations (cid, book_id, chapter_id, lang_code, p_index, start_offset, length, text, ann_type, color)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
-        params![
-            ann.cid,
-            ann.book_id,
-            ann.chapter_id,
-            ann.lang_code,
-            ann.p_index,
-            ann.start_offset,
-            ann.length,
-            ann.text,
-            ann.ann_type,
-            ann.color
-        ],
-    )
-    .map_err(|e| e.to_string())?;
-    let id = tx.last_insert_rowid();
+
+    let id: i64 = tx
+        .query_row(
+            "SELECT id FROM annotations
+             WHERE cid=?1 AND book_id=?2 AND chapter_id=?3 AND lang_code=?4 AND p_index=?5",
+            params![pa.cid, pa.book_id, pa.chapter_id, pa.lang_code, pa.p_index],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
     tx.commit().map_err(|e| e.to_string())?;
     Ok(id)
 }
 
-pub fn delete_annotation(conn: &Connection, id: i64) -> Result<(), String> {
-    conn.execute("DELETE FROM annotations WHERE id = ?1", params![id])
-        .map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-/// Wipe all annotations. Returns the number of rows removed.
-pub fn clear_annotations(conn: &Connection) -> Result<usize, String> {
-    let n = conn
-        .execute("DELETE FROM annotations", [])
-        .map_err(|e| e.to_string())?;
-    Ok(n)
-}
-
-pub fn get_annotations(
+/// Fetch every paragraph's annotation row for a chapter. The frontend
+/// groups by p_index and renders each segment as a DOM span.
+pub fn get_paragraph_annotations(
     conn: &Connection,
     cid: i64,
     book_id: i64,
     chapter_id: i64,
     lang_code: &str,
-) -> Result<Vec<Annotation>, String> {
-    let sql = "SELECT id, cid, book_id, chapter_id, lang_code, p_index, start_offset, length, text, ann_type, color, created_at
+) -> Result<Vec<ParagraphAnnotations>, String> {
+    let sql = "SELECT id, cid, book_id, chapter_id, lang_code, p_index, segments, updated_at
                FROM annotations
                WHERE cid = ?1 AND book_id = ?2 AND chapter_id = ?3 AND lang_code = ?4
-               ORDER BY id";
+               ORDER BY p_index";
     let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
     let rows = stmt
         .query_map(params![cid, book_id, chapter_id, lang_code], |row| {
-            Ok(Annotation {
+            let raw_segments: String = row.get(6)?;
+            // Best-effort parse: corrupt/missing column → empty list rather
+            // than failing the whole read. Defensive against a future schema
+            // mishap or a row that somehow ended up with a non-JSON value.
+            let segments: Vec<AnnotationSegment> = serde_json::from_str(&raw_segments)
+                .unwrap_or_default();
+            Ok(ParagraphAnnotations {
                 id: Some(row.get(0)?),
                 cid: row.get(1)?,
                 book_id: row.get(2)?,
                 chapter_id: row.get(3)?,
                 lang_code: row.get(4)?,
                 p_index: row.get(5)?,
-                start_offset: row.get(6)?,
-                length: row.get(7)?,
-                text: row.get(8)?,
-                ann_type: row.get(9)?,
-                color: row.get(10)?,
-                created_at: row.get(11)?,
+                segments,
+                updated_at: row.get(7)?,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -124,4 +101,30 @@ pub fn get_annotations(
         result.push(row.map_err(|e| e.to_string())?);
     }
     Ok(result)
+}
+
+/// Clear all segments for one paragraph (deletes the row).
+pub fn clear_paragraph_annotations(
+    conn: &Connection,
+    cid: i64,
+    book_id: i64,
+    chapter_id: i64,
+    lang_code: &str,
+    p_index: i64,
+) -> Result<(), String> {
+    conn.execute(
+        "DELETE FROM annotations
+         WHERE cid=?1 AND book_id=?2 AND chapter_id=?3 AND lang_code=?4 AND p_index=?5",
+        params![cid, book_id, chapter_id, lang_code, p_index],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Wipe all annotations across all chapters. Returns the number of rows removed.
+pub fn clear_all_annotations(conn: &Connection) -> Result<usize, String> {
+    let n = conn
+        .execute("DELETE FROM annotations", [])
+        .map_err(|e| e.to_string())?;
+    Ok(n)
 }
