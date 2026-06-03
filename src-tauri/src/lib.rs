@@ -272,12 +272,12 @@ fn is_desktop() -> bool {
 }
 
 #[tauri::command]
-fn open_devtools(window: tauri::WebviewWindow) -> Result<(), String> {
+fn open_devtools(_window: tauri::WebviewWindow) -> Result<(), String> {
     // Compiled in only for debug builds or when the `devtools` feature is on.
     // Android/iOS wry backends implement this as a no-op, so it's safe to call.
     #[cfg(any(debug_assertions, feature = "devtools"))]
     {
-        window.open_devtools();
+        _window.open_devtools();
     }
     Ok(())
 }

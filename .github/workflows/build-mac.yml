@@ -47,6 +47,11 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Add macOS x86_64 target
+        # universal-apple-darwin bundles both x86_64 and aarch64. The
+        # macOS runner image ships with aarch64-apple-darwin only.
+        run: rustup target add x86_64-apple-darwin
+
       # Cache `target/` to keep rebuilds under 10 minutes.
       # macOS runners share /Users/runner but ${{ runner.temp }} is per-job.
       - name: Cache Rust target
