@@ -15,10 +15,14 @@ on:
         default: ""
 
 env:
-  # R2 kept only as a legacy fallback reference. We do NOT upload here
-  # anymore — release artifacts go to GitHub Releases (see
-  # docs/release-pipeline-plan.md). These vars are not used by the build.
+  # R2 is the primary download host (Cloudflare edge, fast in China, no
+  # unauthenticated rate limit). CI uploads the APK + update.json here
+  # on every tag push, and the web /my + /download pages + the Tauri
+  # auto-updater all read from these URLs. GitHub Releases is still
+  # updated as a mirror for non-CN users / history.
   R2_PUBLIC: https://r2.lelexue.cn
+  R2_BUCKET: holy
+  R2_ENDPOINT: https://76f91d4a19eb310b8a1eee846a8d807b.r2.cloudflarestorage.com
 
 jobs:
   build:
@@ -137,9 +141,6 @@ jobs:
 
       - name: Build Android APK
         env:
-          # Injected for frontend frameworks (Svelte/Nuxt) so the
-          # updater / download page can resolve GitHub Release URLs.
-          VITE_GITHUB_REPO: ${{ github.repository }}
           # SvelteKit $env/static/public reads PUBLIC_* at build time.
           # Music / parquet / book data on R2 is still served from R2.
           PUBLIC_R2: ${{ env.R2_PUBLIC }}
@@ -223,12 +224,61 @@ jobs:
 
       - name: Generate updater manifest
         env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
+          R2_PUBLIC: ${{ env.R2_PUBLIC }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           NOTES="Build $VERSION from ${{ github.sha }}"
-          bash scripts/update/generate-manifest.sh "${VERSION}" "${NOTES}"
+          bash scripts/update/generate-manifest.sh "${VERSION}" "${NOTES}" "${{ steps.prepare.outputs.apk_path }}"
           cp update.json dist/update.json
+
+      # ── Primary download host: Cloudflare R2 ──
+      # This is what /my, /download and the Tauri auto-updater read.
+      # R2 is the canonical source because:
+      #   1. Cloudflare edge is fast in China (no slow github.com hop)
+      #   2. No unauthenticated rate limit (apk ~12MB hits would 403
+      #      from api.github.com/repos/.../releases/latest after 60/hr)
+      # GitHub Release upload (next step) still runs as a mirror.
+      - name: Upload APK + manifest to Cloudflare R2
+        if: success()
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_KEY }}
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+            echo "::error::Secret R2_ACCESS_KEY is empty. Add it in repo Settings → Secrets."
+            exit 1
+          fi
+          if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::Secret R2_SECRET_KEY is empty. Add it in repo Settings → Secrets."
+            exit 1
+          fi
+
+          # Versioned APK (preserved for history / GitHub Release mirror)
+          aws s3 cp "dist/stone-${{ steps.version.outputs.version }}.apk" \
+            "s3://${{ env.R2_BUCKET }}/apk/stone-${{ steps.version.outputs.version }}.apk" \
+            --endpoint-url "${{ env.R2_ENDPOINT }}" \
+            --region auto \
+            --content-type "application/vnd.android.package-archive"
+
+          # Always-latest pointer — every download path (auto-updater,
+          # /my page, /download page) resolves to this URL.
+          aws s3 cp "dist/stone-${{ steps.version.outputs.version }}.apk" \
+            "s3://${{ env.R2_BUCKET }}/apk/stone-latest.apk" \
+            --endpoint-url "${{ env.R2_ENDPOINT }}" \
+            --region auto \
+            --content-type "application/vnd.android.package-archive"
+
+          # Updater manifest — Tauri auto-updater reads this directly.
+          aws s3 cp dist/update.json \
+            "s3://${{ env.R2_BUCKET }}/apk/update.json" \
+            --endpoint-url "${{ env.R2_ENDPOINT }}" \
+            --region auto \
+            --content-type "application/json"
+
+          echo ""
+          echo "R2 upload complete."
+          echo "  APK:        ${{ env.R2_PUBLIC }}/apk/stone-latest.apk"
+          echo "  Manifest:   ${{ env.R2_PUBLIC }}/apk/update.json"
 
       - name: Upload APK + manifest to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')

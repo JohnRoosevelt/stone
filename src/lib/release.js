@@ -1,36 +1,48 @@
-// Shared module for fetching the latest GitHub release info.
-// Used by the download page (to build the actual APK/DMG URL) and by the
-// "我的" page (to list supported platforms with their download links).
+// Shared module for fetching the latest release info from the R2
+// bucket. Used by the /my and /download web pages to resolve real
+// download URLs (Android APK + macOS DMG) and show the latest version.
 //
-// The `update.json` manifest is for the Tauri auto-updater and only covers
-// the Android-aarch64 target; for the macOS DMG and any future asset we
-// need the full release info from the GitHub API.
-//
-// VITE_GITHUB_REPO is injected at build time. The dev default points at
-// the real upstream so the URLs work locally too.
+// Primary source: https://r2.lelexue.cn/apk/update.json (written by CI
+// on every tag push). R2 is fast in China and has no rate limits, so
+// no server-side proxy or KV cache is needed. The previous GitHub
+// Releases path was dropped because unauthenticated api.github.com is
+// capped at 60/hr/IP and is slow for China-based users.
 
-const GITHUB_REPO =
-  import.meta.env.VITE_GITHUB_REPO || "JohnRoosevelt/stone";
+const R2_PUBLIC = "https://r2.lelexue.cn";
+const MANIFEST_URL = `${R2_PUBLIC}/apk/update.json`;
 
-/** Server-side cached proxy at /api/release (1h KV TTL in prod). */
-const SERVER_RELEASE_URL = "/api/release";
+/** Always-latest asset URLs — CI overwrites these on every release. */
+const APK_LATEST_URL = `${R2_PUBLIC}/apk/stone-latest.apk`;
+const DMG_LATEST_URL = `${R2_PUBLIC}/apk/stone-latest.dmg`;
 
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes (in-memory, per session)
+/** 5-min in-memory cache so we don't re-fetch on every page render. */
+const CACHE_TTL_MS = 5 * 60 * 1000;
 let _cached = null;
 let _fetchedAt = 0;
 
-/** Shape returned to callers. */
-function normalize(data) {
+/**
+ * Normalize the R2 `update.json` shape into the `{tag, name,
+ * publishedAt, assets: [{name, size, url}]}` shape the existing
+ * /my and /download pages already consume.
+ */
+function normalize(manifest) {
+  const assets = [];
+  for (const [platform, info] of Object.entries(manifest.platforms || {})) {
+    if (!info || !info.url) continue;
+    // Derive a friendly filename from the URL (e.g. stone-latest.apk).
+    const name = info.url.split("/").pop() || platform;
+    assets.push({
+      name,
+      size: typeof info.size === "number" ? info.size : 0,
+      url: info.url,
+    });
+  }
   return {
-    tag: data.tag_name,
-    name: data.name,
-    publishedAt: data.published_at,
-    htmlUrl: data.html_url,
-    assets: (data.assets || []).map((a) => ({
-      name: a.name,
-      size: a.size,
-      url: a.browser_download_url,
-    })),
+    tag: manifest.version,
+    name: manifest.version,
+    publishedAt: manifest.pub_date,
+    htmlUrl: `${R2_PUBLIC}/apk/`,
+    assets,
   };
 }
 
@@ -40,75 +52,16 @@ export async function getLatestRelease({ force = false } = {}) {
     return _cached;
   }
 
-  // 1. Try the server-side proxy (KV-cached, dodges the 60/hr/IP GitHub limit).
-  try {
-    const res = await fetch(SERVER_RELEASE_URL);
-    if (res.ok) {
-      const data = await res.json();
-      _cached = data;
-      _fetchedAt = now;
-      return data;
-    }
-    console.warn(
-      `[release] server proxy returned HTTP ${res.status}, falling back to direct`,
-    );
-  } catch (e) {
-    console.warn(`[release] server proxy failed: ${e.message}, falling back to direct`);
-  }
-
-  // 2. Fallback: direct GitHub call. Same-origin rate limit applies, but
-  //    this path is what dev mode (no KV) and outages fall back on.
-  const res = await fetch(
-    `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`,
-  );
+  const res = await fetch(`${MANIFEST_URL}?t=${now}`);
   if (!res.ok) {
-    // 3. Last resort: a hardcoded recent release so dev mode (where the
-    //    /api/release proxy just relays and also hits the 60/hr limit)
-    //    still renders the /my and /download pages with real asset URLs.
-    //    Update this object when a new version ships.
-    if (HARDCODED_FALLBACK.tag) {
-      console.warn(
-        `[release] GitHub returned HTTP ${res.status}; using hardcoded v${HARDCODED_FALLBACK.tag} fallback`,
-      );
-      _cached = HARDCODED_FALLBACK;
-      _fetchedAt = now;
-      return HARDCODED_FALLBACK;
-    }
-    throw new Error(`GitHub releases/latest: HTTP ${res.status}`);
+    throw new Error(`R2 update.json: HTTP ${res.status}`);
   }
-  const data = await res.json();
-  const out = normalize(data);
+  const manifest = await res.json();
+  const out = normalize(manifest);
   _cached = out;
   _fetchedAt = now;
   return out;
 }
-
-/**
- * Hardcoded fallback release. Used when both the server proxy and the
- * direct GitHub call fail (dev-mode rate limit, transient outage, etc).
- * Set `tag` to `""` to disable and let the error throw instead.
- *
- * Update this when releasing a new version, or rely on the GitHub API
- * path in production where the KV cache absorbs almost all traffic.
- */
-const HARDCODED_FALLBACK = {
-  tag: "0.2.0",
-  name: "stone 0.2.0",
-  publishedAt: "2026-06-03T00:00:00Z",
-  htmlUrl: `https://github.com/${GITHUB_REPO}/releases/tag/v0.2.0`,
-  assets: [
-    {
-      name: "stone-0.2.0.apk",
-      size: 11.2 * 1024 * 1024,
-      url: `https://github.com/${GITHUB_REPO}/releases/download/v0.2.0/stone-0.2.0.apk`,
-    },
-    {
-      name: "stone-0.2.0.dmg",
-      size: 10.5 * 1024 * 1024,
-      url: `https://github.com/${GITHUB_REPO}/releases/download/v0.2.0/stone-0.2.0.dmg`,
-    },
-  ],
-};
 
 export function findAsset(release, predicate) {
   if (!release || !release.assets) return null;
@@ -149,3 +102,8 @@ export const SUPPORTED_PLATFORMS = [
     minVersion: "11",
   },
 ];
+
+// Re-export the latest URLs so non-page consumers (settings, /download
+// share sheet) can build a link without re-parsing the manifest.
+export const LATEST_APK_URL = APK_LATEST_URL;
+export const LATEST_DMG_URL = DMG_LATEST_URL;

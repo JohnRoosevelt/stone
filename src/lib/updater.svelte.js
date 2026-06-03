@@ -2,24 +2,22 @@
  * Shared updater state for checking and installing app updates.
  * Both Updater.svelte and the settings page use this module.
  *
- * Release artifact URLs come from GitHub Releases (see
- * docs/release-pipeline-plan.md). VITE_GITHUB_REPO is injected by CI
- * at build time from $GITHUB_REPOSITORY. The default below is for
- * local dev only.
+ * The R2 bucket (r2.lelexue.cn) is the primary download host — fast
+ * in China (Cloudflare edge) and no unauthenticated rate limits. The
+ * CI writes `apk/stone-latest.apk` + `apk/update.json` to R2 on every
+ * tag push; this client reads those. GitHub Releases is still updated
+ * as a mirror for non-CN users / history.
  */
 
-const GITHUB_REPO = import.meta.env.VITE_GITHUB_REPO || "stone-releases/placeholder";
-// R2 kept as a last-resort fallback if GitHub URL ever fails to resolve.
-// (Removed in step 6 of the plan.)
 const R2_PUBLIC = "https://r2.lelexue.cn";
 
 function manifestUrl() {
-  return `https://github.com/${GITHUB_REPO}/releases/latest/download/update.json?t=${Date.now()}`;
+  return `${R2_PUBLIC}/apk/update.json?t=${Date.now()}`;
 }
-// "latest" alias tracks the highest semver release, not necessarily the one
-// the user is on. The Updater.svelte install path opens the URL via the
-// system browser, which will 404 if the tag has been deleted.
-export const APK_URL = `https://github.com/${GITHUB_REPO}/releases/latest/download/stone.apk`;
+// `stone-latest.apk` is the always-latest pointer that CI keeps
+// overwriting on every release. The install path opens this URL via
+// the system browser, which downloads whatever the CI just shipped.
+export const APK_URL = `${R2_PUBLIC}/apk/stone-latest.apk`;
 
 /**
  * Wrap state in a single object so we can mutate properties,
@@ -32,10 +30,17 @@ export const updater = $state({
   error: "",
 });
 
-// Simple semver comparison (positive = a > b)
+// Simple semver comparison (positive = a > b).
+// Treats null/undefined/empty as "older than anything" so a fresh
+// remote version still gets reported when the running app version is
+// missing (e.g. dev mode, or @tauri-apps/api/app not available).
 function compareVersions(a, b) {
-  const pa = a.split(".").map(Number);
-  const pb = b.split(".").map(Number);
+  const safeSplit = (v) => {
+    if (!v || typeof v !== "string") return [0, 0, 0];
+    return v.split(".").map(Number);
+  };
+  const pa = safeSplit(a);
+  const pb = safeSplit(b);
   for (let i = 0; i < 3; i++) {
     const na = pa[i] || 0;
     const nb = pb[i] || 0;

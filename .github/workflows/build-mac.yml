@@ -20,10 +20,13 @@ on:
         default: ""
 
 env:
-  # R2 is still used for runtime content delivery (music, parquet, etc.)
-  # even though release artifacts now ship via GitHub Releases. SvelteKit
-  # reads PUBLIC_* at build time via $env/static/public.
+  # R2 is the primary download host — the web /my and /download pages
+  # resolve the macOS asset URL from R2's apk/stone-latest.dmg. CI
+  # uploads here on every tag push so the latest pointer is always
+  # current. GitHub Release (later step) still runs as a mirror.
   R2_PUBLIC: https://r2.lelexue.cn
+  R2_BUCKET: holy
+  R2_ENDPOINT: https://76f91d4a19eb310b8a1eee846a8d807b.r2.cloudflarestorage.com
 
 jobs:
   build:
@@ -85,7 +88,6 @@ jobs:
 
       - name: Build macOS (universal)
         env:
-          VITE_GITHUB_REPO: ${{ github.repository }}
           # SvelteKit $env/static/public reads PUBLIC_* at build time.
           # Music / parquet / book data on R2 is still served from R2.
           PUBLIC_R2: ${{ env.R2_PUBLIC }}
@@ -113,12 +115,81 @@ jobs:
           cp "$DMG" "dist/stone-${VERSION}.dmg"
           echo "dmg_path=dist/stone-${VERSION}.dmg" >> "$GITHUB_OUTPUT"
 
+      - name: Upload DMG to Cloudflare R2
+        if: success()
+        # R2 is the primary download host (Cloudflare edge, fast in
+        # China, no rate limit). The android workflow writes
+        # `apk/stone-latest.apk` + `apk/update.json`; this step writes
+        # the DMG half. If android's update.json is already in R2, we
+        # merge the DMG entry in (so /my + /download can show both
+        # platforms with sizes); otherwise we write a fresh manifest
+        # with just the DMG.
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_KEY }}
+          R2_PUBLIC: ${{ env.R2_PUBLIC }}
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::R2 secrets missing; skipping R2 upload."
+            exit 1
+          fi
+
+          DMG_PATH="${{ steps.prepare.outputs.dmg_path }}"
+          DMG_SIZE=$(stat -c%s "$DMG_PATH" 2>/dev/null || stat -f%z "$DMG_PATH" 2>/dev/null || wc -c < "$DMG_PATH" | tr -d ' ')
+          echo "DMG size: $DMG_SIZE bytes"
+
+          # Versioned DMG (preserved for history / GitHub Release mirror)
+          aws s3 cp "$DMG_PATH" \
+            "s3://${{ env.R2_BUCKET }}/apk/stone-${{ steps.version.outputs.version }}.dmg" \
+            --endpoint-url "${{ env.R2_ENDPOINT }}" \
+            --region auto \
+            --content-type "application/x-apple-diskimage"
+
+          # Always-latest DMG pointer
+          aws s3 cp "$DMG_PATH" \
+            "s3://${{ env.R2_BUCKET }}/apk/stone-latest.dmg" \
+            --endpoint-url "${{ env.R2_ENDPOINT }}" \
+            --region auto \
+            --content-type "application/x-apple-diskimage"
+
+          # Merge DMG entry into the existing update.json (written by
+          # android job) so /my + /download show both platforms with
+          # their real sizes.
+          if aws s3 cp "s3://${{ env.R2_BUCKET }}/apk/update.json" /tmp/update-existing.json \
+              --endpoint-url "${{ env.R2_ENDPOINT }}" --region auto 2>/dev/null; then
+            echo "Existing update.json found, merging DMG entry."
+            jq --argjson sz "$DMG_SIZE" \
+              '.platforms["darwin-universal"] = {url: "https://r2.lelexue.cn/apk/stone-latest.dmg", size: $sz, signature: ""}' \
+              /tmp/update-existing.json > /tmp/update-merged.json
+            aws s3 cp /tmp/update-merged.json \
+              "s3://${{ env.R2_BUCKET }}/apk/update.json" \
+              --endpoint-url "${{ env.R2_ENDPOINT }}" \
+              --region auto \
+              --content-type "application/json"
+          else
+            echo "No existing update.json, generating fresh one with just DMG."
+            bash scripts/update/generate-manifest.sh \
+              "${{ steps.version.outputs.version }}" \
+              "Build ${{ steps.version.outputs.version }} from ${{ github.sha }}" \
+              "" \
+              "$DMG_PATH"
+            aws s3 cp update.json \
+              "s3://${{ env.R2_BUCKET }}/apk/update.json" \
+              --endpoint-url "${{ env.R2_ENDPOINT }}" \
+              --region auto \
+              --content-type "application/json"
+          fi
+
+          echo ""
+          echo "R2 upload complete."
+          echo "  DMG:        ${{ env.R2_PUBLIC }}/apk/stone-latest.dmg"
+
       - name: Upload DMG to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
-        # The android workflow creates the Release first (gh release create).
-        # We wait for it, then attach our DMG via `gh release upload`.
-        # `gh release upload` is idempotent for the same filename (it
-        # overwrites), and tolerates the release already existing.
+        # GitHub Release is the mirror (R2 is the primary download
+        # source). The android workflow creates the Release first
+        # (gh release create). We wait for it, then attach our DMG.
+        # `gh release upload` is idempotent for the same filename.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
