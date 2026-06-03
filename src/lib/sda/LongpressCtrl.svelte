@@ -132,6 +132,9 @@
     //   (a) toggle a same-(start,end,style) segment off
     //   (b) add a new segment for the picked style
     let segments = collectSegmentsFromDom(pEl);
+    console.log(
+      `[anno] selection: p=${pIndex} style=${pickedStyle} color=${color} range=[${start},${end}] existing_segments=${JSON.stringify(segments)}`,
+    );
 
     const isToggleOff = segments.some(
       (s) =>
@@ -149,6 +152,9 @@
         style: pickedStyle,
         color,
       });
+      console.log(
+        `[anno] toggle_off: p=${pIndex} range=[${start},${end}] style=${pickedStyle} → segments=${segments.length}`,
+      );
     } else {
       // Add a new segment. (If the same range already has a different style,
       // this becomes a second segment on the same range — the renderer will
@@ -159,6 +165,9 @@
         style: pickedStyle,
         color,
       });
+      console.log(
+        `[anno] toggle_on: p=${pIndex} range=[${start},${end}] style=${pickedStyle} color=${color} → segments=${segments.length}`,
+      );
     }
 
     // Persist the merged segments list.
