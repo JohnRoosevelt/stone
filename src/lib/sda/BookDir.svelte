@@ -192,11 +192,13 @@
       </p>
       <span flex class="gap-1 ml-auto">
         {#if rp}
-          <span class="text-2 text-gray-400">{rp.scroll_percentage}% {rp.chapter_id}˼</span>
+          <span class="text-2 text-gray-400">{rp.scroll_percentage}% {rp.chapter_id}</span>
         {/if}
-        <span text-green>˻</span>
-        <span>{book.abbreviation}</span>
-        <span text-green>˼</span>
+        {#if book.abbreviation}
+          <span text-green>˻</span>
+          <span>{book.abbreviation}</span>
+          <span text-green>˼</span>
+        {/if}
       </span>
     </a>
   </div>
