@@ -17,7 +17,11 @@ function manifestUrl() {
 // `stone-latest.apk` is the always-latest pointer that CI keeps
 // overwriting on every release. The install path opens this URL via
 // the system browser, which downloads whatever the CI just shipped.
-export const APK_URL = `${R2_PUBLIC}/apk/stone-latest.apk`;
+// Always fresh by adding ?t= timestamp at call time, so the browser
+// never serves a cached older APK.
+function apkUrl() {
+  return `${R2_PUBLIC}/apk/stone-latest.apk?t=${Date.now()}`;
+}
 
 /**
  * Wrap state in a single object so we can mutate properties,
@@ -90,7 +94,13 @@ export async function checkForUpdate(silent = false) {
     if (
       manifest.version &&
       compareVersions(manifest.version, currentVersion) > 0 &&
-      manifest.version !== getDismissedVersion()
+      // Only skip if: (a) dismissed same version AND user hasn't upgraded past it yet)
+      // OR (b) dismissed a NEWER version — don't re-prompt for a version the user
+      // explicitly declined.
+      !(
+        getDismissedVersion() === manifest.version &&
+        compareVersions(currentVersion, getDismissedVersion()) < 0
+      )
     ) {
       updater.updateInfo = {
         version: manifest.version,
@@ -125,14 +135,14 @@ export async function installUpdate() {
 
   try {
     const { openUrl } = await import("@tauri-apps/plugin-opener");
-    await openUrl(APK_URL);
+    await openUrl(apkUrl());
     updater.updateInfo = null;
   } catch (e) {
     console.error("[updater] install failed:", e);
     updater.error = `更新失败: ${e?.message || e}`;
 
     try {
-      window.open(APK_URL, "_blank");
+      window.open(apkUrl(), "_blank");
     } catch (_) {}
   }
 }
