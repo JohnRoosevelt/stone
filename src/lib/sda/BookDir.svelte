@@ -190,11 +190,14 @@
       <p class:text-green={page.params.bookId == book.book_id}>
         {book.name}
       </p>
-      {#if rp}
-        <span class="text-2 text-gray-400 ml-auto">
-          {rp.chapter_id}˼ {rp.scroll_percentage}%
-        </span>
-      {/if}
+      <span flex class="gap-1 ml-auto">
+        {#if rp}
+          <span class="text-2 text-gray-400">{rp.scroll_percentage}% {rp.chapter_id}˼</span>
+        {/if}
+        <span text-green>˻</span>
+        <span>{book.abbreviation}</span>
+        <span text-green>˼</span>
+      </span>
     </a>
   </div>
 {/snippet}

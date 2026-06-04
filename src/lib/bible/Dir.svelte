@@ -138,17 +138,14 @@
       <p flex-bc class:text-green={page.params.bookId == book.book_id}>
         <span>{book.name}</span>
         <span flex class="gap-1">
+          {#if rp}
+            <span class="text-2 text-gray-400">{rp.scroll_percentage}% {rp.chapter_id}˼</span>
+          {/if}
           <!-- https://symbl.cc/cn/unicode-table/#spacing-modifier-letters -->
           <!-- u+20FB -->
           <span text-green>˻</span>
           <span>{book.abbreviation}</span>
           <span text-green>˼</span>
-          <!-- u+20FC -->
-          {#if rp}
-            <span class="text-2 text-gray-400"
-              >{rp.chapter_id}˼ {rp.scroll_percentage}%</span
-            >
-          {/if}
         </span>
       </p>
     </a>
