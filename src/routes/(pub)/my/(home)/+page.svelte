@@ -1,5 +1,6 @@
 <script>
   import { DATAS } from "$lib/data.svelte";
+  import { searchHistory, clearSearchHistory } from "$lib/bible/searchStore.svelte.js";
 
   const roadmap = [
     {
@@ -9,8 +10,8 @@
     },
     {
       title: "搜索优化 + KV",
-      desc: "引入 Cloudflare KV 缓存，优化关键字查找性能",
-      done: false,
+      desc: "引入 Cloudflare KV 缓存，keyword 热度跨平台共享",
+      done: true,
     },
     {
       title: "App 发布",
@@ -21,6 +22,7 @@
 
   let showRoadmap = $state(false);
   let showDebug = $state(false);
+  let showSearchHistory = $state(true);
   let loadingUa = $state(false);
 
   async function toggleDebug() {
@@ -52,39 +54,37 @@
       设置
     </h2>
 
-    <!-- 深色模式 -->
+    <!-- 主题模式（auto / light / dark 三档） -->
     <div
-      class="flex items-center justify-between p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
+      class="p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
     >
-      <div flex-cc gap-3>
-        <span i-carbon-sun text-xl></span>
+      <div flex-cc gap-3 mb-3>
+        <span i-carbon-light text-xl></span>
         <div>
-          <div font-medium>深色模式</div>
-          <div text-sm text-gray-500>切换界面明暗主题</div>
+          <div font-medium>主题模式</div>
+          <div text-sm text-gray-500>跟随系统 / 浅色 / 深色</div>
         </div>
       </div>
-      <button
-        w-12
-        h-7
-        rounded-full
-        transition300
-        relative
-        class={DATAS.isDarkMode ? "bg-green" : "bg-gray-300 dark:bg-gray-600"}
-        onclick={() => (DATAS.isDarkMode = !DATAS.isDarkMode)}
-        aria-label="切换深色模式"
-      >
-        <span
-          absolute
-          top-0.5
-          w-6
-          h-6
-          rounded-full
-          bg-white
-          shadow
-          transition300
-          class={DATAS.isDarkMode ? "left-5" : "left-0.5"}
-        ></span>
-      </button>
+      <div class="grid grid-cols-3 gap-1 bg-gray-100 dark:bg-gray-800 rounded-1 p-1">
+        {#each [["system", "i-carbon-asleep", "跟随系统"], ["light", "i-carbon-sun", "浅色"], ["dark", "i-carbon-moon", "深色"]] as [mode, icon, label]}
+          <button
+            class="rounded-1 py-2 text-sm font-medium transition300 flex-cc gap-1.5
+              {DATAS.themeMode === mode
+                ? 'bg-white dark:bg-gray-700 text-green shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}"
+            onclick={() => {
+              DATAS.themeMode = mode;
+              // Re-evaluate isDarkMode against the new mode
+              const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+              DATAS.isDarkMode = mode === "system" ? sysDark : mode === "dark";
+            }}
+            aria-label={label}
+          >
+            <span {icon}></span>
+            {label}
+          </button>
+        {/each}
+      </div>
     </div>
 
     <!-- 字体大小 -->
@@ -160,6 +160,54 @@
       ></span>
     </button>
   {/snippet}
+
+  <!-- ─── 搜索历史 ─── -->
+  <section space-y-2>
+    <div
+      class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+    >
+      <button
+        class="w-full flex items-center justify-between px-4 py-3.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300"
+        onclick={() => (showSearchHistory = !showSearchHistory)}
+      >
+        <span flex-cc gap-2>
+          <span i-carbon-search-history text-green></span>
+          搜索历史
+          {#if searchHistory.length > 0}
+            <span class="text-xs text-gray-400">({searchHistory.length})</span>
+          {/if}
+        </span>
+        <span
+          class="transition300 text-gray-400 {showSearchHistory ? 'rotate-180' : ''}"
+          i-carbon-chevron-down
+        ></span>
+      </button>
+      {#if showSearchHistory}
+        <div class="border-t border-gray-100 dark:border-gray-800 px-3 py-2">
+          {#if searchHistory.length === 0}
+            <p class="text-sm text-gray-400 text-center py-4">暂无搜索历史</p>
+          {:else}
+            <div class="flex flex-wrap gap-1.5 pb-2">
+              {#each searchHistory as q (q)}
+                <a
+                  href="/search?q={encodeURIComponent(q)}"
+                  class="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-green/10 dark:hover:bg-green/20 rounded-full transition300 no-underline"
+                >
+                  {q}
+                </a>
+              {/each}
+            </div>
+            <button
+              class="text-xs text-red hover:underline"
+              onclick={() => clearSearchHistory()}
+            >
+              清除全部
+            </button>
+          {/if}
+        </div>
+      {/if}
+    </div>
+  </section>
 
   <!-- ─── 开发规划 ─── -->
   <div

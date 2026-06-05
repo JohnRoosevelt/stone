@@ -6,6 +6,7 @@
   import {
     searchState,
     searchHistory,
+    clearSearchHistory,
     SCOPES,
   } from "$lib/bible/searchStore.svelte.js";
 
@@ -178,7 +179,7 @@
         <button
           class="hover:text-red transition-colors"
           onclick={() => {
-            searchHistory.length = 0;
+            clearSearchHistory();
             historyItems = [];
           }}
         >
