@@ -104,17 +104,16 @@
           showId("fav", "start");
         }}
         aria-label="fav"
-        size-6
-        flex-cc
-        p-1
-        rounded-1
-        class={activeId === "fav"
-          ? "text-green font-700 bg-gray-200 dark:(bg-gray-600)"
-          : selectId == "fav"
-            ? "text-red bg-gray-300 dark:(bg-gray-800)"
-            : "bg-gray-300 dark:(bg-gray-800)"}
+        class={[
+          "size-6 flex-cc p-1 rounded-1",
+          activeId === "fav"
+            ? "text-green font-700 bg-gray-200 dark:bg-gray-600"
+            : selectId == "fav"
+              ? "text-red bg-gray-300 dark:bg-gray-800"
+              : "bg-gray-300 dark:bg-gray-800",
+        ]}
       >
-        <span i-carbon-star-filled></span>
+        <span class="i-carbon-star-filled"></span>
       </button>
     {/if}
 
@@ -125,15 +124,14 @@
           showId(tag, "start");
         }}
         aria-label={tag}
-        size-6
-        flex-cc
-        p-1
-        rounded-1
-        class={activeId === tag
-          ? "text-green font-700 bg-gray-200 dark:(bg-gray-600)"
-          : selectId == tag
-            ? "text-red bg-gray-300 dark:(bg-gray-800)"
-            : "bg-gray-300 dark:(bg-gray-800)"}
+        class={[
+          "size-6 flex-cc p-1 rounded-1",
+          activeId === tag
+            ? "text-green font-700 bg-gray-200 dark:bg-gray-600"
+            : selectId == tag
+              ? "text-red bg-gray-300 dark:bg-gray-800"
+              : "bg-gray-300 dark:bg-gray-800",
+        ]}
         >{tag}
       </button>
     {/each}

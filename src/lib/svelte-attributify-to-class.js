@@ -420,7 +420,11 @@ export default function svelteAttributifyToClass() {
               } else if (variantNames.has(name)) {
                 for (const v of value.split(/\s+/).filter(Boolean)) {
                   if (v === "~") classParts.push(name);
-                  else classParts.push(`${name}:${name}-${v}`);
+                  else if (v.includes(":")) {
+                    // Value already has variant (e.g. `dark="hover:bg-gray-800"`)
+                    // → keep as-is to avoid double-prefix (`dark:hover:bg-gray-800`).
+                    classParts.push(v);
+                  } else classParts.push(`${name}-${v}`);
                 }
               } else if (valuedAttrs.has(name)) {
                 for (const v of value.split(/\s+/).filter(Boolean)) {
