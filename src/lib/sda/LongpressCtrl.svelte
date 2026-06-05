@@ -111,6 +111,7 @@
     const range = selection.getRangeAt(0);
     if (range.collapsed) return; // empty selection — nothing to annotate
 
+    // 找段落
     const startNode =
       range.startContainer.nodeType === Node.TEXT_NODE
         ? range.startContainer.parentNode
@@ -122,19 +123,59 @@
       return;
     }
 
-    // Web 划线 **不存**任何地方 — 纯 DOM 操作, 刷新即丢
-    // (与 Tauri/Android 端持久化到本地 SQLite 不同; 按 user 设计原则)
-    // 这一段 = 一整段加 css (不能用 span 拆 — 简单可靠)
-    if (pEl.getAttribute("data-type") === dataType) {
-      // 同一段同一 style 再次点击 → 清除划线
-      pEl.removeAttribute("data-type");
-      pEl.style.cssText = "";
+    // 检测: selection 是否完全在一个已有 [data-style] span 内?
+    // (startContainer + endContainer 都在同一 span, 且 selection 文本 === span 文本)
+    // 是的话 → 走 toggle off (删除这段内容, span 自动缩短)
+    const startSpan = (range.startContainer.nodeType === Node.TEXT_NODE
+      ? range.startContainer.parentElement
+      : range.startContainer)?.closest?.("[data-style]");
+    const endSpan = (range.endContainer.nodeType === Node.TEXT_NODE
+      ? range.endContainer.parentElement
+      : range.endContainer)?.closest?.("[data-style]");
+    if (
+      startSpan &&
+      endSpan &&
+      startSpan === endSpan &&
+      startSpan.getAttribute("data-style") === dataType &&
+      range.toString() === startSpan.textContent
+    ) {
+      // toggle off: 删除选区内容 (span 自动缩短 / 分裂 / 变空被清理)
+      range.deleteContents();
+      // 空 span 清理 + text node 合并
+      // 用 textContent (不用 firstChild) — Svelte 编译会注入 whitespace text node
+      // 让 firstChild 仍 truthy, 但 textContent 才是用户实际可见内容
+      if (!startSpan.textContent) startSpan.remove();
+      else startSpan.parentNode.normalize();
       info("已清除（本页面刷新后丢失）");
-    } else {
-      pEl.setAttribute("data-type", dataType);
-      pEl.style.cssText = cssText;
-      info("已划线（本页面刷新后丢失）");
+      selection.removeAllRanges();
+      return;
     }
+
+    // toggle on: span 包裹 selection
+    //   surroundContents 在 selection 跨 element boundary 时 throw InvalidStateError
+    //   (例如 selection 部分在旧 span 内, 部分在外) → 用 extractContents 兜底
+    //   (参考 Article.svelte loadAnnotations 同款兜底)
+    const span = document.createElement("span");
+    span.style.cssText = cssText;
+    span.setAttribute("data-style", dataType);
+    span.setAttribute("data-color", color);
+
+    try {
+      range.surroundContents(span);
+    } catch (e) {
+      try {
+        const fragment = range.extractContents();
+        span.appendChild(fragment);
+        range.insertNode(span);
+      } catch (e2) {
+        console.warn("[web 划线] surround+extract 都失败:", e?.message, e2?.message);
+        info("划线失败,请重新选择");
+        return;
+      }
+    }
+
+    info("已划线（本页面刷新后丢失）");
+    selection.removeAllRanges();
   }
 </script>
 
