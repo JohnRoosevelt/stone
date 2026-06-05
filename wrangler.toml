@@ -6,9 +6,18 @@ compatibility_flags = [ "nodejs_compat" ]
 
 [vars]
 PUBLIC_R2 = "https://r2.lelexue.cn"
+PUBLIC_API_BASE = "https://lelexue.cn"
 R2 = "76f91d4a19eb310b8a1eee846a8d807b,85ac4a675838688f09e61e8e52ca24bc,dd28cc17212f27ebd63fe8bd597671369877f9bf31d0aad4c636b26a7cfa0b3f,holy"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "stone-db"
 database_id = "8aa5dbac-b20e-47dd-96af-79a493e5638f"
+
+# KV bindings — dev 走 miniflare 本地 path (`.wrangler/state/v3/kv/`),
+# prod 走 CF 远端 namespace（id 在 deploy 时由 wrangler 注入）。
+# 每次新环境需要 `wrangler kv namespace create` 拿 id（需要 CF API token）。
+[[kv_namespaces]]
+binding = "SEARCH_CACHE"
+id = "dev-only-placeholder-search-cache"  # dev: miniflare ignores; prod: replace via wrangler
+preview_id = "dev-only-placeholder-search-cache"

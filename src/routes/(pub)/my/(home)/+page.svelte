@@ -104,7 +104,6 @@
           h-8
           rounded-full
           bg-gray-100
-          dark:bg-gray-700
           flex-cc
           flex-shrink-0
           class={DATAS.fontSize <= 12 ? "opacity-30" : ""}
@@ -128,7 +127,6 @@
           h-8
           rounded-full
           bg-gray-100
-          dark:bg-gray-700
           flex-cc
           flex-shrink-0
           class={DATAS.fontSize >= 28 ? "opacity-30" : ""}

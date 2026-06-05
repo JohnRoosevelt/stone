@@ -8,7 +8,9 @@ export async function GET({ url }) {
   const Key = url.searchParams.get("Key");
   if (!Key) throw error(400, "Key required");
 
-  const [accountId, accessKeyId, secretAccessKey, Bucket] = env.R2.split(",");
+  const r2 = env.R2;
+  if (!r2) throw error(500, "R2 binding not configured");
+  const [accountId, accessKeyId, secretAccessKey, Bucket] = r2.split(",");
 
   const client = new S3Client({
     region: "auto",

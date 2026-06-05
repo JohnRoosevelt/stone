@@ -333,8 +333,14 @@
 {#if showEdit}
   <div
     class="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
     onclick={(e) => {
       if (e.target === e.currentTarget) showEdit = false;
+    }}
+    onkeydown={(e) => {
+      if (e.key === "Escape") showEdit = false;
     }}
   >
     <div
@@ -460,8 +466,17 @@
 {#if showDelete && deleteTarget}
   <div
     class="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
     onclick={(e) => {
       if (e.target === e.currentTarget) {
+        showDelete = false;
+        deleteTarget = null;
+      }
+    }}
+    onkeydown={(e) => {
+      if (e.key === "Escape") {
         showDelete = false;
         deleteTarget = null;
       }
@@ -514,8 +529,14 @@
 {#if showImport}
   <div
     class="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
     onclick={(e) => {
       if (e.target === e.currentTarget) showImport = false;
+    }}
+    onkeydown={(e) => {
+      if (e.key === "Escape") showImport = false;
     }}
   >
     <div
