@@ -1,24 +1,19 @@
 import { json, error } from "@sveltejs/kit";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { env } from "$env/dynamic/private";
 
 /** GET /api/r2/download?Key=1/en/1/1.parquet.zst */
-export async function GET({ url }) {
+export async function GET({ url, platform }) {
   const Key = url.searchParams.get("Key");
   if (!Key) throw error(400, "Key required");
 
-  // R2 凭据拆 4 个 env 读:
-  //   - R2_ACCOUNT_ID + R2_BUCKET: 公开信息, wrangler.toml [vars] 提供
-  //   - R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY: 走 wrangler secret put (prod) /
-  //     .dev.vars (dev), 严禁进 git
-  const accountId = env.R2_ACCOUNT_ID;
-  const accessKeyId = env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = env.R2_SECRET_ACCESS_KEY;
-  const Bucket = env.R2_BUCKET;
-  if (!accountId || !accessKeyId || !secretAccessKey || !Bucket) {
-    throw error(500, "R2 binding not configured");
-  }
+  // R2 凭据走单 secret `R2` (CF Pages Secret / dev .dev.vars),
+  // 4 段逗号分隔: accountId,accessKeyId,secretAccessKey,bucket.
+  // miniflare 启的 workerd 把 .dev.vars 注入到 platform.env (不是 process.env),
+  // 所以 SvelteKit server endpoint 必须走 event.platform.env.
+  const r2 = platform?.env?.R2;
+  if (!r2) throw error(500, "R2 binding not configured");
+  const [accountId, accessKeyId, secretAccessKey, Bucket] = r2.split(",");
 
   const client = new S3Client({
     region: "auto",

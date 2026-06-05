@@ -1,9 +1,8 @@
 import { json, error } from "@sveltejs/kit";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { env } from "$env/dynamic/private";
 
-export async function GET({ url }) {
+export async function GET({ url, platform }) {
   const Key = url.searchParams.get("Key");
   const ContentType =
     url.searchParams.get("contentType") || "application/octet-stream";
@@ -12,14 +11,13 @@ export async function GET({ url }) {
     throw error(400, "fileName is required");
   }
 
-  // R2 凭据拆 4 个 env 读 (跟 download endpoint 同步, 见 /api/r2/download/+server.js)
-  const accountId = env.R2_ACCOUNT_ID;
-  const accessKeyId = env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = env.R2_SECRET_ACCESS_KEY;
-  const Bucket = env.R2_BUCKET;
-  if (!accountId || !accessKeyId || !secretAccessKey || !Bucket) {
-    throw error(500, "R2 binding not configured");
-  }
+  // R2 凭据走单 secret `R2` (CF Pages Secret / dev .dev.vars),
+  // 4 段逗号分隔: accountId,accessKeyId,secretAccessKey,bucket.
+  // 跟 /api/r2/download 同步, 走 event.platform.env (workerd platform bindings,
+  // 不是 process.env).
+  const r2 = platform?.env?.R2;
+  if (!r2) throw error(500, "R2 binding not configured");
+  const [accountId, accessKeyId, secretAccessKey, Bucket] = r2.split(",");
 
   const client = new S3Client({
     region: "auto",
