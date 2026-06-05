@@ -6,7 +6,12 @@
  * - Web 环境：使用 fetch() 调用后端 API
  */
 
-import { PUBLIC_API_BASE } from "$env/static/public";
+// SvelteKit `$env/static/public` 在 dev 模式无 .env 时会 throw SyntaxError
+// (整个 virtual module 无 export 列表) — 用 import.meta.env + fallback
+// 生产环境: 走 vite build 时的 .env / .env.production + adapter-cloudflare
+// 静态替换 (PUBLIC_* 会被 tree-shake 进去 client bundle)
+const PUBLIC_API_BASE =
+  import.meta.env.PUBLIC_API_BASE || "https://lelexue.cn";
 
 let _isTauri = null;
 
@@ -150,4 +155,22 @@ export async function searchAPI(q, { lang = "zh", cid, limit = 200, offset = 0 }
     results: data.results,
     hasMore: data.hasMore ?? false,
   };
+}
+
+// ── Tauri-only API stubs for web (避免 esbuild 静态 import 报错) ─────
+//
+// 这些函数在 Tauri/Android 端有真实实现, web 端不应被调用。
+// 保留 stub 导出是必须的 — Article.svelte / +layout.js / tools/import
+// 等组件会静态 import 它们, esbuild 解析失败会让整个 module 编译挂掉,
+// 渲染不出来 → 划线工具栏 / 章节页 / 工具页全部失灵。
+//
+// 语义:
+//   - getParagraphAnnotations: web 划线纯 DOM 不存 (CLAUDE.md #2), 永远空
+//   - hasBookData:              web 永远走 R2 整本拉, 永远 false (CLAUDE.md #1)
+export async function getParagraphAnnotations() {
+  return [];
+}
+
+export async function hasBookData() {
+  return false;
 }

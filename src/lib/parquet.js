@@ -1,4 +1,6 @@
-import { PUBLIC_R2 } from "$env/static/public";
+// SvelteKit `$env/static/public` 在 dev 模式无 .env 时会 throw SyntaxError
+// (整个 virtual module 无 export 列表) — 用 import.meta.env + fallback
+const PUBLIC_R2 = import.meta.env.PUBLIC_R2 || "https://r2.lelexue.cn";
 import { dev } from "$app/environment";
 import { tableFromArrays, tableToIPC } from "apache-arrow";
 import initZstd, { decompress, compress } from "@dweb-browser/zstd-wasm";

@@ -1,5 +1,6 @@
 <script>
-  import { PUBLIC_R2 } from "$env/static/public";
+  // 见 src/lib/tauri.js:1 注释 — $env/static/public 在 dev 无 .env 时 throw
+  const PUBLIC_R2 = import.meta.env.PUBLIC_R2 || "https://r2.lelexue.cn";
   import AudioPlayer from "$lib/media/AudioPlayer.svelte";
   import media from "$lib/media/media.json";
 
