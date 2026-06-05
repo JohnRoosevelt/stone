@@ -4,17 +4,44 @@
  * Cross-page (search input page ↔ search results page ↔ detail page) maintain search results and scroll position.
  * Use .svelte.js module-level $state to implement global reactive state.
  *
- * Caching strategy:
- *   Fetch 200 results per search, cache to Map by `${lang}|${q}|${cid}`.
- *   When the same search criteria is hit again, return cache directly without querying the database.
- *   Cache limit of 50 entries, evict the oldest when exceeded (FIFO).
+ * Caching strategy: server-side only (Cloudflare KV in /api/search).
+ * Client-side caching was removed — it would suppress the server-side
+ * per-keyword counter (every GET, including KV-hit, bumps the count).
  */
-
-import { DATAS } from "$lib/data.svelte";
 
 /** @typedef {{ rowid: number, cid: number, book_id: number, chapter_id: number, id: string, num: number | null, text_content: string, format: string, lang_code: string, chapter_title: string, book_name: string }} SearchResult */
 
-/** @typedef {{ total: number, hasMore: boolean, results: SearchResult[] }} CacheEntry */
+/** Search history (max 20 entries) — persisted to localStorage. */
+const HISTORY_MAX = 20;
+const HISTORY_KEY = "stone:searchHistory";
+
+function loadHistory() {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.slice(0, HISTORY_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistHistory() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(searchHistory));
+  } catch (e) {
+    console.warn("[search] localStorage persist failed:", e);
+  }
+}
+
+export const searchHistory = $state(/** @type {string[]} */ (loadHistory()));
+
+/** Clear all search history (exported so the UI's "clear" button uses one path). */
+export function clearSearchHistory() {
+  searchHistory.length = 0;
+  persistHistory();
+}
 
 /**
  * Search scope options
@@ -24,53 +51,6 @@ export const SCOPES = [
   { cid: 1, label: "预言之灵" },
   { cid: 2, label: "书籍" },
 ];
-
-/** Search history (max 20 entries) */
-const HISTORY_MAX = 20;
-
-export const searchHistory = $state(/** @type {string[]} */ ([]));
-
-const PAGE_SIZE = 200;
-const CACHE_MAX = 50;
-
-/**
- * Search cache (module-level Map)
- * key = `${lang}|${q}|${cid}`   value = CacheEntry
- */
-const searchCache = new Map();
-/** FIFO eviction key queue */
-const cacheKeys = [];
-
-/**
- * Build cache key
- * @param {string} q
- * @param {number | undefined} cid
- * @param {string} [lang]
- * @returns {string}
- */
-function cacheKey(q, cid, lang = "zh") {
-  return `${lang}|${q}|${cid ?? ""}`;
-}
-
-/**
- * Write to cache (evict oldest when over limit)
- * @param {string} key
- * @param {CacheEntry} entry
- */
-function setCache(key, entry) {
-  if (searchCache.has(key)) {
-    // Already exists, move to end of queue
-    const idx = cacheKeys.indexOf(key);
-    if (idx !== -1) cacheKeys.splice(idx, 1);
-  }
-  searchCache.set(key, entry);
-  cacheKeys.push(key);
-  // FIFO eviction
-  while (cacheKeys.length > CACHE_MAX) {
-    const oldest = cacheKeys.shift();
-    searchCache.delete(oldest);
-  }
-}
 
 /**
  * Search state
@@ -119,40 +99,6 @@ export function resetResults() {
 }
 
 /**
- * Restore search results from cache
- * @param {string} q
- * @param {number | undefined} cid
- * @returns {boolean} Whether cache was hit
- */
-function restoreFromCache(q, cid) {
-  const key = cacheKey(q, cid);
-  const cached = searchCache.get(key);
-  if (!cached) return false;
-
-  searchState.results = cached.results;
-  searchState.total = cached.total;
-  searchState.hasMore = cached.hasMore;
-  searchState.offset = cached.results.length;
-  searchState.query = q;
-  searchState.scopeCid = cid;
-  searchState.searched = true;
-  searchState.error = "";
-  return true;
-}
-
-/**
- * Write to cache (based on current search results)
- */
-function saveToCache() {
-  const key = cacheKey(searchState.query, searchState.scopeCid);
-  setCache(key, {
-    total: searchState.total,
-    hasMore: searchState.hasMore,
-    results: searchState.results,
-  });
-}
-
-/**
  * Record search history (dedup, newest goes first)
  * @param {string} q
  */
@@ -161,6 +107,7 @@ function recordHistory(q) {
   if (idx !== -1) searchHistory.splice(idx, 1);
   searchHistory.unshift(q);
   if (searchHistory.length > HISTORY_MAX) searchHistory.length = HISTORY_MAX;
+  persistHistory();
 }
 
 /**
@@ -173,14 +120,7 @@ export async function doSearch(q, cid, append = false) {
   const trimmed = q.trim();
   if (!trimmed) return;
 
-  // ── Non-append mode: try cache first ──
   if (!append) {
-    if (restoreFromCache(trimmed, cid)) {
-      searchState.loading = false;
-      searchState.loadingMore = false;
-      return;
-    }
-
     searchState.loading = true;
     searchState.offset = 0;
     searchState.results = [];
@@ -193,39 +133,10 @@ export async function doSearch(q, cid, append = false) {
   }
 
   try {
-    // Tauri mode: use local SQLite search
-    if (DATAS.isTauri) {
-      const { searchAPI } = await import("$lib/tauri");
-      const data = await searchAPI(trimmed, {
-        lang: "zh",
-        cid: cid,
-        limit: PAGE_SIZE,
-        offset: searchState.offset,
-      });
-      if (!data || !data.results) {
-        throw new Error("搜索返回结果为空");
-      }
-      const newResults = data.results ?? [];
-      searchState.results = append
-        ? [...searchState.results, ...newResults]
-        : newResults;
-      searchState.total = data.total ?? 0;
-      searchState.hasMore = data.hasMore ?? false;
-      searchState.query = trimmed;
-      searchState.scopeCid = cid;
-      searchState.offset = searchState.results.length;
-      saveToCache();
-      if (!append) {
-        recordHistory(trimmed);
-      }
-      return;
-    }
-
-    // Web mode: original fetch logic
     const params = new URLSearchParams({
       q: trimmed,
       lang: "zh",
-      limit: String(PAGE_SIZE),
+      limit: "200",
       offset: String(searchState.offset),
     });
     if (cid !== undefined) {
@@ -238,7 +149,7 @@ export async function doSearch(q, cid, append = false) {
         const err = await res.json();
         errMsg = err.error || err.details || errMsg;
       } catch (_) {
-        /* Ignore JSON parse error */
+        /* 忽略 JSON 解析错误 */
       }
       throw new Error(errMsg);
     }
@@ -251,11 +162,9 @@ export async function doSearch(q, cid, append = false) {
     searchState.hasMore = data.hasMore ?? false;
     searchState.query = trimmed;
     searchState.scopeCid = cid;
-    // Update offset to current total results, ensuring next append starts from correct position
+    // 更新 offset 为当前结果总数，确保下次追加从正确位置开始
     searchState.offset = searchState.results.length;
 
-    // ── Update cache on every request (initial & append) ──
-    saveToCache();
     if (!append) {
       recordHistory(trimmed);
     }
@@ -289,7 +198,6 @@ export function highlightText(text, keyword) {
       ranges.push({ start: m.index, end: m.index + m[0].length });
     }
   }
-  // Deduplicate and sort by position
   ranges.sort((a, b) => a.start - b.start);
   const unique = ranges.filter(
     (r, i) => i === 0 || r.start !== ranges[i - 1].start,
@@ -335,10 +243,7 @@ export function getSnippet(text, keyword, before = 60, after = 80) {
   if (idx === -1) {
     for (const w of words) {
       const pos = text.toLowerCase().indexOf(w.toLowerCase());
-      if (pos !== -1) {
-        idx = pos;
-        break;
-      }
+      if (idx === -1) idx = pos; // first matching word wins
     }
   }
 

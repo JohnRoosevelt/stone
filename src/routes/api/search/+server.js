@@ -1,47 +1,11 @@
-import { json } from "@sveltejs/kit";
+import { json, error } from "@sveltejs/kit";
 import { getDB } from "$lib/server/db";
-import {
-  buildCacheKey,
-  getFromCache,
-  setToCache,
-  recordSearchTerm,
-} from "$lib/server/searchCache.js";
 
-/** Check if text contains CJK Chinese characters */
+/** 判断是否包含 CJK 中文 */
 function hasCJK(str) {
   return /[\u4e00-\u9fff\u3400-\u4dbf]/.test(str);
 }
 
-/**
- * rowid range pruning optimization
- *
- * Background: FTS5 external content table only indexes text_content, not lang_code / cid / book_id.
- * When searching with scoping, FTS first finds all matching rows across all languages,
- * then JOINs back to the main table for filtering. High-frequency words (e.g. "Jesus")
- * can match tens of thousands of rows; if the scope is limited to a specific category/book,
- * most of the back-joins are wasteful.
- *
- * Optimization: Pre-calculate the target scope's rowid [min, max] and pass it to the FTS JOIN,
- * allowing SQLite to skip out-of-range rows during back-join.
- *
- * Effect (assuming a high-frequency word matches 8000 FTS rows):
- *   ┌────────────────────────────────┬──────┬──────────┬────────┐
- *   │ Search Scope                   │ Hits │ Back-join│ Speedup│
- *   ├────────────────────────────────┼──────┼──────────┼────────┤
- *   │ lang=zh                        │ 8000 │ 8000     │ none   │
- *   │ lang=zh&cid=0                  │ 8000 │ ~4000    │ 2x     │
- *   │ lang=zh&cid=0&bookId=1        │ 8000 │ ~200     │ 40x    │
- *   │ lang=zh&cid=0&bookId=1&chapter=3 │ 8000 │ ~5    │ 1600x  │
- *   └────────────────────────────────┴──────┴──────────┴────────┘
- *   Low-frequency words (e.g. "Elisha") only hit dozens of rows,
- *   so the optimization is less noticeable but has no extra overhead.
- *
- * @param db    - D1 database instance
- * @param lang  - Language code (required)
- * @param cid   - Category ID (optional)
- * @param bookId - Book ID (optional)
- * @returns { minRowid, maxRowid } | null (null if scope is invalid)
- */
 async function getRowidRange(db, { lang, cid, bookId }) {
   const conditions = ["lang_code = ?"];
   const params = [lang];
@@ -71,9 +35,6 @@ async function getRowidRange(db, { lang, cid, bookId }) {
   return { minRowid: row.minRowid, maxRowid: row.maxRowid };
 }
 
-/**
- * Build FTS5 MATCH query (for non-Chinese only)
- */
 function buildFtsMatch(raw) {
   const words = raw
     .replace(/[*"()+\-~^]/g, " ")
@@ -83,66 +44,98 @@ function buildFtsMatch(raw) {
   return words.map((w) => `"${w}"`).join(" AND ");
 }
 
-export async function GET({ url, platform }) {
+// ── KV cache helpers ──────────────────────────────────────────
+//
+// KV key 格式：
+//   search:result:<lang>:<q>:<cid>:<bookId>  → JSON {total, hasMore, results, ts}
+//   search:count:<lang>:<q>                 → 数字（真实累计被搜次数，每次 GET 都 +1）
+//
+// 计数语义：每次 search GET（包括 KV 命中）都 +1，**不设上限**。
+// 这反映用户真实查询频率，用于 hot keyword ranking。
+
+const RESULT_TTL_SECONDS = 24 * 60 * 60; // 24h
+
+function resultKey(lang, q, cid, bookId) {
+  return `search:result:${lang}:${q}:${cid ?? ""}:${bookId ?? ""}`;
+}
+
+function countKey(lang, q) {
+  return `search:count:${lang}:${q}`;
+}
+
+/** Always bumps the keyword counter — both KV-hit and KV-miss paths call this. */
+async function bumpCount(kv, lang, q) {
+  if (!kv) return;
   try {
-    const db = getDB(platform);
-    const kv = platform?.env?.STONE_SEARCH_CACHE;
+    // KV doesn't have a native INCR; put with read-modify-write. KV is
+    // strongly consistent per-key so this is safe.
+    const key = countKey(lang, q);
+    const cur = (await kv.get(key)) || "0";
+    const next = String(Number(cur) + 1);
+    // No TTL on counters — they accumulate forever. Cheap (1 byte per key).
+    await kv.put(key, next);
+  } catch (e) {
+    console.warn("[search] count bump failed:", e.message);
+  }
+}
 
-    const q = url.searchParams.get("q") || "";
-    const lang = url.searchParams.get("lang") || "zh";
-    const cidParam = url.searchParams.get("cid");
-    const bookIdParam = url.searchParams.get("bookId");
-    const limit = Math.min(
-      parseInt(url.searchParams.get("limit") || "200"),
-      200,
-    );
-    const offset = parseInt(url.searchParams.get("offset") || "0");
+export async function GET({ url, platform }) {
+  const kv = platform?.env?.SEARCH_CACHE;
+  const db = getDB(platform);
 
-    if (!q.trim()) {
-      return json({ error: "Missing search query" }, { status: 400 });
-    }
+  const q = url.searchParams.get("q") || "";
+  const lang = url.searchParams.get("lang") || "zh";
+  const cidParam = url.searchParams.get("cid");
+  const bookIdParam = url.searchParams.get("bookId");
+  const limit = Math.min(
+    parseInt(url.searchParams.get("limit") || "200"),
+    200,
+  );
+  const offset = parseInt(url.searchParams.get("offset") || "0");
 
-    const cid = cidParam ? parseInt(cidParam) : undefined;
-    const bookId = bookIdParam ? parseInt(bookIdParam) : undefined;
-    const isCJKQuery = hasCJK(q);
+  if (!q.trim()) {
+    return json({ error: "Missing search query" }, { status: 400 });
+  }
 
-    // ── Try KV cache first ──
-    console.log("[search] KV available:", !!kv);
-    if (kv) {
-      const cacheKey = buildCacheKey({ q, lang, cid, bookId, limit, offset });
-      console.log("[search] KV cache lookup: key =", cacheKey);
-      const cached = await getFromCache(kv, cacheKey);
-      console.log("[search] KV cache result:", cached ? "HIT" : "MISS");
-      if (cached) {
-        console.log(
-          "[search] KV cache hit: returning cached data, total =",
-          cached.total,
-        );
-        return json(cached);
+  const cid = cidParam ? parseInt(cidParam) : undefined;
+  const bookId = bookIdParam ? parseInt(bookIdParam) : undefined;
+
+  // ── 1) Bump the keyword counter (every request, KV hit or miss) ──
+  // Fire-and-await: cheap (one KV round-trip), and we want the counter
+  // to reflect this request even if the cache write below is dropped.
+  await bumpCount(kv, lang, q);
+
+  // ── 2) Try KV cache (first page only — offset=0) ──
+  if (kv && offset === 0) {
+    try {
+      const cached = await kv.get(resultKey(lang, q, cid, bookId), "json");
+      if (cached && Array.isArray(cached.results)) {
+        return json({
+          total: cached.total,
+          hasMore: cached.hasMore,
+          results: cached.results.slice(0, limit),
+          cached: true,
+        });
       }
-      console.log("[search] KV cache miss — will query D1");
-    } else {
-      console.log("[search] KV not available, querying D1 directly");
+    } catch (e) {
+      console.warn("[search] KV read failed:", e.message);
     }
+  }
 
+  // ── 3) Miss → query D1 ──
+  try {
+    const isCJKQuery = hasCJK(q);
     const params = [];
     const joins = [];
     const whereConditions = [];
 
-    // Language filtering (always present)
     whereConditions.push("cp.lang_code = ?");
     params.push(lang);
 
     if (isCJKQuery) {
-      // ── Chinese search: use LIKE instead of FTS5 ──
-      // FTS5's unicode61 tokenizer cannot correctly split Chinese text;
-      // consecutive Chinese characters are treated as a single token,
-      // causing significant phrase matching misses. While LIKE lacks index acceleration,
-      // combined with rowid range pruning + other indexes, it's more accurate for Chinese.
       whereConditions.push("cp.text_content LIKE ?");
       params.push(`%${q}%`);
     } else {
-      // ── Non-Chinese (English etc.): use FTS5 ──
       const matchStr = buildFtsMatch(q);
       if (!matchStr) {
         return json({ error: "Invalid search terms" }, { status: 400 });
@@ -152,7 +145,6 @@ export async function GET({ url, platform }) {
       params.push(matchStr);
     }
 
-    // ── rowid range pruning (optional) ──
     if (cid !== undefined || bookId !== undefined) {
       const range = await getRowidRange(db, { lang, cid, bookId });
       if (range) {
@@ -161,7 +153,6 @@ export async function GET({ url, platform }) {
       }
     }
 
-    // ── Additional filter conditions ──
     if (cid !== undefined) {
       whereConditions.push("cp.cid = ?");
       params.push(cid);
@@ -176,7 +167,6 @@ export async function GET({ url, platform }) {
       ? "WHERE " + whereConditions.join(" AND ")
       : "";
 
-    // ORDER BY: Chinese uses rowid (original order), non-Chinese uses fts.rank (relevance)
     const orderBy = isCJKQuery ? "cp.cid, cp.rowid" : "cp.cid, fts.rank";
 
     const sql = `
@@ -218,45 +208,20 @@ export async function GET({ url, platform }) {
       .all();
     const total = results.length > 0 ? results[0]._total : 0;
     const hasMore = offset + limit < total;
-    // Remove redundant _total field from each row
     for (const r of results) delete r._total;
 
-    const response = { total, results, hasMore };
-    console.log(
-      "[search] D1 query done: total =",
-      total,
-      ", results length =",
-      results.length,
-      ", hasMore =",
-      hasMore,
-    );
-
-    // ── Store in KV cache (fire-and-forget; don't block response) ──
-    if (kv) {
-      const cacheKey = buildCacheKey({ q, lang, cid, bookId, limit, offset });
-      console.log("[search] Writing D1 result to KV cache: key =", cacheKey);
-      // Write search results to KV cache asynchronously
-      setToCache(kv, cacheKey, response).catch((e) =>
-        console.warn("[search] KV cache write error:", e.message),
-      );
-      // Record search term for trending keywords (first page only to avoid dupes)
-      if (offset === 0) {
-        console.log(
-          "[search] Recording search term for hot keywords:",
-          q.trim(),
-        );
-        recordSearchTerm(kv, q.trim()).catch((e) =>
-          console.warn("[search] KV record term error:", e.message),
-        );
-      } else {
-        console.log(
-          "[search] Skipping hot keyword recording (offset > 0):",
-          offset,
-        );
-      }
+    // ── 4) Write to KV cache (first page only, fire-and-forget) ──
+    if (kv && offset === 0 && results.length > 0) {
+      kv
+        .put(
+          resultKey(lang, q, cid, bookId),
+          JSON.stringify({ total, hasMore, results, ts: Date.now() }),
+          { expirationTtl: RESULT_TTL_SECONDS },
+        )
+        .catch((e) => console.warn("[search] KV write failed:", e.message));
     }
 
-    return json(response);
+    return json({ total, hasMore, results, cached: false });
   } catch (e) {
     return json(
       { error: "Search failed", details: e.message },

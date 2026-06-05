@@ -3,53 +3,27 @@
   import { onMount } from "svelte";
   import { DATAS } from "$lib/data.svelte";
   import { showId } from "$lib";
-  import { getAllReadingProgress, isTauri } from "$lib/tauri";
-
-  let { bookList = page.data.books || [] } = $props();
 
   let clientHeight = $state(0);
   let activeId = $state("");
   let selectId = $state("");
-  /** Map of "cid-bookId" -> reading progress record */
-  let progressMap = $state({});
 
-  const fav = $derived(bookList.filter((b) => b.featured));
+  const fav = $derived(page.data.books.filter((b) => b.featured));
 
-  const groupByTag = $derived(
-    bookList.reduce((pre, cur) => {
-      if (!pre[cur.title]) {
-        pre[cur.title] = [];
-      }
-      pre[cur.title].push(cur);
-      return pre;
-    }, {}),
-  );
+  const groupByTag = page.data.books.reduce((pre, cur) => {
+    if (!pre[cur.title]) {
+      pre[cur.title] = [];
+    }
+    pre[cur.title].push(cur);
+    return pre;
+  }, {});
 
   const sortedTags = $derived(
     Object.entries(groupByTag).sort(([a], [b]) => a.localeCompare(b)),
   );
 
-  // Load reading progress for all books
-  async function loadProgress() {
-    if (!isTauri()) return;
-    try {
-      const list = await getAllReadingProgress();
-      const map = {};
-      for (const rp of list) {
-        const key = rp.cid + "-" + rp.book_id;
-        map[key] = rp;
-      }
-      progressMap = map;
-    } catch (err) {
-      console.error("Failed to load reading progress:", err);
-    }
-  }
-
-  onMount(() => {
-    loadProgress();
-  });
-
-  function observeHeaders() {
+  $effect(() => {
+    if (page.data.books.length === 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -73,32 +47,29 @@
       ...Object.keys(groupByTag),
     ];
     ids.forEach((id) => observer.observe(document.getElementById(id)));
-  }
 
-  $effect(() => {
-    if (bookList.length === 0) return;
-    observeHeaders();
+    return () => observer.disconnect();
   });
 </script>
 
-<article
-  bind:clientHeight
-  class="w-full h-full relative overflow-hidden font-500"
->
+<article bind:clientHeight w-full h-full relative overflow-hidden font-500>
   <section
     id="booksContainer"
     style:height="{clientHeight}px"
-    class="relative scroll-y"
+    relative
+    scroll-y
   >
     {#if fav.length > 0}
-      <div id="fav" class="space-y-px">
+      <div id="fav" space-y-px>
         <div
-          class={[
-            "px-3 sticky top-0 z-3 bg-white dark:bg-black",
-            activeId === "fav" && "text-green font-700",
-          ]}
+          px-3
+          sticky
+          top-0
+          z-3
+          bg="white dark:black"
+          class={activeId === "fav" ? "text-green font-700" : ""}
         >
-          <span class="i-carbon-star-filled"></span>
+          <span i-carbon-star-filled></span>
         </div>
         {#each fav as book}
           {@render Rbook(book)}
@@ -107,12 +78,14 @@
     {/if}
 
     {#each sortedTags as [tag, group]}
-      <div id={tag} class="space-y-px" class:min-h-full={tag == "Z"}>
+      <div id={tag} space-y-px class:min-h-full={tag == "Z"}>
         <div
-          class={[
-            activeId === tag && "text-green font-700",
-            "px-3 sticky top-0 z-3 bg-white dark:bg-black",
-          ]}
+          px-3
+          sticky
+          top-0
+          z-3
+          bg="white dark:black"
+          class={activeId === tag ? "text-green font-700" : ""}
         >
           {tag}
         </div>
@@ -123,9 +96,7 @@
     {/each}
   </section>
 
-  <section
-    class="absolute w-auto h-full top-0 right-4 z-3 flex-col flex-cc gap-px"
-  >
+  <section absolute w-auto h-full top-0 right-4 z-3 flex-col flex-cc gap-px>
     {#if fav.length > 0}
       <button
         onclick={() => {
@@ -133,16 +104,17 @@
           showId("fav", "start");
         }}
         aria-label="fav"
-        class={[
-          "size-6 flex-cc p-1 rounded-1",
-          activeId === "fav"
-            ? "text-green font-700 bg-gray-200 dark:(bg-gray-600)"
-            : selectId == "fav"
-              ? "text-red bg-gray-300 dark:(bg-gray-800)"
-              : "bg-gray-300 dark:(bg-gray-800)",
-        ]}
+        size-6
+        flex-cc
+        p-1
+        rounded-1
+        class={activeId === "fav"
+          ? "text-green font-700 bg-gray-200 dark:(bg-gray-600)"
+          : selectId == "fav"
+            ? "text-red bg-gray-300 dark:(bg-gray-800)"
+            : "bg-gray-300 dark:(bg-gray-800)"}
       >
-        <span class="i-carbon-star-filled"></span>
+        <span i-carbon-star-filled></span>
       </button>
     {/if}
 
@@ -153,14 +125,15 @@
           showId(tag, "start");
         }}
         aria-label={tag}
-        class={[
-          "size-6 flex-cc p-1 rounded-1",
-          activeId === tag
-            ? "text-green font-700 bg-gray-200 dark:bg-gray-600"
-            : selectId == tag
-              ? "text-red bg-gray-300 dark:bg-gray-800"
-              : "bg-gray-300 dark:bg-gray-800",
-        ]}
+        size-6
+        flex-cc
+        p-1
+        rounded-1
+        class={activeId === tag
+          ? "text-green font-700 bg-gray-200 dark:(bg-gray-600)"
+          : selectId == tag
+            ? "text-red bg-gray-300 dark:(bg-gray-800)"
+            : "bg-gray-300 dark:(bg-gray-800)"}
         >{tag}
       </button>
     {/each}
@@ -168,38 +141,11 @@
 </article>
 
 {#snippet Rbook(book)}
-  {@const key = page.params.cid + "-" + book.book_id}
-  {@const rp = progressMap[key]}
-  {@const chapterLink = rp
-    ? `/${page.params.cid}/${book.book_id}/${rp.chapter_id}`
-    : `/${page.params.cid}/${book.book_id}/1`}
-  <div class="flex-bc h-12 px-3 pr-12 bg-gray-100 dark:bg-gray-700">
-    <a
-      class="flex-1 flex-bc gap-2"
-      href={chapterLink}
-      onclick={() => {
-        // Store scroll percentage for restoration on the chapter page
-        if (rp && rp.scroll_percentage > 0) {
-          sessionStorage.setItem(
-            "restoreScroll_" + book.book_id,
-            String(rp.scroll_percentage),
-          );
-        }
-      }}
-    >
+  <div flex-bc h-12 px-3 pr-12 bg-gray-100 dark="bg-gray-700">
+    <a flex-1 href="/{page.params.cid}/{book.book_id}/1">
       <p class:text-green={page.params.bookId == book.book_id}>
         {book.name}
       </p>
-      <span flex class="gap-1 ml-auto">
-        {#if rp}
-          <span class="text-2 text-gray-400">{rp.scroll_percentage}% {rp.chapter_id}</span>
-        {/if}
-        {#if book.abbreviation}
-          <span text-green>˻</span>
-          <span>{book.abbreviation}</span>
-          <span text-green>˼</span>
-        {/if}
-      </span>
     </a>
   </div>
 {/snippet}

@@ -1,130 +1,346 @@
 <script>
-  import { onMount } from "svelte";
   import { DATAS } from "$lib/data.svelte";
-  import { isDesktop } from "$lib/tauri";
-  import { getLatestRelease } from "$lib/release";
-  import CheckUpdate from "./components/CheckUpdate.svelte";
-  import ClearAnnotations from "./components/ClearAnnotations.svelte";
-  import DebugInfo from "./components/DebugInfo.svelte";
-  import DevtoolsCard from "./components/DevtoolsCard.svelte";
-  import InitCheck from "./components/InitCheck.svelte";
-  import Roadmap from "./components/Roadmap.svelte";
-  import ThemeSettings from "./components/ThemeSettings.svelte";
+  import { searchHistory, clearSearchHistory } from "$lib/bible/searchStore.svelte.js";
 
-  let isDesktopTauri = $state(false);
-  let appVersion = $state("");
+  const roadmap = [
+    {
+      title: "线上搜索",
+      desc: "已支持线上全文搜索",
+      done: true,
+    },
+    {
+      title: "搜索优化 + KV",
+      desc: "引入 Cloudflare KV 缓存，keyword 热度跨平台共享",
+      done: true,
+    },
+    {
+      title: "App 发布",
+      desc: "打包为 Tauri 桌面/移动应用，支持离线存储",
+      done: false,
+    },
+  ];
 
-  // Web-only: latest version is shown as a subtitle on the single
-  // "下载 App" row. The platform-specific download UI lives on
-  // /download (which detects Android / macOS / iOS / WeChat and shows
-  // the right button + size). So /my only needs the version string,
-  // not the full release asset list.
-  let release = $state(null);
-  let releaseLoading = $state(true);
-  let releaseError = $state("");
+  let showRoadmap = $state(false);
+  let showDebug = $state(false);
+  let showSearchHistory = $state(true);
+  let loadingUa = $state(false);
 
-  onMount(async () => {
-    // Tauri: get app version + detect desktop for devtools entry
-    if (DATAS.isTauri) {
+  async function toggleDebug() {
+    showDebug = !showDebug;
+    if (showDebug && !DATAS.uaInfo?.ua) {
+      loadingUa = true;
       try {
-        const { getVersion } = await import("@tauri-apps/api/app");
-        appVersion = await getVersion();
-      } catch (_) {
-        appVersion = "";
+        const { UAParser } = await import("ua-parser-js");
+        const parser = new UAParser();
+        DATAS.uaInfo = parser.getResult();
+      } catch (e) {
+        console.warn("[UA] parse failed:", e);
+      } finally {
+        loadingUa = false;
       }
-      try {
-        isDesktopTauri = await isDesktop();
-      } catch (_) {
-        isDesktopTauri = false;
-      }
-      return;
     }
-
-    // Web: fetch latest version (R2 update.json, cached 5 min in
-    // release.js). /download will refetch to get asset sizes/URLs.
-    try {
-      release = await getLatestRelease();
-    } catch (err) {
-      console.warn("[my/download] failed to load release info:", err);
-      releaseError = "无法获取最新版本信息";
-    } finally {
-      releaseLoading = false;
-    }
-  });
+  }
 </script>
 
 <svelte:head>
   <title>我的 - 脚前的灯</title>
 </svelte:head>
 
-<article class="w-full h-full overflow-y-auto px-4 py-4 space-y-5">
-  <ThemeSettings />
+<article w-full h-full overflow-y-auto px-4 py-4 space-y-5>
+  <!-- ─── 设置 ─── -->
+  <section space-y-3>
+    <h2 text-lg font-semibold flex-cc gap-2>
+      <span i-carbon-settings></span>
+      设置
+    </h2>
 
+    <!-- 主题模式（auto / light / dark 三档） -->
+    <div
+      class="p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
+    >
+      <div flex-cc gap-3 mb-3>
+        <span i-carbon-light text-xl></span>
+        <div>
+          <div font-medium>主题模式</div>
+          <div text-sm text-gray-500>跟随系统 / 浅色 / 深色</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-1 bg-gray-100 dark:bg-gray-800 rounded-1 p-1">
+        {#each [["system", "i-carbon-asleep", "跟随系统"], ["light", "i-carbon-sun", "浅色"], ["dark", "i-carbon-moon", "深色"]] as [mode, icon, label]}
+          <button
+            class="rounded-1 py-2 text-sm font-medium transition300 flex-cc gap-1.5
+              {DATAS.themeMode === mode
+                ? 'bg-white dark:bg-gray-700 text-green shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}"
+            onclick={() => {
+              DATAS.themeMode = mode;
+              // Re-evaluate isDarkMode against the new mode
+              const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+              DATAS.isDarkMode = mode === "system" ? sysDark : mode === "dark";
+            }}
+            aria-label={label}
+          >
+            <span {icon}></span>
+            {label}
+          </button>
+        {/each}
+      </div>
+    </div>
+
+    <!-- 字体大小 -->
+    <div
+      class="p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
+    >
+      <div flex-cc gap-3 mb-3>
+        <span i-carbon-text-size text-xl></span>
+        <div>
+          <div font-medium>字体大小</div>
+          <div text-sm text-gray-500>{DATAS.fontSize}px</div>
+        </div>
+      </div>
+      <div flex-cc gap-3>
+        <button
+          w-8
+          h-8
+          rounded-full
+          bg-gray-100
+          flex-cc
+          flex-shrink-0
+          class={DATAS.fontSize <= 12 ? "opacity-30" : ""}
+          disabled={DATAS.fontSize <= 12}
+          onclick={() => (DATAS.fontSize = Math.max(12, DATAS.fontSize - 2))}
+          aria-label="减小字号"
+        >
+          <span i-carbon-subtract text-lg></span>
+        </button>
+        <input
+          type="range"
+          min="12"
+          max="28"
+          step="1"
+          bind:value={DATAS.fontSize}
+          class="flex-1 accent-green"
+          aria-label="字体大小"
+        />
+        <button
+          w-8
+          h-8
+          rounded-full
+          bg-gray-100
+          flex-cc
+          flex-shrink-0
+          class={DATAS.fontSize >= 28 ? "opacity-30" : ""}
+          disabled={DATAS.fontSize >= 28}
+          onclick={() => (DATAS.fontSize = Math.min(28, DATAS.fontSize + 2))}
+          aria-label="增大字号"
+        >
+          <span i-carbon-add text-lg></span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── 折叠区块通用样式 ─── -->
+  {#snippet foldBtn(icon, label, expanded, toggle, loading)}
+    <button
+      class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300"
+      onclick={toggle}
+    >
+      <span flex-cc gap-2>
+        {#if loading}
+          <span i-carbon-loading text-4 animate-spin></span>
+        {:else}
+          <span {icon} text-green></span>
+        {/if}
+        {label}
+      </span>
+      <span
+        class="transition300 text-gray-400 {expanded ? 'rotate-180' : ''}"
+        i-carbon-chevron-down
+      ></span>
+    </button>
+  {/snippet}
+
+  <!-- ─── 搜索历史 ─── -->
+  <section space-y-2>
+    <div
+      class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+    >
+      <button
+        class="w-full flex items-center justify-between px-4 py-3.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300"
+        onclick={() => (showSearchHistory = !showSearchHistory)}
+      >
+        <span flex-cc gap-2>
+          <span i-carbon-search-history text-green></span>
+          搜索历史
+          {#if searchHistory.length > 0}
+            <span class="text-xs text-gray-400">({searchHistory.length})</span>
+          {/if}
+        </span>
+        <span
+          class="transition300 text-gray-400 {showSearchHistory ? 'rotate-180' : ''}"
+          i-carbon-chevron-down
+        ></span>
+      </button>
+      {#if showSearchHistory}
+        <div class="border-t border-gray-100 dark:border-gray-800 px-3 py-2">
+          {#if searchHistory.length === 0}
+            <p class="text-sm text-gray-400 text-center py-4">暂无搜索历史</p>
+          {:else}
+            <div class="flex flex-wrap gap-1.5 pb-2">
+              {#each searchHistory as q (q)}
+                <a
+                  href="/search?q={encodeURIComponent(q)}"
+                  class="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-green/10 dark:hover:bg-green/20 rounded-full transition300 no-underline"
+                >
+                  {q}
+                </a>
+              {/each}
+            </div>
+            <button
+              class="text-xs text-red hover:underline"
+              onclick={() => clearSearchHistory()}
+            >
+              清除全部
+            </button>
+          {/if}
+        </div>
+      {/if}
+    </div>
+  </section>
+
+  <!-- ─── 开发规划 ─── -->
+  <div
+    class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+  >
+    <button
+      class="w-full flex items-center justify-between px-4 py-3.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300"
+      onclick={() => (showRoadmap = !showRoadmap)}
+    >
+      <span flex-cc gap-2>
+        <span i-carbon-development text-green></span>
+        开发规划
+      </span>
+      <span
+        class="transition300 text-gray-400 {showRoadmap ? 'rotate-180' : ''}"
+        i-carbon-chevron-down
+      ></span>
+    </button>
+
+    {#if showRoadmap}
+      <div>
+        {#each roadmap as item, i}
+          <div
+            class="flex items-center gap-3 px-4 py-3.5 {i < roadmap.length - 1
+              ? 'border-b border-gray-100 dark:border-gray-800'
+              : ''}"
+          >
+            <span
+              class="w-6 h-6 rounded-full flex-cc text-xs font-700 flex-shrink-0 {item.done
+                ? 'bg-green text-white'
+                : 'bg-green/20 text-green'}"
+            >
+              {#if item.done}
+                <span i-carbon-checkmark></span>
+              {:else}
+                {i + 1}
+              {/if}
+            </span>
+            <div class="min-w-0">
+              <div
+                class="text-sm font-500 {item.done
+                  ? 'text-green line-through opacity-60'
+                  : ''}"
+              >
+                {item.title}
+              </div>
+              <div
+                class="text-xs {item.done ? 'text-green/60' : 'text-gray-400'}"
+              >
+                {item.desc}
+              </div>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </div>
+
+  <!-- ─── 关于 ─── -->
   <a
     href="/my/about"
     class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 no-underline"
   >
-    <span class="flex-cc gap-2">
-      <span class="i-carbon-information text-green"></span>
+    <span flex-cc gap-2>
+      <span i-carbon-information text-green></span>
       关于
     </span>
-    <span class="i-carbon-chevron-right text-gray-400"></span>
+    <span i-carbon-chevron-right text-gray-400></span>
   </a>
 
-  {#if !DATAS.isTauri}
-    <!-- Web-only: a single "下载 App" entry that links to /download.
-         /download does the platform detection (Android / macOS / iOS /
-         WeChat) and shows the right button + size. No more listing
-         every supported platform on /my — that was redundant with what
-         /download shows. -->
-    <a
-      href="/download"
-      class="w-full flex items-center gap-3 px-4 py-3.5 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 no-underline"
-    >
-      <span class="i-carbon-download text-xl text-green"></span>
-      <div class="flex-1 min-w-0">下载 App</div>
+  <!-- ─── 调试信息 ─── -->
+  <section space-y-2>
+    {@render foldBtn(
+      "i-carbon-debug",
+      "调试信息",
+      showDebug,
+      toggleDebug,
+      loadingUa,
+    )}
+
+    {#if showDebug}
       <div
-        class="text-xs text-gray-400 font-normal shrink-0 text-right whitespace-nowrap"
+        class="px-4 py-3 space-y-1.5 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-mono text-gray-500"
       >
-        {#if releaseLoading}
-          正在获取…
-        {:else if releaseError}
-          点击查看
-        {:else if release}
-          v{release.tag?.replace(/^v/, "")} · Android + macOS
-        {/if}
+        <div class="flex items-center gap-1">
+          <span text-gray-400>network: </span>
+          {#if DATAS.online}
+            {#if DATAS.connectionType === "wifi"}
+              <span i-carbon-wifi class="text-green"></span>
+              <span class="text-green">WiFi</span>
+            {:else if DATAS.connectionType === "cellular"}
+              <span i-carbon-radio></span>
+              <span>{DATAS.networkType}</span>
+            {:else}
+              <span i-carbon-network-3 class="text-green"></span>
+              <span>{DATAS.networkType || "在线"}</span>
+            {/if}
+          {:else}
+            <span i-carbon-wifi-off class="text-gray-400"></span>
+            <span>离线</span>
+          {/if}
+        </div>
+        <div>
+          <span text-gray-400>device: </span>
+          {DATAS.uaInfo?.device?.vendor || "-"}
+          {DATAS.uaInfo?.device?.model || "-"} ({DATAS.uaInfo?.device?.type ||
+            "-"})
+        </div>
+        <div>
+          <span text-gray-400>os: </span>
+          {DATAS.uaInfo?.os?.name || "-"}
+          {DATAS.uaInfo?.os?.version || ""}
+        </div>
+        <div>
+          <span text-gray-400>browser: </span>
+          {DATAS.uaInfo?.browser?.name || "-"}
+          {DATAS.uaInfo?.browser?.version || ""}
+        </div>
+        <div>
+          <span text-gray-400>engine: </span>
+          {DATAS.uaInfo?.engine?.name || "-"}
+          {DATAS.uaInfo?.engine?.version || ""}
+        </div>
+        <div>
+          <span text-gray-400>database: </span>
+          （待迁移至 Tauri 原生 SQL）
+        </div>
+        <div>
+          <span text-gray-400>version: </span>
+          {__GIT_COMMIT__}
+          <span text-gray-400> ({__BUILD_TIME__})</span>
+        </div>
       </div>
-      <span class="i-carbon-chevron-right text-gray-400 shrink-0"></span>
-    </a>
-  {/if}
-
-  {#if DATAS.isTauri}
-    <a
-      href="/tools/import"
-      class="w-full flex items-center justify-between px-4 py-3.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition300 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
-    >
-      <span class="flex-cc gap-2">
-        <span class="i-carbon-download text-green"></span>
-        书籍导入
-      </span>
-      <span>
-        <span class="text-xs text-gray-400">未导入的内容从 R2 加载</span>
-        <span class="i-carbon-chevron-right text-gray-400"></span>
-      </span>
-    </a>
-
-    <CheckUpdate {appVersion} />
-    <InitCheck />
-
-    {#if isDesktopTauri}
-      <DevtoolsCard />
     {/if}
-  {/if}
-
-  <Roadmap />
-  <DebugInfo {appVersion} />
-
-  {#if DATAS.isTauri}
-    <ClearAnnotations />
-  {/if}
+  </section>
 </article>

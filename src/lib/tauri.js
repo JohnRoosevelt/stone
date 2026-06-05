@@ -1,195 +1,132 @@
+/**
+ * Tauri 桥接模块
+ *
+ * 提供环境检测和统一 API 接口。
+ * - Tauri 环境：使用 invoke() 调用 Rust 命令
+ * - Web 环境：使用 fetch() 调用后端 API
+ */
+
+import { PUBLIC_API_BASE } from "$env/static/public";
+
 let _isTauri = null;
 
+/**
+ * 检测是否运行在 Tauri 环境中
+ */
 export function isTauri() {
   if (_isTauri !== null) return _isTauri;
-  _isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
+  _isTauri =
+    typeof window !== "undefined" &&
+    typeof window.__TAURI_INTERNALS__ !== "undefined";
   return _isTauri;
 }
 
+/**
+ * 安全的 invoke 调用（仅在 Tauri 环境）
+ */
 async function tauriInvoke(cmd, args) {
-  if (!isTauri()) throw new Error("Not in Tauri environment");
+  if (!isTauri()) {
+    throw new Error("Not in Tauri environment");
+  }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke(cmd, args);
 }
 
-// ── Books ────────────────────────────────────────────────────
+// ── 书籍 API ────────────────────────────────────────────────
 
+/**
+ * 获取书籍列表
+ * @param {string} lang - 语言代码
+ * @param {number} [cid] - 分类 ID
+ * @returns {Promise<Array>}
+ */
 export async function getBooks(lang = "zh", cid) {
-  if (isTauri()) return tauriInvoke("get_books", { lang, cid: cid ?? null });
-  const res = await fetch(`/api/books?lang=${lang}`);
+  if (isTauri()) {
+    return tauriInvoke("get_books", { lang, cid: cid ?? null });
+  }
+  const params = new URLSearchParams({ lang });
+  const res = await fetch(`/api/books?${params}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
+/**
+ * 获取章节列表
+ * @param {number} cid - 分类 ID
+ * @param {number} bookId - 书籍 ID
+ * @param {string} [lang] - 语言代码
+ * @returns {Promise<Array>}
+ */
 export async function getChapters(cid, bookId, lang = "zh") {
-  if (isTauri()) return tauriInvoke("get_chapters", { cid, bookId, lang });
-  const res = await fetch(
-    `/api/admin/import?cid=${cid}&bookId=${bookId}&lang=${lang}`,
-  );
+  if (isTauri()) {
+    return tauriInvoke("get_chapters", { cid, bookId, lang });
+  }
+  const params = new URLSearchParams({ cid, bookId, lang });
+  const res = await fetch(`/api/admin/import?${params}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   return data.chapters || [];
 }
 
+/**
+ * 获取段落内容
+ * @param {number} cid - 分类 ID
+ * @param {number} bookId - 书籍 ID
+ * @param {number} chapterId - 章节 ID
+ * @param {string} [lang] - 语言代码
+ * @returns {Promise<Array>}
+ */
 export async function getParagraphs(cid, bookId, chapterId, lang = "zh") {
-  if (isTauri())
+  if (isTauri()) {
     return tauriInvoke("get_paragraphs", { cid, bookId, chapterId, lang });
-  const res = await fetch(
-    `/api/admin/import?cid=${cid}&bookId=${bookId}&chapterId=${chapterId}&lang=${lang}`,
-  );
+  }
+  const params = new URLSearchParams({ cid, bookId, chapterId, lang });
+  const res = await fetch(`/api/admin/import?${params}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   return data.paragraphs || [];
 }
 
-// ── Data Import ────────────────────────────────────────────────
-
-export async function hasBookData(cid, bookId, lang = "zh") {
-  if (!isTauri()) return false;
-  return tauriInvoke("has_book_data", { cid, bookId, lang });
-}
-
-export async function getFullBook(cid, bookId, lang = "zh") {
-  if (isTauri()) return tauriInvoke("get_full_book", { cid, bookId, lang });
-  throw new Error("getFullBook only available in Tauri mode");
-}
-
-export async function deleteBookData(cid, bookId, lang = "zh") {
-  if (isTauri()) return tauriInvoke("delete_book_data", { cid, bookId, lang });
-  throw new Error("deleteBookData only available in Tauri mode");
-}
-
-export async function getDbSize() {
-  if (isTauri()) return tauriInvoke("get_db_size", {});
-  return "N/A";
-}
-
-// ── Initial Import ────────────────────────────────────────────
-
-export async function needsInitialImport() {
-  if (isTauri()) return tauriInvoke("needs_initial_import", {});
-  return false;
-}
-
-export async function getAllBooksForImport(lang = "zh") {
-  if (isTauri()) return tauriInvoke("get_all_books_for_import", { lang });
-  return [];
-}
-
-export async function getImportedBooks(lang = "zh") {
-  if (isTauri()) return tauriInvoke("get_imported_books", { lang });
-  return [];
-}
-
-export async function markImportComplete() {
-  if (isTauri()) return tauriInvoke("mark_import_complete", {});
-}
-
-export async function resetInitialImport() {
-  if (isTauri()) return tauriInvoke("reset_initial_import", {});
-}
-
-// ── Annotations (per-paragraph, JSON `segments` array) ──────────
-
-/// Fetch every paragraph's annotation row for a chapter. Each row carries
-/// a full `segments` array — the caller is expected to merge any
-/// in-progress edits into that array before saving.
-export async function getParagraphAnnotations(cid, bookId, chapterId, lang = "zh") {
-  if (!isTauri()) return [];
-  const t0 = performance.now();
-  const out = await tauriInvoke("get_paragraph_annotations", {
-    cid,
-    bookId,
-    chapterId,
+/**
+ * 搜索
+ * @param {string} q - 搜索关键词
+ * @param {object} [opts]
+ * @param {string} [opts.lang]
+ * @param {number} [opts.cid]
+ * @param {number} [opts.limit]
+ * @param {number} [opts.offset]
+ * @returns {Promise<{total: number, results: Array, hasMore: boolean}>}
+ */
+export async function searchAPI(q, { lang = "zh", cid, limit = 200, offset = 0 } = {}) {
+  const params = new URLSearchParams({
+    q: String(q),
     lang,
+    limit: String(limit),
+    offset: String(offset),
   });
-  const totalSegs = (out || []).reduce((n, r) => n + r.segments.length, 0);
-  console.log(
-    `[anno] get: cid=${cid} book=${bookId} chapter=${chapterId} rows=${out?.length ?? 0} total_segments=${totalSegs} (${(performance.now() - t0).toFixed(1)}ms)`,
-  );
-  return out;
-}
+  if (cid !== undefined && cid !== null) params.set("cid", String(cid));
 
-/// Upsert the segment list for one paragraph. The DB stores whatever
-/// `segments` array is passed; dedup and merge logic lives in the toolbar.
-export async function saveParagraphAnnotations(annotations) {
-  if (!isTauri()) return -1;
-  const t0 = performance.now();
-  const id = await tauriInvoke("save_paragraph_annotations", { annotations });
-  console.log(
-    `[anno] save: cid=${annotations.cid} book=${annotations.book_id} chapter=${annotations.chapter_id} p=${annotations.p_index} segments=${annotations.segments.length} id=${id} (${(performance.now() - t0).toFixed(1)}ms)`,
-  );
-  return id;
-}
-
-/// Clear every segment for a single paragraph.
-export async function clearParagraphAnnotations(
-  cid,
-  bookId,
-  chapterId,
-  lang,
-  pIndex,
-) {
-  if (!isTauri()) return;
-  console.log(
-    `[anno] clear_paragraph: cid=${cid} book=${bookId} chapter=${chapterId} p=${pIndex}`,
-  );
-  return tauriInvoke("clear_paragraph_annotations", {
-    cid,
-    bookId,
-    chapterId,
-    lang,
-    pIndex,
-  });
-}
-
-export async function clearAnnotations() {
-  if (!isTauri()) return 0;
-  return tauriInvoke("clear_annotations", {});
-}
-
-// ── Reading Progress ───────────────────────────────────────────────
-
-export async function saveReadingProgress(progress) {
-  if (!isTauri()) return;
-  return tauriInvoke("save_reading_progress", { progress });
-}
-
-export async function getReadingProgress(cid, bookId, lang = "zh") {
-  if (!isTauri()) return null;
-  return tauriInvoke("get_reading_progress", { cid, bookId, lang });
-}
-
-export async function getAllReadingProgress() {
-  if (!isTauri()) return [];
-  return tauriInvoke("get_all_reading_progress", {});
-}
-
-// ── Devtools ───────────────────────────────────────────────────
-
-export async function isDesktop() {
-  if (!isTauri()) return false;
-  return tauriInvoke("is_desktop", {});
-}
-
-export async function openDevtools() {
-  if (!isTauri()) return;
-  // Tauri 2 has no JS-side openDevtools(); we route through a Rust command.
-  // No-op on Android/iOS, opens web inspector on desktop.
-  try {
-    await tauriInvoke("open_devtools", {});
-  } catch (e) {
-    console.warn("[devtools] open failed:", e);
-  }
-}
-
-// ── Search ────────────────────────────────────────────────────
-
-export async function searchAPI(
-  q,
-  { lang = "zh", cid, limit = 200, offset = 0 } = {},
-) {
   if (isTauri()) {
+    // Tauri 端: 本地 Rust SQLite 搜索 + 并行 fire-and-forget 关键词热度上报
+    //   - 本地搜索 (Rust FTS5) 始终进行，不依赖网络
+    //   - 网络 fetch `/api/search/track` 仅为了把 keyword 计数 +1 上传到 KV
+    //   - 离线/网络失败时 catch，不影响本地结果
+    // 这样 web + Android 的 keyword 热度都汇总到同一份 CF KV 计数。
+    const base = PUBLIC_API_BASE || "https://lelexue.cn";
+
+    // Fire-and-forget 热度上报（POST body 比 query 短，~80 bytes）。
+    // 只在 `navigator.onLine === true` 时才发，避免无谓的 DNS / TCP。
+    if (typeof navigator !== "undefined" && navigator.onLine) {
+      fetch(`${base}/api/search/track`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ q: String(q), lang }),
+        keepalive: true, // tab 关闭也能完成
+      }).catch(() => {
+        /* 网络失败 / 离线 — 本地搜索进度不受影响 */
+      });
+    }
+
     const result = await tauriInvoke("search", {
       q,
       lang,
@@ -203,14 +140,14 @@ export async function searchAPI(
       hasMore: offset + result.results.length < result.total,
     };
   }
-  const params = new URLSearchParams({
-    q,
-    lang,
-    limit: String(limit),
-    offset: String(offset),
-  });
-  if (cid !== undefined && cid !== null) params.set("cid", String(cid));
+
+  // Web 端: 走当前 origin（dev = miniflare KV, prod = CF 远端 KV）。
   const res = await fetch(`/api/search?${params}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  const data = await res.json();
+  return {
+    total: data.total,
+    results: data.results,
+    hasMore: data.hasMore ?? false,
+  };
 }

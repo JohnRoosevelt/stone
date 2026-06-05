@@ -1,5 +1,5 @@
 <script>
-  import AboutApp from "../AboutApp.svelte";
+  import AboutApp from "$lib/components/AboutApp.svelte";
   import { safeGoBack } from "$lib";
 
   function goBack() {

@@ -2,45 +2,22 @@
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { showId } from "$lib";
-  import { getAllReadingProgress, isTauri } from "$lib/tauri";
-
-  let { bookList = page.data.books || [] } = $props();
 
   let clientHeight = $state(0);
   let activeId = $state("");
   let selectId = $state("");
-  /** Map of "cid-bookId" -> reading progress record */
-  let progressMap = $state({});
 
-  const groupByTag = $derived(
-    bookList.reduce((pre, cur) => {
-      if (!pre[cur.title]) {
-        pre[cur.title] = [];
-      }
-      pre[cur.title].push(cur);
-      return pre;
-    }, {}),
-  );
+  const groupByTag = page.data.books.reduce((pre, cur) => {
+    if (!pre[cur.title]) {
+      pre[cur.title] = [];
+    }
+    pre[cur.title].push(cur);
+    return pre;
+  }, {});
 
   // console.log({ bible, groupByTag });
 
-  // Load reading progress for all books
-  async function loadProgress() {
-    if (!isTauri()) return;
-    try {
-      const list = await getAllReadingProgress();
-      const map = {};
-      for (const rp of list) {
-        const key = rp.cid + "-" + rp.book_id;
-        map[key] = rp;
-      }
-      progressMap = map;
-    } catch (err) {
-      console.error("Failed to load reading progress:", err);
-    }
-  }
-
-  function observeHeaders() {
+  onMount(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -61,29 +38,28 @@
 
     const ids = [...Object.keys(groupByTag)];
     ids.forEach((id) => observer.observe(document.getElementById(id)));
-  }
-  onMount(() => {
-    loadProgress();
-    observeHeaders();
+
+    return () => observer.disconnect();
   });
 </script>
 
-<article
-  bind:clientHeight
-  class="w-full h-full relative overflow-hidden font-500"
->
+<article bind:clientHeight w-full h-full relative overflow-hidden font-500>
   <section
     id="booksContainer"
     style:height="{clientHeight}px"
-    class="h-full pb-12 relative scroll-y"
+    relative
+    scroll-y
+    class="pb-12"
   >
     {#each Object.entries(groupByTag) as [tag, group]}
-      <div id={tag} class="space-y-px">
+      <div id={tag} space-y-px>
         <div
-          class={[
-            activeId === tag && "text-green font-700",
-            "px-3 sticky top-0 z-3 bg-white dark:bg-black",
-          ]}
+          px-3
+          sticky
+          top-0
+          z-3
+          class={activeId === tag ? "text-green font-700" : ""}
+          bg="white dark:black"
         >
           {tag}
         </div>
@@ -94,7 +70,7 @@
     {/each}
   </section>
 
-  <section class="absolute w-full h-12 bottom-0 z-3 flex-cc gap-2">
+  <section absolute w-full h-12 bottom-0 z-3 flex-cc gap-2>
     {#each Object.entries(groupByTag) as [tag]}
       <button
         onclick={() => {
@@ -102,14 +78,15 @@
           showId(tag, "start");
         }}
         aria-label={tag}
-        class={[
-          "flex-cc flex-1 h-full rounded-1",
-          activeId === tag
-            ? "text-green font-700 bg-gray-200 dark:bg-gray-600"
-            : selectId == tag
-              ? "text-red bg-gray-300 dark:bg-gray-800"
-              : "bg-gray-300 dark:bg-gray-800",
-        ]}
+        flex-cc
+        flex-1
+        h-full
+        rounded-1
+        class={activeId === tag
+          ? "text-green font-700 bg-gray-200 dark:(bg-gray-600)"
+          : selectId == tag
+            ? "text-red bg-gray-300 dark:(bg-gray-800)"
+            : "bg-gray-300 dark:(bg-gray-800)"}
         >{tag}
       </button>
     {/each}
@@ -117,42 +94,19 @@
 </article>
 
 {#snippet Rbook(book)}
-  {@const key = "0-" + book.book_id}
-  {@const rp = progressMap[key]}
-  {@const chapterLink = rp
-    ? `/0/${book.book_id}/${rp.chapter_id}`
-    : `/0/${book.book_id}/1`}
-  <div class="flex-bc h-12 px-3 bg-gray-100 dark:bg-gray-700">
-    <a
-      flex-1
-      href={chapterLink}
-      onclick={() => {
-        if (rp && rp.scroll_percentage > 0) {
-          sessionStorage.setItem(
-            "restoreScroll_" + book.book_id,
-            String(rp.scroll_percentage),
-          );
-        }
-      }}
-    >
+  <div flex-bc h-12 px-3 bg-gray-100 dark="bg-gray-700">
+    <a flex-1 href="/0/{book.book_id}/1">
       <p flex-bc class:text-green={page.params.bookId == book.book_id}>
         <span>{book.name}</span>
-        <span flex class="gap-1">
-          {#if rp}
-            <span class="text-2 text-gray-400">{rp.scroll_percentage}% {rp.chapter_id}˼</span>
-          {/if}
+        <span flex>
           <!-- https://symbl.cc/cn/unicode-table/#spacing-modifier-letters -->
           <!-- u+20FB -->
           <span text-green>˻</span>
           <span>{book.abbreviation}</span>
           <span text-green>˼</span>
+          <!-- u+20FC -->
         </span>
       </p>
     </a>
   </div>
 {/snippet}
-
-<style
-  uno-global
-  uno-safelist="text-green font-700 bg-gray-200 dark:bg-gray-600 text-red bg-gray-300 dark:bg-gray-800"
-></style>

@@ -1,43 +1,34 @@
 /**
- * Global state
+ * 全局状态 — 单一来源
  *
- * Organized by functional areas; new code can import directly from sub-store files:
- *   import { networkStore } from "$lib/stores/network.svelte";
- *   import { themeStore }   from "$lib/stores/theme.svelte";
- *   import { readerStore }  from "$lib/stores/reader.svelte";
- *   import { deviceStore }  from "$lib/stores/device.svelte";
- *   import { uiStore }      from "$lib/stores/ui.svelte";
- *   import { dialogStore }  from "$lib/stores/dialog.svelte";
- *   import { touchStore, touchP } from "$lib/stores/touch.svelte";
+ * 按功能分区（network / theme / device / reader / ui / dialog / touch）。
+ * 旧版细分 store 文件（$lib/stores/*）已删除，新代码直接 import 这个模块：
+ *   import { DATAS, TOUCHP } from "$lib/data.svelte";
  */
 
 export const DATAS = $state({
-  // ── Network ──
+  // ── 网络 ──
   online: false,
   networkType: "unknown",
   connectionType: "unknown",
 
-  // ── Theme ──
-  /** "system" | "light" | "dark" — follows OS pref by default; pages can override */
-  themeMode: "system",
-  /** Derived: true when the dark class should be active on <html> */
+  // ── 主题 ──
   isDarkMode: false,
 
-  // ── Device ──
+  // ── 设备 ──
   uaInfo: {},
   dbInfo: {},
-  isTauri: false,
 
-  // ── Reader ──
+  // ── 阅读器 ──
   fontSize: 16,
   isFullScreen: false,
   bg: "#F8F9FA",
   showSdaEnglish: false,
 
-  // ── UI Layout ──
+  // ── UI 布局 ──
   isMobile: false,
 
-  // ── Dialog ──
+  // ── 对话框 ──
   dialog: {
     show: false,
     animate: {},
@@ -45,7 +36,7 @@ export const DATAS = $state({
     c: null,
   },
 
-  // ── Touch ──
+  // ── 触摸 ──
   touchInfo: {},
 });
 

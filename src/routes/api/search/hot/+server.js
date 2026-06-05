@@ -1,44 +1,57 @@
 import { json } from "@sveltejs/kit";
-import { getTopSearchTerms } from "$lib/server/searchCache.js";
 
 /**
  * GET /api/search/hot
  *
- * Returns hot search keywords ranked by actual user search frequency.
- * Data comes from KV where search terms are recorded and aggregated.
- * Returns an empty array if no search data has been recorded yet.
+ * Returns the top-N most-searched keywords (cumulative counts from
+ * `search:count:<lang>:<q>` KV keys).
  *
- * Response format:
- *   Array<{ text: string, count: number }>
+ * Implementation: KV doesn't have a "scan by prefix" server-side aggregation,
+ * so we list keys with the `list()` method and aggregate counts client-side.
+ * Acceptable for the modest keyspace we expect (one entry per unique query).
+ *
+ * Query params:
+ *   - limit:    max keywords to return (default 20, max 100)
+ *   - lang:     filter by language (default "zh")
  */
-export async function GET({ platform }) {
+export async function GET({ url, platform }) {
+  const kv = platform?.env?.SEARCH_CACHE;
+  if (!kv) {
+    return json({ error: "KV not configured" }, { status: 503 });
+  }
+
+  const limit = Math.min(parseInt(url.searchParams.get("limit") || "20"), 100);
+  const lang = url.searchParams.get("lang") || "zh";
+  const prefix = `search:count:${lang}:`;
+
   try {
-    const kv = platform?.env?.STONE_SEARCH_CACHE;
-
-    console.log("[hotKeywords] KV available:", !!kv);
-    console.log(
-      "[hotKeywords] platform.env keys:",
-      platform?.env ? Object.keys(platform.env) : "no platform.env",
-    );
-
-    if (kv) {
-      console.log("[hotKeywords] Calling getTopSearchTerms...");
-      const topTerms = await getTopSearchTerms(kv, 16);
-      console.log(
-        "[hotKeywords] getTopSearchTerms result:",
-        JSON.stringify(topTerms),
-      );
-      return json(topTerms);
+    const out = [];
+    let cursor;
+    // Cap pages so a runaway keyspace can't DoS the request
+    for (let page = 0; page < 50; page++) {
+      const list = await kv.list({ prefix, cursor, limit: 1000 });
+      for (const key of list.keys) {
+        const q = key.name.slice(prefix.length);
+        const cnt = Number((await kv.get(key.name)) || 0);
+        if (q) out.push({ q, count: cnt });
+      }
+      if (!list.list_complete) {
+        cursor = list.cursor;
+      } else {
+        break;
+      }
     }
 
-    // KV not available
-    console.warn(
-      "[hotKeywords] KV namespace 'STONE_SEARCH_CACHE' is NOT available on platform.env",
-    );
-    return json([]);
+    out.sort((a, b) => b.count - a.count);
+    return json({
+      lang,
+      total: out.length,
+      hot: out.slice(0, limit),
+    });
   } catch (e) {
-    console.warn("[hotKeywords] Error:", e.message);
-    console.warn("[hotKeywords] Error stack:", e.stack);
-    return json([]);
+    return json(
+      { error: "Hot list failed", details: e.message },
+      { status: 500 },
+    );
   }
 }
