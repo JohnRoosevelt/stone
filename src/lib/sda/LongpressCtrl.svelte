@@ -94,120 +94,47 @@
         text-decoration-thickness: 2px;
         text-decoration-style: wavy;
         text-decoration-color: ${color};`;
-    }
-
-    if (dataType === "underline") {
+    } else if (dataType === "underline") {
       cssText = `text-decoration-line: underline;
         text-underline-offset: 4px;
         text-decoration-thickness: 2px;
         text-decoration-color: ${color};`;
-    }
-
-    if (dataType === "bg") {
+    } else if (dataType === "bg") {
       cssText = `background-color: ${color};`;
-    }
-
-    if (dataType === "text") {
+    } else if (dataType === "text") {
       cssText = `color: ${color};`;
     }
-
-    void cssText;
+    if (!cssText) return;
 
     const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
     const range = selection.getRangeAt(0);
-    const parent = range.commonAncestorContainer;
-    console.log(parent.nodeName, parent.nodeType, Node.TEXT_NODE);
+    if (range.collapsed) return; // empty selection — nothing to annotate
 
-    if (parent.nodeName === "ARTICLE") {
+    const startNode =
+      range.startContainer.nodeType === Node.TEXT_NODE
+        ? range.startContainer.parentNode
+        : range.startContainer;
+    const pEl = startNode?.closest?.("[data-i]");
+    if (!pEl) {
       info("只能在一段内处理标记");
       selection.removeAllRanges();
       return;
     }
 
-    if (parent.nodeType !== Node.TEXT_NODE) {
-      const dataType = parent.getAttribute("data-type");
-
-      // console.log("has style", parent, parent.nodeName, dataType, type);
-
-      if (dataType !== type) {
-        console.log(".... change", dataType, "to ", type);
-        parent.setAttribute("data-type", type);
-        parent.style.cssText = cssText;
-
-        return;
-      }
-      console.log(".... remove");
-      const target = parent.parentNode;
-      while (parent.firstChild) {
-        target.insertBefore(parent.firstChild, parent);
-      }
-      target.removeChild(parent);
-      target.normalize();
-
-      return;
+    // Web 划线 **不存**任何地方 — 纯 DOM 操作, 刷新即丢
+    // (与 Tauri/Android 端持久化到本地 SQLite 不同; 按 user 设计原则)
+    // 这一段 = 一整段加 css (不能用 span 拆 — 简单可靠)
+    if (pEl.getAttribute("data-type") === dataType) {
+      // 同一段同一 style 再次点击 → 清除划线
+      pEl.removeAttribute("data-type");
+      pEl.style.cssText = "";
+      info("已清除（本页面刷新后丢失）");
+    } else {
+      pEl.setAttribute("data-type", dataType);
+      pEl.style.cssText = cssText;
+      info("已划线（本页面刷新后丢失）");
     }
-
-    console.log("set new ...");
-
-    const span = document.createElement("span");
-    span.style.cssText = cssText;
-    span.setAttribute("data-type", dataType);
-
-    span.addEventListener("click", (e) => {
-      e.stopPropagation();
-
-      // const target = e.currentTarget;
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(e.target);
-      selection.removeAllRanges();
-      selection.addRange(range);
-
-      const dataType = e.target.getAttribute("data-type");
-      // console.log("set type", dataType);
-      type = dataType;
-    });
-
-    // removeEdit(span)
-    range.surroundContents(span);
-
-    saveHighlight(selection.toString(), range);
-
-    const newRange = document.createRange();
-    newRange.selectNodeContents(span);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-  }
-
-  function saveHighlight(text, range) {
-    let parent = range.commonAncestorContainer;
-
-    if (parent.nodeType === Node.TEXT_NODE) {
-      parent = parent.parentNode;
-    }
-
-    const pIndex = parent.getAttribute("data-i");
-
-    const preRange = document.createRange();
-    preRange.setStart(parent.firstChild, 0);
-    preRange.setEnd(range.startContainer, range.startOffset);
-
-    // console.log(target.firstChild, range.startContainer, range.startOffset, preRange);
-    const startOffset = preRange.toString().length;
-
-    const highlight = {
-      pIndex,
-      text,
-      startOffset,
-      length: text.length,
-    };
-
-    console.log({ highlight });
-
-    // 从 localStorage 获取现有高亮或初始化空数组
-    // let highlights = JSON.parse(localStorage.getItem("highlights") || "[]");
-    // highlights.push(highlight);
-    // localStorage.setItem("highlights", JSON.stringify(highlights));
   }
 </script>
 
