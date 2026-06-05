@@ -160,6 +160,27 @@
     span.setAttribute("data-style", dataType);
     span.setAttribute("data-color", color);
 
+    // Reverse path (v0.2.5 行为, e7ed619 重写时丢了):
+    //   点击已划线 span → 选中该 span 内容 + 触发 doc-level selectionchange
+    //   → chapter +page.svelte 的 onselectionchange 把 isShowLongpressCtrl 置 true
+    //   → LongpressCtrl $effect 里的 syncTypeFromSelection 把 type 同步成
+    //   span 自己的 data-style → 工具栏对应按钮高亮
+    // stopPropagation 阻止冒泡到 chapter section 的 onclick (会误 toggle
+    // isShowCtrl ArticleCtrl). 浏览器 default selection 高亮 (蓝底) + span
+    // 自己的 underline / bg color 叠加, 视觉上"特别突出".
+    span.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const sel = window.getSelection();
+      if (!sel) return;
+      sel.removeAllRanges();
+      const rr = document.createRange();
+      rr.selectNodeContents(span);
+      sel.addRange(rr);
+      // type 同步其实走 selectionchange listener, 但这里直接 set 一次
+      // 减少一个 rAF 的视觉延迟 (toolbar 按钮立刻高亮)
+      type = dataType;
+    });
+
     try {
       range.surroundContents(span);
     } catch (e) {
