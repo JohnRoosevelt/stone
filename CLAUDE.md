@@ -58,3 +58,43 @@ UnoCSS with `presetWind4` + `presetMini` + `presetIcons`. Custom icon collection
 ### Auto-update (Android only)
 
 `src/lib/updater.svelte.js` fetches a version manifest from R2 (`apk/update.json`), compares semver against the running app, and opens the APK URL via `@tauri-apps/plugin-shell` `open()` for installation. Shared between `Updater.svelte` banner and settings page.
+
+## Cross-cutting design principles (hard rules)
+
+These are user-stated invariants. **Do not violate them when refactoring** — always confirm with the user first.
+
+### 1. Web reader — single R2 read per book, never per-chapter
+
+`src/routes/(pub)/[cid]/[bookId]/+layout.js` (web branch) and `[chapterId]/+page.js` use `loadR2Parquet()` to fetch the **entire book** from R2 on the book page, then `[chapterId]/+page.js` reads the chapter in-memory via `parent().chapters[chapterId - 1]`.
+
+- **Why**: minimize D1 query count. Each chapter page render = 1 R2 GET (cached at edge) + 0 D1 queries.
+- **Never** rewrite to `/api/admin/import?chapterId=…` (per-chapter D1) — it shifts load from R2 (cheap, cached) to D1 (expensive, rate-limited) for no UX gain. The `/api/admin/import` per-chapter endpoint is for admin tooling only.
+
+### 2. Web annotation — DOM-only, never persisted
+
+`src/lib/sda/LongpressCtrl.svelte` selectionEdit must keep annotations **in the DOM only** on web — no `localStorage`, no IndexedDB, no fetch to `/api/annotation/*`. Toast should remind the user "本页面刷新后丢失".
+
+- **Why**: the project has no cross-device user system; persisting per-device would risk filling up user storage with non-portable data.
+- Tauri/Android path is different: `tauri.js` `saveParagraphAnnotations` / `clearParagraphAnnotations` call into Rust SQLite via `invoke`. **Do not unify** the two paths.
+
+### 3. No user-account system, anywhere
+
+No login, no signup, no cross-device sync. All "personalization" (search history, theme, font size, reading position on web) lives in `localStorage` keyed to the browser. Tauri-side personalization lives in on-device SQLite. The two are **deliberately independent**.
+
+### 4. Tauri search — local SQLite + fire-and-forget keyword-heat pings
+
+`src/lib/tauri.js` `searchAPI()` Tauri branch invokes the Rust `search` command against on-device SQLite **first**, then fire-and-forget POSTs `/api/search/track` to bump the keyword counter in Cloudflare KV.
+
+- The local search **never depends on the network**. If `fetch(track)` fails or `navigator.onLine === false`, swallow the error silently — local search progress is unaffected.
+- The track endpoint exists **only** to count keyword frequency. Do not consume the response; discard it.
+
+### 5. Cloudflare KV search-counter semantics
+
+`/api/search` and `/api/search/track` both `INCR` `search:count:<lang>:<q>` **on every request, including KV cache hits**. No rate limit, no 3-times-cap (an earlier prototype capped at 3 — that was wrong). Counters are monotonic and unbounded.
+
+### 6. Dev mode uses miniflare, not `wrangler dev`
+
+`bun dev` (vite + `@sveltejs/adapter-cloudflare`) auto-injects `platform.env.{DB, SEARCH_CACHE, R2, …}` via `getPlatformProxy()` in adapter-cloudflare v7+ `emulate()`. The `.wrangler/state/v3/` directory holds the miniflare local KV/D1 state.
+
+- `wrangler.toml` must declare every binding the app reads at runtime (d1_databases, kv_namespaces, vars) so miniflare can materialize them.
+- The user has explicitly said "不要 wrangler dev" multiple times — do not propose `wrangler dev` as a workaround.
