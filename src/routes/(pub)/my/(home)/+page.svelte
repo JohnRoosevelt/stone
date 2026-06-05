@@ -1,6 +1,7 @@
 <script>
   import { DATAS } from "$lib/data.svelte";
   import { searchHistory, clearSearchHistory } from "$lib/bible/searchStore.svelte.js";
+  import { formatBuildTime } from "$lib/format.js";
 
   const roadmap = [
     {
@@ -338,7 +339,7 @@
         <div>
           <span text-gray-400>version: </span>
           {__GIT_COMMIT__}
-          <span text-gray-400> ({__BUILD_TIME__})</span>
+          <span text-gray-400> ({formatBuildTime(__BUILD_TIME__)})</span>
         </div>
       </div>
     {/if}

@@ -246,10 +246,10 @@
     <button
       data-type="underline-wavy"
       aria-label="select-edit"
-      flex-cc
-      w-10
-      h={type === "underline-wavy" ? 24 : 14}
-      class="underline underline-offset-4 decoration-2 decoration-wavy"
+      class={[
+        "underline underline-offset-4 decoration-2 decoration-wavy w-10 flex-cc",
+        type === "underline-wavy" ? "h-24" : "h-12",
+      ]}
       style="text-decoration-color: var(--color);"
       onclick={selectionEdit}
     >
@@ -259,10 +259,10 @@
     <button
       data-type="underline"
       aria-label="select-edit"
-      flex-cc
-      w-10
-      h={type === "underline" ? 24 : 14}
-      class="underline underline-offset-4 decoration-2"
+      class={[
+        "underline underline-offset-4 decoration-2 w-10 flex-cc",
+        type === "underline" ? "h-24" : "h-12",
+      ]}
       style="text-decoration-color: var(--color);"
       onclick={selectionEdit}
     >
@@ -272,9 +272,7 @@
     <button
       data-type="bg"
       aria-label="select-edit"
-      flex-cc
-      w-10
-      h={type === "bg" ? 24 : 14}
+      class={["w-10 flex-cc", type === "bg" ? "h-24" : "h-12"]}
       style="background-color: var(--color);"
       onclick={selectionEdit}
     >
@@ -284,9 +282,7 @@
     <button
       data-type="text"
       aria-label="select-edit"
-      flex-cc
-      w-10
-      h={type === "text" ? 24 : 14}
+      class={["w-10 flex-cc", type === "text" ? "h-24" : "h-12"]}
       style="color: var(--color);"
       onclick={selectionEdit}
     >
