@@ -80,7 +80,7 @@ async function bumpCount(kv, lang, q) {
 }
 
 export async function GET({ url, platform }) {
-  const kv = platform?.env?.SEARCH_CACHE;
+  const kv = platform?.env?.STONE_SEARCH_CACHE;
   const db = getDB(platform);
 
   const q = url.searchParams.get("q") || "";

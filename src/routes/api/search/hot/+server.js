@@ -15,7 +15,7 @@ import { json } from "@sveltejs/kit";
  *   - lang:     filter by language (default "zh")
  */
 export async function GET({ url, platform }) {
-  const kv = platform?.env?.SEARCH_CACHE;
+  const kv = platform?.env?.STONE_SEARCH_CACHE;
   if (!kv) {
     return json({ error: "KV not configured" }, { status: 503 });
   }

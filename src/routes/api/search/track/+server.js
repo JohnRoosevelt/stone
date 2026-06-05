@@ -23,7 +23,7 @@ async function trackKeyword(kv, lang, q) {
 }
 
 export async function POST({ request, platform }) {
-  const kv = platform?.env?.SEARCH_CACHE;
+  const kv = platform?.env?.STONE_SEARCH_CACHE;
   if (!kv) {
     return json({ error: "KV not configured" }, { status: 503 });
   }
@@ -51,7 +51,7 @@ export async function POST({ request, platform }) {
 // Also accept GET for clients that prefer query params (e.g. simple
 // keepalive-style ping from a web worker / Tauri webview).
 export async function GET({ url, platform }) {
-  const kv = platform?.env?.SEARCH_CACHE;
+  const kv = platform?.env?.STONE_SEARCH_CACHE;
   if (!kv) {
     return json({ error: "KV not configured" }, { status: 503 });
   }

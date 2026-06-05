@@ -20,6 +20,10 @@ database_id = "8aa5dbac-b20e-47dd-96af-79a493e5638f"
 # prod 走 CF 远端 namespace（id 在 deploy 时由 wrangler 注入）。
 # 每次新环境需要 `wrangler kv namespace create` 拿 id（需要 CF API token）。
 [[kv_namespaces]]
-binding = "SEARCH_CACHE"
-id = "dev-only-placeholder-search-cache"  # dev: miniflare ignores; prod: replace via wrangler
-preview_id = "dev-only-placeholder-search-cache"
+# Binding 名跟 CF Pages dashboard STONE_SEARCH_CACHE 1:1 对齐,
+# id 是 2026-05-15 commit 9a7fa81 / 95458c8 / d512ecc / b0a94af / a4c0ac3
+# 一直用的 namespace. d5f28c4 改成 SEARCH_CACHE + 占位符 id 跟 dashboard
+# 冲突, CF Pages deploy 报 8000022 "Invalid KV namespace ID".
+binding = "STONE_SEARCH_CACHE"
+id = "a47185b8d89f47e89e85f4a981e2ae13"
+preview_id = "472b3327834b4c3a8243ea31e6e40b5f"
