@@ -12,9 +12,14 @@ export async function GET({ url }) {
     throw error(400, "fileName is required");
   }
 
-  const r2 = env.R2;
-  if (!r2) throw error(500, "R2 binding not configured");
-  const [accountId, accessKeyId, secretAccessKey, Bucket] = r2.split(",");
+  // R2 凭据拆 4 个 env 读 (跟 download endpoint 同步, 见 /api/r2/download/+server.js)
+  const accountId = env.R2_ACCOUNT_ID;
+  const accessKeyId = env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = env.R2_SECRET_ACCESS_KEY;
+  const Bucket = env.R2_BUCKET;
+  if (!accountId || !accessKeyId || !secretAccessKey || !Bucket) {
+    throw error(500, "R2 binding not configured");
+  }
 
   const client = new S3Client({
     region: "auto",

@@ -5,9 +5,14 @@ compatibility_flags = [ "nodejs_compat" ]
 
 
 [vars]
+# PUBLIC_* — vite 静态替换到 client bundle (跟 .env 同步维护)
 PUBLIC_R2 = "https://r2.lelexue.cn"
 PUBLIC_API_BASE = "https://lelexue.cn"
-R2 = "76f91d4a19eb310b8a1eee846a8d807b,85ac4a675838688f09e61e8e52ca24bc,dd28cc17212f27ebd63fe8bd597671369877f9bf31d0aad4c636b26a7cfa0b3f,holy"
+# R2 公开信息 — Account ID + bucket name 不算 secret, 写 vars 安全
+# 但 Access Key ID / Secret Access Key 走 wrangler secret put (prod) /
+# .dev.vars (dev), 严禁进 wrangler.toml 跟 git
+R2_ACCOUNT_ID = "76f91d4a19eb310b8a1eee846a8d807b"
+R2_BUCKET = "holy"
 
 [[d1_databases]]
 binding = "DB"

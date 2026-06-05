@@ -19,6 +19,8 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.test
+# Cloudflare Workers / Pages dev secret (跟 .env 类似, 但 miniflare 专用)
+.dev.vars
 
 # Vite
 vite.config.js.timestamp-*
