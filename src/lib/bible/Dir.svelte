@@ -17,7 +17,7 @@
 
   // console.log({ bible, groupByTag });
 
-  function observeHeaders() {
+  onMount(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -38,9 +38,8 @@
 
     const ids = [...Object.keys(groupByTag)];
     ids.forEach((id) => observer.observe(document.getElementById(id)));
-  }
-  onMount(() => {
-    observeHeaders();
+
+    return () => observer.disconnect();
   });
 </script>
 

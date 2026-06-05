@@ -1,14 +1,9 @@
 /**
- * 全局状态
+ * 全局状态 — 单一来源
  *
- * 按功能分区组织，新代码可直接从细分 store 文件导入：
- *   import { networkStore } from "$lib/stores/network.svelte";
- *   import { themeStore }   from "$lib/stores/theme.svelte";
- *   import { readerStore }  from "$lib/stores/reader.svelte";
- *   import { deviceStore }  from "$lib/stores/device.svelte";
- *   import { uiStore }      from "$lib/stores/ui.svelte";
- *   import { dialogStore }  from "$lib/stores/dialog.svelte";
- *   import { touchStore, touchP } from "$lib/stores/touch.svelte";
+ * 按功能分区（network / theme / device / reader / ui / dialog / touch）。
+ * 旧版细分 store 文件（$lib/stores/*）已删除，新代码直接 import 这个模块：
+ *   import { DATAS, TOUCHP } from "$lib/data.svelte";
  */
 
 export const DATAS = $state({

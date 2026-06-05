@@ -5,7 +5,6 @@
   import { showId, safeGoBack } from "$lib";
   import Setting from "$lib/sda/Setting.svelte";
   import Chapter from "$lib/cid/Chapter.svelte";
-  import { info } from "$lib/global/Toast";
 
   let { isShowCtrl = $bindable(false), scrollPercentage } = $props();
 </script>
@@ -126,18 +125,6 @@
       }}
     >
       <span i-carbon-language></span>
-    </button>
-
-    <button
-      flex-1
-      flex-cc
-      aria-label="media"
-      text-gray
-      onclick={() => {
-        info("暂无相关媒体资源");
-      }}
-    >
-      <span i-carbon-media-library></span>
     </button>
 
     <a href="/search" flex-1 flex-cc h-full aria-label="search">

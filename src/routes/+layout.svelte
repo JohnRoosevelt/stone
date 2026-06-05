@@ -7,36 +7,69 @@
   import { SvelteToast } from "@zerodevx/svelte-toast";
   import { onMount } from "svelte";
 
-  // $inspect(DATAS).with(console.trace);
   const { children } = $props();
   let innerWidth = $state(0);
 
-  // Client-side initialization (runs only in browser, not during SSR)
-  onMount(async () => {
-    // Theme from localStorage
-    DATAS.isDarkMode = localStorage.getItem("theme") == "dark";
+  // ── Network info (browser only — Tauri uses native APIs) ──
+  let connection = $state(null);
 
-    wakeLock();
+  function updateNetworkInfo(netInfo) {
+    if (!netInfo) return;
+    DATAS.networkType = netInfo.effectiveType || netInfo.type || "unknown";
+    DATAS.connectionType = netInfo.type || "unknown";
+  }
 
-    // Network type detection
-    const connection = navigator.connection ||
-      navigator.mozConnection ||
-      navigator.webkitConnection || { type: "unknown", effectiveType: "" };
-    DATAS.networkType =
-      connection.effectiveType || connection.type || "unknown";
-    DATAS.connectionType = connection.type || "unknown";
-    connection.addEventListener("change", () => {
-      DATAS.networkType =
-        connection.effectiveType || connection.type || "unknown";
-      DATAS.connectionType = connection.type || "unknown";
+  function initTheme() {
+    const saved = localStorage.getItem("themeMode");
+    if (saved === "light" || saved === "dark") {
+      DATAS.isDarkMode = saved === "dark";
+      return;
+    }
+    // Migrate legacy "theme" key
+    const legacy = localStorage.getItem("theme");
+    if (legacy === "dark" || legacy === "light") {
+      DATAS.isDarkMode = legacy === "dark";
+      localStorage.removeItem("theme");
+      localStorage.setItem("themeMode", legacy);
+    }
+  }
+
+  function initOsScheme() {
+    const m = window.matchMedia("(prefers-color-scheme: dark)");
+    m.addEventListener("change", (e) => {
+      if (DATAS.themeMode === "system") DATAS.isDarkMode = e.matches;
     });
+  }
 
-    // 后续 Tauri 版本将使用 Rust SQLite 替代
-    console.log("[App] SQLite Worker removed, Tauri native SQL pending");
+  function initNetwork() {
+    connection =
+      navigator.connection ||
+      navigator.mozConnection ||
+      navigator.webkitConnection ||
+      null;
+    if (connection) {
+      updateNetworkInfo(connection);
+      connection.addEventListener("change", () => updateNetworkInfo(connection));
+    } else {
+      DATAS.networkType = "unknown";
+      DATAS.connectionType = "unknown";
+    }
+  }
+
+  // Client-side initialization (runs only in browser, not during SSR)
+  onMount(() => {
+    // 1) Theme restore + OS preference watcher
+    initTheme();
+    initOsScheme();
+    // 2) Wake Lock (silently fails without user gesture; reader pages
+    //    call wakeLock() again on entry)
+    wakeLock();
+    // 3) Network status
+    initNetwork();
   });
 
+  // Apply the dark class to <html> whenever isDarkMode flips
   $effect(() => {
-    DATAS.isDarkMode;
     setTheme(DATAS.isDarkMode ? "dark" : "light");
   });
 

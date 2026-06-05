@@ -37,18 +37,48 @@
   let isShowColor = $state(false);
 
   $effect(() => {
-    if (isShowLongpressCtrl) {
-      const selection = window.getSelection();
-      const range = selection.getRangeAt(0);
-      const parent = range.commonAncestorContainer;
-      // console.log(parent.nodeName, parent.nodeType, parent.parentNode);
-      if (parent.nodeType === Node.TEXT_NODE) {
-        type = "";
-        return;
+    if (!isShowLongpressCtrl) return;
+
+    // Keep the toolbar's selected style in sync with whatever segment the
+    // user's selection currently overlaps. Each segment <span> has
+    // `data-style` set, so we just walk up from the selection endpoints.
+    function findDataType(node) {
+      let el = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentNode;
+      while (el && el !== document.body) {
+        const dt = el.getAttribute?.("data-style");
+        if (dt) return dt;
+        el = el.parentElement;
       }
-      return;
+      return null;
     }
-    // isShowColor = false;
+
+    function syncTypeFromSelection() {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      if (sel.toString().length === 0) return;
+      const range = sel.getRangeAt(0);
+      const dt =
+        findDataType(range.startContainer) ?? findDataType(range.endContainer);
+      if (dt) type = dt;
+    }
+
+    syncTypeFromSelection();
+    // rAF-throttle selectionchange — `findDataType` walks the DOM ancestor
+    // chain, which is unnecessary work for every selection tick during a
+    // long drag-select on mobile.
+    let raf = 0;
+    function throttledSync() {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        syncTypeFromSelection();
+      });
+    }
+    document.addEventListener("selectionchange", throttledSync);
+    return () => {
+      document.removeEventListener("selectionchange", throttledSync);
+      if (raf) cancelAnimationFrame(raf);
+    };
   });
 
   function selectionEdit(event) {
@@ -81,7 +111,7 @@
       cssText = `color: ${color};`;
     }
 
-    console.log({ cssText });
+    void cssText;
 
     const selection = window.getSelection();
     const range = selection.getRangeAt(0);

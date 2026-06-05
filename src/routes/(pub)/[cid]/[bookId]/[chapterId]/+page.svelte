@@ -8,6 +8,7 @@
   let isShowCtrl = $state(false);
   let isShowLongpressCtrl = $state(false);
   let scrollPercentage = $state(0);
+  let scrollRaf = $state(0);
 </script>
 
 <svelte:head>
@@ -26,15 +27,26 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <section
   flex-1
   h-full
   flex-cc
   relative
   bind:clientHeight
+  aria-label="文章内容"
+  tabindex="0"
   onclick={() => {
     if (isShowLongpressCtrl) return;
     isShowCtrl = !isShowCtrl;
+  }}
+  onkeydown={(e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (isShowLongpressCtrl) return;
+      isShowCtrl = !isShowCtrl;
+    }
   }}
 >
   <article
@@ -45,11 +57,17 @@
     class="pb-50vh"
     onscroll={(e) => {
       isShowCtrl = false;
-      const { scrollTop, scrollHeight, clientHeight } = e.target;
-      scrollPercentage =
-        scrollHeight - clientHeight === 0
-          ? 0
-          : Math.round((scrollTop / (scrollHeight - clientHeight)) * 100);
+      // rAF-throttle to avoid heavy $state writes on every wheel/touch tick
+      if (scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = 0;
+        const { scrollTop, scrollHeight, clientHeight } = e.target;
+        const pct =
+          scrollHeight - clientHeight === 0
+            ? 0
+            : Math.round((scrollTop / (scrollHeight - clientHeight)) * 100);
+        if (pct !== scrollPercentage) scrollPercentage = pct;
+      });
     }}
   >
     <div h-1px id="article-top"></div>

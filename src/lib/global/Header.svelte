@@ -14,25 +14,26 @@
   </a>
 
   {#if !page.url.pathname.startsWith("/search")}
-    <a href="/search" aria-label="打开搜索" b-px rounded-1 px-2 py-1 flex-cc>
+    <form
+      action="/search"
+      method="get"
+      class="b-px rounded-1 px-2 py-1 flex-cc flex-1 mx-3"
+      role="search"
+    >
       <span i-carbon-search text-gray-400></span>
-
-      <div
-        text-sm
-        text-gray-400
-        b-0
-        w-full
-        ring-0
-        px-1
-        outline-0
-        bg-transparent
-        cursor-pointer
-      >
-        搜索圣经、预言之灵、书籍…
-      </div>
-    </a>
+      <input
+        type="search"
+        name="q"
+        placeholder="搜索圣经、预言之灵、书籍…"
+        class="text-sm text-gray-400 b-0 w-full ring-0 px-1 outline-0 bg-transparent"
+      />
+    </form>
   {/if}
 
-  <!-- user avatar -->
-  <span alt="icon" i-carbon-user text-9></span>
+  <a
+    href="/my"
+    aria-label="我的"
+    data-sveltekit-replacestate
+    class="i-carbon-user text-9"
+  ></a>
 </header>

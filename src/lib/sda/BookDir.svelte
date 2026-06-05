@@ -22,7 +22,8 @@
     Object.entries(groupByTag).sort(([a], [b]) => a.localeCompare(b)),
   );
 
-  function observeHeaders() {
+  $effect(() => {
+    if (page.data.books.length === 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -46,11 +47,8 @@
       ...Object.keys(groupByTag),
     ];
     ids.forEach((id) => observer.observe(document.getElementById(id)));
-  }
 
-  $effect(() => {
-    if (page.data.books.length === 0) return;
-    observeHeaders();
+    return () => observer.disconnect();
   });
 </script>
 
