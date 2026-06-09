@@ -130,7 +130,7 @@
 <svelte:document onvisibilitychange={handleVisibilityChange} />
 
 <main
-  class="w-screen h-svh overflow-hidden flex-col flex-bc z-0 bg-[#EDF1F0] text-black/85 dark:(bg-[#111615] text-white)"
+  class="w-screen h-svh overflow-hidden flex-col flex-bc z-0 bg-[#EDF1F0] text-black/85 dark:bg-[#111615] dark:text-white"
 >
   {@render children()}
 </main>

@@ -70,7 +70,7 @@
       const range = sel.getRangeAt(0);
       const dt =
         findDataType(range.startContainer) ?? findDataType(range.endContainer);
-      if (dt) type = dt;
+      type = dt;
     }
 
     syncTypeFromSelection();
@@ -180,9 +180,13 @@
    * scratch" — simpler than mutating in place and the article re-renders
    * fast enough that the flicker is invisible.
    */
-  async function persistSegments(pEl, pIndex, segments, sourceRange, pickedStyle) {
-    if (!isTauriEnv()) return;
-
+  async function persistSegments(
+    pEl,
+    pIndex,
+    segments,
+    sourceRange,
+    pickedStyle,
+  ) {
     // 1) Rebuild the DOM: strip all existing annotation spans, then apply
     //    the new segments back-to-front (descending start) so earlier
     //    inserts don't shift the offsets of later ones.
@@ -235,6 +239,7 @@
     }
 
     // 2) Push the merged list to the DB. Empty list → delete the row.
+    if (!isTauriEnv()) return;
     try {
       if (segments.length === 0) {
         await clearParagraphAnnotations(
@@ -310,7 +315,7 @@
       aria-label="select-edit"
       class={[
         "underline underline-offset-4 decoration-2 decoration-wavy w-10 flex-cc",
-        type === "underline_wavy" ? "h-24" : "h-12",
+        type === "underline_wavy" ? "h-28" : "h-14",
       ]}
       style="text-decoration-color: var(--color);"
       onclick={selectionEdit}
@@ -323,7 +328,7 @@
       aria-label="select-edit"
       class={[
         "underline underline-offset-4 decoration-2 w-10 flex-cc",
-        type === "underline" ? "h-24" : "h-12",
+        type === "underline" ? "h-28" : "h-14",
       ]}
       style="text-decoration-color: var(--color);"
       onclick={selectionEdit}
@@ -334,7 +339,7 @@
     <button
       data-type="bg"
       aria-label="select-edit"
-      class={["bg w-10 flex-cc", type === "bg" ? "h-24" : "h-12"]}
+      class={["bg w-10 flex-cc", type === "bg" ? "h-28" : "h-14"]}
       style="background-color: var(--color);"
       onclick={selectionEdit}
     >
@@ -344,7 +349,7 @@
     <button
       data-type="text"
       aria-label="select-edit"
-      class={["text w-10 flex-cc", type === "text" ? "h-24" : "h-12"]}
+      class={["text w-10 flex-cc", type === "text" ? "h-28" : "h-14"]}
       style="color: var(--color);"
       onclick={selectionEdit}
     >

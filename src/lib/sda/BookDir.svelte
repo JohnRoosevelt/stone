@@ -136,10 +136,10 @@
         class={[
           "size-6 flex-cc p-1 rounded-1",
           activeId === "fav"
-            ? "text-green font-700 bg-gray-200 dark:(bg-gray-600)"
+            ? "text-green font-700 bg-gray-200 dark:bg-gray-600"
             : selectId == "fav"
-              ? "text-red bg-gray-300 dark:(bg-gray-800)"
-              : "bg-gray-300 dark:(bg-gray-800)",
+              ? "text-red bg-gray-300 dark:bg-gray-800"
+              : "bg-gray-300 dark:bg-gray-800",
         ]}
       >
         <span class="i-carbon-star-filled"></span>
@@ -192,7 +192,9 @@
       </p>
       <span flex class="gap-1 ml-auto">
         {#if rp}
-          <span class="text-2 text-gray-400">{rp.scroll_percentage}% {rp.chapter_id}</span>
+          <span class="text-2 text-gray-400"
+            >{rp.scroll_percentage}% {rp.chapter_id}</span
+          >
         {/if}
         {#if book.abbreviation}
           <span text-green>˻</span>
