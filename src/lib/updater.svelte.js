@@ -91,12 +91,16 @@ export async function checkForUpdate(silent = false) {
       manifest.version,
     );
 
+    // Compute updateInfo afresh on each call (don't carry over stale state
+    // from a previous check, e.g. after the user dismissed the dialog).
+    updater.updateInfo = null;
+
     if (
       manifest.version &&
       compareVersions(manifest.version, currentVersion) > 0 &&
-      // Only skip if: (a) dismissed same version AND user hasn't upgraded past it yet)
-      // OR (b) dismissed a NEWER version — don't re-prompt for a version the user
-      // explicitly declined.
+      // Only skip if: dismissed same version AND user hasn't upgraded past it yet.
+      // A dismissed newer version stays in storage — we won't re-prompt for a
+      // version the user explicitly declined.
       !(
         getDismissedVersion() === manifest.version &&
         compareVersions(currentVersion, getDismissedVersion()) < 0
