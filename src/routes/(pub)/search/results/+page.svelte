@@ -220,7 +220,7 @@
     class="bg-white dark:(bg-black border-gray-700) border-b border-gray-200 w-full flex-shrink-0 flex-cc gap-2 px-3 py-2"
   >
     <button
-      class="text-5 text-gray-500"
+      class="text-5 text-gray-500 dark:text-gray-400"
       aria-label="返回"
       onclick={() => safeGoBack("/search")}
     >
@@ -241,7 +241,12 @@
         搜索结果
       {/if}
     </div>
-    <button text-sm text-green font-500 onclick={backToInput}>修改</button>
+    <button
+      text-sm
+      text-green
+      dark:text-green-400
+      font-500
+      onclick={backToInput}>修改</button>
   </section>
 
   <!-- Category tabs bar -->
@@ -250,11 +255,13 @@
   >
     {#each TABS as { cid, label } (cid)}
       <button
-        class="px-3 py-1.5 text-sm font-500 rounded-2 whitespace-nowrap dark:text-gray-400 dark:bg-gray-800"
+        class="px-3 py-1.5 text-sm font-500 rounded-2 whitespace-nowrap"
         class:bg-green={activeCid === cid}
         class:text-white={activeCid === cid}
         class:text-gray-500={activeCid !== cid}
+        class:dark:text-gray-400={activeCid !== cid}
         class:bg-gray-100={activeCid !== cid}
+        class:dark:bg-gray-800={activeCid !== cid}
         onclick={() => switchTab(cid)}
       >
         {label}
@@ -363,7 +370,7 @@
                 <!-- Sequence number + book info → same line -->
                 <div class="flex items-center gap-2">
                   <span
-                    class="font-mono text-red font-600 text-right"
+                    class="font-mono text-red dark:text-red-400 font-600 text-right"
                     style:font-size="{DATAS.fontSize}px"
                   >
                     {r._seq}
@@ -373,7 +380,7 @@
                     style:font-size="{Math.max(DATAS.fontSize - 4, 12)}px"
                   >
                     第 {r.chapter_id} 章
-                    <span class="text-gray-500">
+                    <span class="text-gray-500 dark:text-gray-400">
                       第 {r.num ?? r.id} 节
                     </span>
                     {#if r.chapter_title}

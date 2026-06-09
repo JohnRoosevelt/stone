@@ -54,13 +54,30 @@ export function collectSegmentsFromDom(pEl) {
   return segments;
 }
 
-/** Append a new segment to the list, deduping by (start, end, style). */
+/**
+ * Merge `seg` into `segments` using the "one highlight per range" rule.
+ *
+ * Two segments are considered the "same physical highlight" iff they share
+ * the same (start, end). style/color are properties of that single highlight
+ * and get replaced, not stacked. Returning a NEW array (never mutating the
+ * input) keeps the toolbar's undo/discard logic safe.
+ *
+ * Outcomes:
+ *   - no matching (start,end)          → append
+ *   - same (start,end)                 → replace that single entry in place
+ *                                       (style/color overwrite, no second
+ *                                       entry created — this is what stops
+ *                                       "underline + underline_wavy" from
+ *                                       stacking on the same range)
+ */
 export function appendSegment(segments, seg) {
-  const exists = segments.some(
-    (s) => s.start === seg.start && s.end === seg.end && s.style === seg.style,
+  const idx = segments.findIndex(
+    (s) => s.start === seg.start && s.end === seg.end,
   );
-  if (exists) return segments;
-  return [...segments, seg];
+  if (idx === -1) return [...segments, seg];
+  const out = segments.slice();
+  out[idx] = seg;
+  return out;
 }
 
 /** Remove the segment that matches (start, end, style). */

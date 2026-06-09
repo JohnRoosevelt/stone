@@ -137,6 +137,7 @@
       <button
         text-5
         text-gray-500
+        dark:text-gray-400
         aria-label="返回"
         onclick={() => safeGoBack()}
       >
@@ -216,8 +217,9 @@
           class:bg-green={scopeCid === cid}
           class:text-white={scopeCid === cid}
           class:text-gray-500={scopeCid !== cid}
+          class:dark:text-gray-400={scopeCid !== cid}
           class:bg-gray-100={scopeCid !== cid}
-          class="dark:bg-gray-800 dark:text-gray-400"
+          class:dark:bg-gray-800={scopeCid !== cid}
           onclick={() => (scopeCid = cid)}
         >
           {label}

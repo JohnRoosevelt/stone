@@ -15,6 +15,17 @@
     removeSegment,
   } from "$lib/sda/annotationUtil";
 
+  // Web-only heads-up: annotations live in the DOM and vanish on reload.
+  // The toolbar shows a persistent hint, plus a one-shot toast on the first
+  // edit of the session so the user actually notices before they lose work.
+  let hasShownWebNotice = $state(false);
+  function notifyWebOnlyOnce() {
+    if (hasShownWebNotice) return;
+    if (isTauriEnv()) return;
+    hasShownWebNotice = true;
+    info("网页版不保存标记，刷新就消失。推荐下载 App 永久保存。");
+  }
+
   let { isShowLongpressCtrl = $bindable(false) } = $props();
   let colors2 = $state({
     OrangeRed: false, // 	Orange Red
@@ -128,24 +139,30 @@
     }
 
     // Re-collect the paragraph's segments from the DOM (this is the source
-    // of truth for what's currently shown). Then either:
-    //   (a) toggle a same-(start,end,style) segment off
-    //   (b) add a new segment for the picked style
+    // of truth for what's currently shown). Then apply the "one highlight
+    // per range" rule — see appendSegment for the semantics. The three
+    // outcomes for a tap:
+    //   (a) exact same (start,end,style) → toggle OFF  (removeSegment)
+    //   (b) same (start,end), different style/color → REPLACE in place
+    //       (this is the fix: previously this stacked, so the same text
+    //       could end up with solid + wavy underlines layered on top of
+    //       each other; now it just overwrites the single entry)
+    //   (c) new (start,end)               → append
     let segments = collectSegmentsFromDom(pEl);
     console.log(
       `[anno] selection: p=${pIndex} style=${pickedStyle} color=${color} range=[${start},${end}] existing_segments=${JSON.stringify(segments)}`,
     );
 
-    const isToggleOff = segments.some(
-      (s) =>
-        s.start === start &&
-        s.end === end &&
-        s.style === pickedStyle &&
-        s.color === color,
+    const sameRange = segments.find(
+      (s) => s.start === start && s.end === end,
     );
+    const isExactToggle =
+      sameRange &&
+      sameRange.style === pickedStyle &&
+      sameRange.color === color;
 
-    if (isToggleOff) {
-      // User re-tapped the same style on the same span → remove it.
+    if (isExactToggle) {
+      // (a) Re-tapped identical style+color on the same range → cancel it.
       segments = removeSegment(segments, {
         start,
         end,
@@ -155,10 +172,10 @@
       console.log(
         `[anno] toggle_off: p=${pIndex} range=[${start},${end}] style=${pickedStyle} → segments=${segments.length}`,
       );
-    } else {
-      // Add a new segment. (If the same range already has a different style,
-      // this becomes a second segment on the same range — the renderer will
-      // layer it on top of the existing span via a nested or sibling <span>.)
+    } else if (sameRange) {
+      // (b) Same range, different style/color → REPLACE in place.
+      // appendSegment's (start,end) dedup makes this a single-entry swap,
+      // so we never get two segments for the same physical highlight.
       segments = appendSegment(segments, {
         start,
         end,
@@ -166,11 +183,25 @@
         color,
       });
       console.log(
-        `[anno] toggle_on: p=${pIndex} range=[${start},${end}] style=${pickedStyle} color=${color} → segments=${segments.length}`,
+        `[anno] replace: p=${pIndex} range=[${start},${end}] ${sameRange.style}→${pickedStyle} color=${sameRange.color}→${color} → segments=${segments.length}`,
+      );
+    } else {
+      // (c) Brand-new range → append a fresh segment.
+      segments = appendSegment(segments, {
+        start,
+        end,
+        style: pickedStyle,
+        color,
+      });
+      console.log(
+        `[anno] append: p=${pIndex} range=[${start},${end}] style=${pickedStyle} color=${color} → segments=${segments.length}`,
       );
     }
 
-    // Persist the merged segments list.
+    // Persist the merged segments list. On the web build the toolbar still
+    // shows the highlight (it's all DOM), but nothing reaches a DB — the
+    // first-edit toast + the inline hint are the only signal the user gets.
+    notifyWebOnlyOnce();
     await persistSegments(pEl, pIndex, segments, range, pickedStyle);
   }
 
