@@ -37,52 +37,48 @@
   const max = 42;
 </script>
 
-<section w-full flex-cc flex-col gap-7 py-7>
-  <div w-full flex-bc gap-4>
+<section class="w-full flex-cc flex-col gap-7 py-7">
+  <div class="w-full flex-bc gap-4">
     <p style:font-size="{DATAS.fontSize}px">
       字体大小: {DATAS.fontSize}
     </p>
 
     <input
-      flex-1
       type="range"
       {min}
       {max}
       step="1"
       bind:value={DATAS.fontSize}
+      class="flex-1 accent-green"
+      aria-label="字体大小"
     />
   </div>
 
-  <!-- <div w-full flex-bc gap-4>
+  <!-- <div class="w-full flex-bc gap-4">
     <p>行间距:</p>
 
     <div>...</div>
   </div>
 
-  <div w-full flex-bc gap-4>
+  <div class="w-full flex-bc gap-4">
     <p>段间距:</p>
 
     <div>...</div>
   </div> -->
 
-  <div w-full flex justify-between gap-px>
+  <div class="w-full flex justify-between gap-px">
     <p
-      p-2
-      flex-cc
-      rounded-l-2
+      class="p-2 flex-cc rounded-l-2"
       style:background-color={DATAS.bg}
       style="writing-mode: vertical-rl; letter-spacing: 1em"
     >
       背景颜色
     </p>
 
-    <div flex-1 flex-cc flex-col gap-4 text-14px>
+    <div class="flex-1 flex-cc flex-col gap-4 text-14px">
       {#each backgroundColors as color}
         <button
-          w-full
-          flex-bc
-          border-1
-          rounded-r-2
+          class="w-full flex-bc border-1 rounded-r-2"
           style:border-color={color.value === DATAS.bg
             ? color.value
             : "transparent"}
@@ -91,35 +87,32 @@
             DATAS.bg = color.value;
           }}
         >
-          <div flex-cc gap-1>
+          <div class="flex-cc gap-1">
             <span
-              inline-block
-              size-6
-              rounded-r-1
+              class="inline-block size-6 rounded-r-1"
               style:background-color={color.value}
             ></span>
             <span>{color.name}</span>
           </div>
-          <span opacity-65 pr-1>{color.desc}</span>
+          <span class="opacity-65 pr-1">{color.desc}</span>
         </button>
       {/each}
       <button
-        w-full
-        flex-bc
-        border-1
-        rounded-r-2
+        class="w-full flex-bc border-1 rounded-r-2"
         style:border-color={DATAS.isDarkMode ? "white" : "transparent"}
         onclick={() => {
           DATAS.bg = "#000";
           DATAS.themeMode = "dark";
         }}
       >
-        <div flex-cc gap-1>
-          <span inline-block size-6 rounded-r-1 style:background-color="black"
+        <div class="flex-cc gap-1">
+          <span
+            class="inline-block size-6 rounded-r-1"
+            style:background-color="black"
           ></span>
           <span>黑色模式</span>
         </div>
-        <span opacity-65 pr-1>调整系统模式为黑色模式</span>
+        <span class="opacity-65 pr-1">调整系统模式为黑色模式</span>
       </button>
     </div>
   </div>

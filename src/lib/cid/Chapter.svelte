@@ -72,9 +72,9 @@
     text-7
     grid grid-cols-1
     bg-gray-200
-    divide-y-2 divide-gray-100
     rounded-4
-    text-gray dark:bg-gray-900 dark:divide-gray-800"
+    text-gray dark:bg-gray-900
+    ctrl-group"
   >
     <button
       aria-label="back"
@@ -113,3 +113,15 @@
     </button>
   </div>
 </article>
+
+<style>
+  /* 底部按钮组的分隔线 — UnoCSS dark:divide- 的 & 在 :where() 中未展开，手写替代 */
+  .ctrl-group > :not(:last-child) {
+    border-bottom-width: 2px;
+    border-style: solid;
+    border-color: rgb(229 231 235);
+  }
+  :global(.dark) .ctrl-group > :not(:last-child) {
+    border-color: rgb(31 41 55);
+  }
+</style>
