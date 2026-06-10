@@ -35,10 +35,7 @@
     <Dir />
   </section>
 
-  <section
-    class="w-full h-full overflow-hidden flex-cc flex-col sm:flex-1"
-    hidden={!hidden}
-  >
+  <section class="w-full h-full overflow-hidden flex-cc flex-col sm:flex-1">
     {@render children()}
   </section>
 </article>
