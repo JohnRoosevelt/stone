@@ -98,10 +98,10 @@ export async function checkForUpdate(silent = false) {
     if (
       manifest.version &&
       compareVersions(manifest.version, currentVersion) > 0 &&
-      // Only skip if: dismissed same version AND user hasn't upgraded past it yet.
-      // A dismissed newer version stays in storage — we won't re-prompt for a
-      // version the user explicitly declined.
+      // Manual check (silent=false): always show the available update.
+      // Auto check (silent=true): skip if this version was dismissed.
       !(
+        silent &&
         getDismissedVersion() === manifest.version &&
         compareVersions(currentVersion, getDismissedVersion()) < 0
       )
