@@ -148,6 +148,18 @@ export async function clearAnnotations() {
   return tauriInvoke("clear_annotations", {});
 }
 
+/// Fetch every annotation row across all books/chapters.
+export async function getAllAnnotations() {
+  if (!isTauri()) return [];
+  return tauriInvoke("get_all_annotations", {});
+}
+
+/// Delete a single annotation row by id.
+export async function deleteAnnotation(id) {
+  if (!isTauri()) return;
+  return tauriInvoke("delete_annotation", { id });
+}
+
 // ── Reading Progress ───────────────────────────────────────────────
 
 export async function saveReadingProgress(progress) {

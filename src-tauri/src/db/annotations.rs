@@ -14,7 +14,7 @@
 
 use rusqlite::{params, Connection};
 
-use super::models::{AnnotationSegment, ParagraphAnnotations};
+use super::models::{AllAnnotation, AnnotationSegment, ParagraphAnnotations};
 
 /// Upsert the segments list for one paragraph. Replaces whatever was
 /// previously stored for the same (cid, book, chapter, lang, p_index).
@@ -143,4 +143,68 @@ pub fn clear_all_annotations(conn: &Connection) -> Result<usize, String> {
         .map_err(|e| e.to_string())?;
     log::info!("[anno] clear_all: rows_deleted={}", n);
     Ok(n)
+}
+
+/// Fetch every annotation row across all books/chapters, with denormalised
+/// book and chapter names. Used by the "all annotations" management page.
+pub fn get_all_annotations(conn: &Connection) -> Result<Vec<AllAnnotation>, String> {
+    let sql = r#"
+        SELECT
+            a.id,
+            a.cid,
+            a.book_id,
+            a.chapter_id,
+            a.lang_code,
+            a.p_index,
+            a.segments,
+            a.updated_at,
+            COALESCE(bi.name, '') AS book_name,
+            COALESCE(ch.title, '') AS chapter_title
+        FROM annotations a
+        LEFT JOIN book_i18n bi
+            ON  bi.cid = a.cid
+            AND bi.book_id = a.book_id
+            AND bi.lang_code = a.lang_code
+        LEFT JOIN chapters ch
+            ON  ch.cid = a.cid
+            AND ch.book_id = a.book_id
+            AND ch.chapter_id = a.chapter_id
+            AND ch.lang_code = a.lang_code
+        ORDER BY book_name, ch.chapter_id, a.p_index
+    "#;
+    let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
+    let rows = stmt.query_map([], |row| {
+        let raw_segments: String = row.get(6)?;
+        let segments: Vec<AnnotationSegment> =
+            serde_json::from_str(&raw_segments).unwrap_or_default();
+        Ok(AllAnnotation {
+            id: row.get(0)?,
+            cid: row.get(1)?,
+            book_id: row.get(2)?,
+            chapter_id: row.get(3)?,
+            lang_code: row.get(4)?,
+            p_index: row.get(5)?,
+            segments,
+            updated_at: row.get(7)?,
+            book_name: row.get(8)?,
+            chapter_title: row.get(9)?,
+        })
+    }).map_err(|e| e.to_string())?;
+
+    let mut result = Vec::new();
+    for row in rows {
+        result.push(row.map_err(|e| e.to_string())?);
+    }
+    let total: usize = result.iter().map(|r| r.segments.len()).sum();
+    log::info!("[anno] get_all: rows={} total_segments={}", result.len(), total);
+    Ok(result)
+}
+
+/// Delete a single annotation row by its primary key id.
+pub fn delete_annotation(conn: &Connection, id: i64) -> Result<(), String> {
+    let n = conn
+        .execute("DELETE FROM annotations WHERE id = ?1", params![id])
+        .map_err(|e| e.to_string())?;
+    log::info!("[anno] delete_one: id={} rows_deleted={}", id, n);
+    Ok(())
 }

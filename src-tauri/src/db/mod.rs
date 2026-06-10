@@ -25,15 +25,15 @@ pub mod search;
 // Re-export model types at the `db::` level so existing call sites
 // (`db::ParagraphAnnotations`, `db::Book`, ...) keep working after the split.
 pub use models::{
-    AnnotationSegment, Book, BookForImport, Chapter, FullChapter, FullParagraph, Paragraph,
-    ParagraphAnnotations, ReadingProgress, SearchResult,
+    AllAnnotation, AnnotationSegment, Book, BookForImport, Chapter, FullChapter, FullParagraph,
+    Paragraph, ParagraphAnnotations, ReadingProgress, SearchResult,
 };
 // Re-export the most-used query functions at the `db::` level too, so the
 // lib.rs call sites (`db::save_paragraph_annotations`, `db::get_books`, ...)
 // don't need to know the internal layout.
 pub use annotations::{
-    clear_all_annotations, clear_paragraph_annotations, get_paragraph_annotations,
-    save_paragraph_annotations,
+    clear_all_annotations, clear_paragraph_annotations, delete_annotation,
+    get_all_annotations, get_paragraph_annotations, save_paragraph_annotations,
 };
 pub use books::{
     delete_book_data, format_size, get_all_books_for_import, get_books, get_chapters,

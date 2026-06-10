@@ -47,7 +47,7 @@
 <footer
   data-device="mobile"
   class={[
-    "w-full text-3 px-6 flex-bc bg-white dark:(bg-black border-gray-700) sm:hidden transition300 overflow-hidden",
+    "w-full text-3 px-6 flex-bc bg-white dark:bg-black dark:border-gray-700 sm:hidden transition300 overflow-hidden",
     page.route.id?.includes("(home)") ? "h-12" : "h-0",
   ]}
 >
@@ -55,6 +55,6 @@
 </footer>
 
 <!-- only show on desktop -->
-<aside class="hidden w-12 bg-white flex-col sm:flex-ac dark:(bg-gray-900)">
+<aside class="hidden w-12 bg-white flex-col sm:flex-ac dark:bg-gray-900">
   {@render nav(VISIBLE_ITEMS)}
 </aside>

@@ -11,6 +11,6 @@
   <title>{title}</title>
 </svelte:head>
 
-<section text-24 text-green>
-  <span {icon}></span>
+<section class="text-24 text-green">
+  <span class={icon}></span>
 </section>

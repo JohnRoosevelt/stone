@@ -25,19 +25,20 @@
 </script>
 
 <article
-  data-layout="sda"
-  w-full
-  h-full
-  flex-col
-  flex-bc
-  overflow-hidden
-  sm="flex-row"
+  data-layout="cid"
+  class="w-full h-full flex-col flex-bc overflow-hidden sm:flex-row"
 >
-  <section w-full h-full flex-shrink-0 overflow-hidden class:hidden sm="w-60">
+  <section
+    class="w-full h-full flex-shrink-0 overflow-hidden sm:w-60"
+    class:hidden
+  >
     <Dir />
   </section>
 
-  <section w-full h-full overflow-hidden flex-cc flex-col sm="flex-1">
+  <section
+    class="w-full h-full overflow-hidden flex-cc flex-col sm:flex-1"
+    hidden={!hidden}
+  >
     {@render children()}
   </section>
 </article>

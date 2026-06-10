@@ -239,6 +239,18 @@ fn clear_annotations(state: tauri::State<DbState>) -> Result<usize, String> {
     db::clear_all_annotations(&conn)
 }
 
+#[tauri::command]
+fn get_all_annotations(state: tauri::State<DbState>) -> Result<Vec<db::AllAnnotation>, String> {
+    let conn = state.read_conn.lock().map_err(|e| e.to_string())?;
+    db::get_all_annotations(&conn)
+}
+
+#[tauri::command]
+fn delete_annotation(state: tauri::State<DbState>, id: i64) -> Result<(), String> {
+    let conn = state.write_conn.lock().map_err(|e| e.to_string())?;
+    db::delete_annotation(&conn, id)
+}
+
 // ═══════════════════════════════════════════════════════════
 // Reading Progress commands
 // ═══════════════════════════════════════════════════════════
@@ -349,6 +361,8 @@ pub fn run() {
             save_paragraph_annotations,
             clear_paragraph_annotations,
             clear_annotations,
+            get_all_annotations,
+            delete_annotation,
             // Reading Progress
             save_reading_progress,
             get_reading_progress,

@@ -57,7 +57,7 @@
   <title>我的 - 脚前的灯</title>
 </svelte:head>
 
-<article class="w-full h-full overflow-y-auto px-4 py-4 space-y-5">
+<article class="w-full h-full scroll-y px-4 py-4 space-y-5">
   <ThemeSettings />
 
   <a

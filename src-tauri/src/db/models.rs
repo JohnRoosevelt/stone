@@ -80,6 +80,24 @@ pub struct AnnotationSegment {
     pub color: String,
 }
 
+/// A single annotation row with denormalised book/chapter names for the
+/// "all annotations" list page.
+#[derive(Debug, Serialize)]
+pub struct AllAnnotation {
+    pub id: i64,
+    pub cid: i64,
+    pub book_id: i64,
+    pub chapter_id: i64,
+    pub lang_code: String,
+    pub p_index: i64,
+    pub segments: Vec<AnnotationSegment>,
+    pub updated_at: Option<String>,
+    /// Book name from book_i18n (empty string if book data not imported)
+    pub book_name: String,
+    /// Chapter title from chapters (empty string if chapter data not imported)
+    pub chapter_title: String,
+}
+
 /// All annotation segments for one paragraph. UNIQUE on
 /// (cid, book_id, chapter_id, lang_code, p_index).
 #[derive(Debug, Clone, Serialize, Deserialize)]

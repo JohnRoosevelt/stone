@@ -11,12 +11,7 @@
 
 <article
   data-layout="pub"
-  w-full
-  flex-1
-  flex
-  flex-col
-  overflow-hidden
-  sm="flex-row"
+  class="w-full flex-1 overflow-hidden flex flex-col sm:flex-row"
 >
   {#if !DATAS.isMobile}
     <Nav />
