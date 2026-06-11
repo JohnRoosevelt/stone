@@ -32,13 +32,13 @@ pub use models::{
 // lib.rs call sites (`db::save_paragraph_annotations`, `db::get_books`, ...)
 // don't need to know the internal layout.
 pub use annotations::{
-    clear_all_annotations, clear_paragraph_annotations, delete_annotation,
-    get_all_annotations, get_paragraph_annotations, save_paragraph_annotations,
+    clear_all_annotations, clear_paragraph_annotations, delete_annotation, get_all_annotations,
+    get_paragraph_annotations, save_paragraph_annotations,
 };
 pub use books::{
-    delete_book_data, format_size, get_all_books_for_import, get_books, get_chapters,
+    delete_book_data, format_size, get_all_books_for_import, get_books, get_chapters, get_db_size,
     get_full_book, get_imported_book_ids, get_paragraphs, has_book_data, mark_import_complete,
-    needs_initial_import, reset_import_flag, save_book, get_db_size,
+    needs_initial_import, reset_import_flag, save_book,
 };
 pub use progress::{get_all_reading_progress, get_reading_progress, save_reading_progress};
 pub use schema::init_database;

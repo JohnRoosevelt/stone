@@ -101,17 +101,19 @@ pub fn init_database(db_path: &PathBuf) -> Result<(Connection, Connection)> {
 
     // annotations: text marks (underline, highlight, background, text color).
     //
-    // New schema (per-segment → per-paragraph): one row per paragraph. The
-    // `segments` column stores a JSON array of {start, end, style, color}
+    // One row per `(cid, book_id, chapter_id, lang_code, p_index)` paragraph.
+    // The `segments` column stores a JSON array of {start, end, style, color}
     // entries, where start/end are character offsets into the paragraph text.
     //
-    // Per the spec, we ignore previous "dirty" data and don't try to migrate
-    // it: the old `annotations` table (one row per marked span with ann_type
-    // as a string column) is dropped on init. Users will lose old highlights
-    // but keep the new clean shape.
+    // Note: the per-paragraph shape was introduced in commit c7b4c5c as a
+    // destructive migration that `DROP TABLE IF EXISTS annotations`'d on every
+    // init. That `DROP` was meant to be a one-time cleanup of the old per-span
+    // schema, but it was left in the code — every subsequent init wiped user
+    // highlights too. We now use `IF NOT EXISTS` so user marks survive across
+    // app restarts and APK upgrades. If a future schema change is needed,
+    // add a versioned migration rather than an unconditional DROP.
     write_conn.execute_batch(
-        "DROP TABLE IF EXISTS annotations;
-         CREATE TABLE annotations (
+        "CREATE TABLE IF NOT EXISTS annotations (
              id          INTEGER PRIMARY KEY AUTOINCREMENT,
              cid         INTEGER NOT NULL,
              book_id     INTEGER NOT NULL,

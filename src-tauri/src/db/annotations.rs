@@ -23,17 +23,19 @@ pub fn save_paragraph_annotations(
     conn: &Connection,
     pa: &ParagraphAnnotations,
 ) -> Result<i64, String> {
-    let segments_json =
-        serde_json::to_string(&pa.segments).map_err(|e| e.to_string())?;
+    let segments_json = serde_json::to_string(&pa.segments).map_err(|e| e.to_string())?;
     log::info!(
         "[anno] save: cid={} book={} chapter={} lang={} p={} segments={} payload={}",
-        pa.cid, pa.book_id, pa.chapter_id, pa.lang_code, pa.p_index,
-        pa.segments.len(), segments_json,
+        pa.cid,
+        pa.book_id,
+        pa.chapter_id,
+        pa.lang_code,
+        pa.p_index,
+        pa.segments.len(),
+        segments_json,
     );
 
-    let tx = conn
-        .unchecked_transaction()
-        .map_err(|e| e.to_string())?;
+    let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
 
     // UPSERT — first save inserts, subsequent saves overwrite segments.
     // ON CONFLICT requires SQLite ≥ 3.24 (universally available now).
@@ -87,8 +89,8 @@ pub fn get_paragraph_annotations(
             // Best-effort parse: corrupt/missing column → empty list rather
             // than failing the whole read. Defensive against a future schema
             // mishap or a row that somehow ended up with a non-JSON value.
-            let segments: Vec<AnnotationSegment> = serde_json::from_str(&raw_segments)
-                .unwrap_or_default();
+            let segments: Vec<AnnotationSegment> =
+                serde_json::from_str(&raw_segments).unwrap_or_default();
             Ok(ParagraphAnnotations {
                 id: Some(row.get(0)?),
                 cid: row.get(1)?,
@@ -108,7 +110,12 @@ pub fn get_paragraph_annotations(
     let total_segs: usize = result.iter().map(|r| r.segments.len()).sum();
     log::info!(
         "[anno] get: cid={} book={} chapter={} lang={} rows={} total_segments={}",
-        cid, book_id, chapter_id, lang_code, result.len(), total_segs,
+        cid,
+        book_id,
+        chapter_id,
+        lang_code,
+        result.len(),
+        total_segs,
     );
     Ok(result)
 }
@@ -131,7 +138,12 @@ pub fn clear_paragraph_annotations(
         .map_err(|e| e.to_string())?;
     log::info!(
         "[anno] clear_paragraph: cid={} book={} chapter={} lang={} p={} rows_deleted={}",
-        cid, book_id, chapter_id, lang_code, p_index, n,
+        cid,
+        book_id,
+        chapter_id,
+        lang_code,
+        p_index,
+        n,
     );
     Ok(())
 }
@@ -173,30 +185,36 @@ pub fn get_all_annotations(conn: &Connection) -> Result<Vec<AllAnnotation>, Stri
         ORDER BY book_name, ch.chapter_id, a.p_index
     "#;
     let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
-    let rows = stmt.query_map([], |row| {
-        let raw_segments: String = row.get(6)?;
-        let segments: Vec<AnnotationSegment> =
-            serde_json::from_str(&raw_segments).unwrap_or_default();
-        Ok(AllAnnotation {
-            id: row.get(0)?,
-            cid: row.get(1)?,
-            book_id: row.get(2)?,
-            chapter_id: row.get(3)?,
-            lang_code: row.get(4)?,
-            p_index: row.get(5)?,
-            segments,
-            updated_at: row.get(7)?,
-            book_name: row.get(8)?,
-            chapter_title: row.get(9)?,
+    let rows = stmt
+        .query_map([], |row| {
+            let raw_segments: String = row.get(6)?;
+            let segments: Vec<AnnotationSegment> =
+                serde_json::from_str(&raw_segments).unwrap_or_default();
+            Ok(AllAnnotation {
+                id: row.get(0)?,
+                cid: row.get(1)?,
+                book_id: row.get(2)?,
+                chapter_id: row.get(3)?,
+                lang_code: row.get(4)?,
+                p_index: row.get(5)?,
+                segments,
+                updated_at: row.get(7)?,
+                book_name: row.get(8)?,
+                chapter_title: row.get(9)?,
+            })
         })
-    }).map_err(|e| e.to_string())?;
+        .map_err(|e| e.to_string())?;
 
     let mut result = Vec::new();
     for row in rows {
         result.push(row.map_err(|e| e.to_string())?);
     }
     let total: usize = result.iter().map(|r| r.segments.len()).sum();
-    log::info!("[anno] get_all: rows={} total_segments={}", result.len(), total);
+    log::info!(
+        "[anno] get_all: rows={} total_segments={}",
+        result.len(),
+        total
+    );
     Ok(result)
 }
 

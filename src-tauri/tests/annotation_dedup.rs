@@ -61,7 +61,10 @@ fn save_upserts_one_row_per_paragraph() {
     let count: i64 = write_conn
         .query_row("SELECT COUNT(*) FROM annotations", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(count, 1, "after first save: exactly 1 row for that paragraph");
+    assert_eq!(
+        count, 1,
+        "after first save: exactly 1 row for that paragraph"
+    );
 
     // 2) Save a second time with an expanded segments list — still one row
     //    (upsert), same id (the row is preserved, only the data changes).
@@ -85,7 +88,11 @@ fn save_upserts_one_row_per_paragraph() {
 
     // The stored segments should reflect the expanded list.
     let stored: String = write_conn
-        .query_row("SELECT segments FROM annotations WHERE id = ?1", [id2], |r| r.get(0))
+        .query_row(
+            "SELECT segments FROM annotations WHERE id = ?1",
+            [id2],
+            |r| r.get(0),
+        )
         .unwrap();
     let parsed: Vec<AnnotationSegment> = serde_json::from_str(&stored).unwrap();
     assert_eq!(parsed.len(), 2);
@@ -104,7 +111,11 @@ fn save_upserts_one_row_per_paragraph() {
     assert_eq!(count, 1, "after shrinking segments: still 1 row");
 
     let stored: String = write_conn
-        .query_row("SELECT segments FROM annotations WHERE id = ?1", [id3], |r| r.get(0))
+        .query_row(
+            "SELECT segments FROM annotations WHERE id = ?1",
+            [id3],
+            |r| r.get(0),
+        )
         .unwrap();
     let parsed: Vec<AnnotationSegment> = serde_json::from_str(&stored).unwrap();
     assert_eq!(parsed.len(), 1, "stored list should be the new short one");
@@ -128,7 +139,10 @@ fn save_keeps_disjoint_paragraphs_separate() {
     let count: i64 = write_conn
         .query_row("SELECT COUNT(*) FROM annotations", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(count, 3, "one row per paragraph, even when segments is empty");
+    assert_eq!(
+        count, 3,
+        "one row per paragraph, even when segments is empty"
+    );
 
     // Different chapters in the same book also don't collide.
     let d = make_pa(1, 1, 2, 3, vec![seg(0, 4, "text", "Lime")]);
@@ -160,8 +174,7 @@ fn get_returns_separate_paragraphs() {
     let _ = save_paragraph_annotations(&write_conn, &a).unwrap();
     let _ = save_paragraph_annotations(&write_conn, &b).unwrap();
 
-    let result =
-        app_lib::db::get_paragraph_annotations(&read_conn, 1, 1, 1, "zh").expect("read");
+    let result = app_lib::db::get_paragraph_annotations(&read_conn, 1, 1, 1, "zh").expect("read");
     assert_eq!(result.len(), 2, "two paragraphs worth of rows");
 
     // Find paragraph 3 and verify its two segments came back.
@@ -191,8 +204,7 @@ fn clear_paragraph_removes_only_that_row() {
     let _ = save_paragraph_annotations(&write_conn, &a).unwrap();
     let _ = save_paragraph_annotations(&write_conn, &b).unwrap();
 
-    app_lib::db::clear_paragraph_annotations(&write_conn, 1, 1, 1, "zh", 3)
-        .expect("clear p3");
+    app_lib::db::clear_paragraph_annotations(&write_conn, 1, 1, 1, "zh", 3).expect("clear p3");
 
     let count: i64 = write_conn
         .query_row("SELECT COUNT(*) FROM annotations", [], |r| r.get(0))
