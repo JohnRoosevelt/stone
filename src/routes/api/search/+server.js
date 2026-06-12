@@ -125,6 +125,13 @@ export async function GET({ url, platform }) {
       console.log("[search] KV not available, querying D1 directly");
     }
 
+    // Record search term regardless of KV cache hit/miss, so hot keyword counts keep updating
+    if (kv && offset === 0) {
+      recordSearchTerm(kv, q.trim()).catch((e) =>
+        console.warn("[search] KV record term error:", e.message),
+      );
+    }
+
     const params = [];
     const joins = [];
     const whereConditions = [];
@@ -239,21 +246,7 @@ export async function GET({ url, platform }) {
       setToCache(kv, cacheKey, response).catch((e) =>
         console.warn("[search] KV cache write error:", e.message),
       );
-      // Record search term for trending keywords (first page only to avoid dupes)
-      if (offset === 0) {
-        console.log(
-          "[search] Recording search term for hot keywords:",
-          q.trim(),
-        );
-        recordSearchTerm(kv, q.trim()).catch((e) =>
-          console.warn("[search] KV record term error:", e.message),
-        );
-      } else {
-        console.log(
-          "[search] Skipping hot keyword recording (offset > 0):",
-          offset,
-        );
-      }
+      // Note: recordSearchTerm moved above KV cache check so it fires on cache hit too
     }
 
     return json(response);
