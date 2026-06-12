@@ -163,6 +163,12 @@ function recordHistory(q) {
   if (searchHistory.length > HISTORY_MAX) searchHistory.length = HISTORY_MAX;
 }
 
+/** Fire-and-forget: tell the server this term was searched (for hot keywords) */
+function trackSearchTerm(term) {
+  if (DATAS.isTauri) return;
+  fetch(`/api/search/track?q=${encodeURIComponent(term)}`).catch(() => {});
+}
+
 /**
  * Execute search (append or refresh)
  * @param {string} q - Search query
@@ -178,6 +184,7 @@ export async function doSearch(q, cid, append = false) {
     if (restoreFromCache(trimmed, cid)) {
       searchState.loading = false;
       searchState.loadingMore = false;
+      trackSearchTerm(trimmed);
       return;
     }
 
@@ -258,6 +265,7 @@ export async function doSearch(q, cid, append = false) {
     saveToCache();
     if (!append) {
       recordHistory(trimmed);
+      trackSearchTerm(trimmed);
     }
   } catch (e) {
     console.error("[search] error:", e);

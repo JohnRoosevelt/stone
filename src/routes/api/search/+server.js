@@ -114,22 +114,11 @@ export async function GET({ url, platform }) {
       const cached = await getFromCache(kv, cacheKey);
       console.log("[search] KV cache result:", cached ? "HIT" : "MISS");
       if (cached) {
-        console.log(
-          "[search] KV cache hit: returning cached data, total =",
-          cached.total,
-        );
         return json(cached);
       }
       console.log("[search] KV cache miss — will query D1");
     } else {
       console.log("[search] KV not available, querying D1 directly");
-    }
-
-    // Record search term regardless of KV cache hit/miss, so hot keyword counts keep updating
-    if (kv && offset === 0) {
-      recordSearchTerm(kv, q.trim()).catch((e) =>
-        console.warn("[search] KV record term error:", e.message),
-      );
     }
 
     const params = [];
@@ -246,7 +235,11 @@ export async function GET({ url, platform }) {
       setToCache(kv, cacheKey, response).catch((e) =>
         console.warn("[search] KV cache write error:", e.message),
       );
-      // Note: recordSearchTerm moved above KV cache check so it fires on cache hit too
+      if (offset === 0) {
+        recordSearchTerm(kv, q.trim()).catch((e) =>
+          console.warn("[search] KV record term error:", e.message),
+        );
+      }
     }
 
     return json(response);
