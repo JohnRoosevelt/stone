@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' ipc://localhost https://r2.lelexue.cn; img-src 'self' data: https://r2.lelexue.cn; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; worker-src 'self' blob:"
+      "csp": "default-src 'self'; connect-src 'self' ipc://localhost https://r2.lelexue.cn https://lelexue.cn; img-src 'self' data: https://r2.lelexue.cn; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; worker-src 'self' blob:"
     }
   },
   "bundle": {

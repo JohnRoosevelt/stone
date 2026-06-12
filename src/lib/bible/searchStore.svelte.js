@@ -165,8 +165,7 @@ function recordHistory(q) {
 
 /** Fire-and-forget: tell the server this term was searched (for hot keywords) */
 function trackSearchTerm(term) {
-  if (DATAS.isTauri) return;
-  fetch(`/api/search/track?q=${encodeURIComponent(term)}`).catch(() => {});
+  fetch(`https://lelexue.cn/api/search/track?q=${encodeURIComponent(term)}`).catch(() => {});
 }
 
 /**

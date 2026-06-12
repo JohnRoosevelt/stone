@@ -65,7 +65,7 @@
   async function fetchHotKeywords() {
     try {
       console.log("[search] fetchHotKeywords: fetching /api/search/hot...");
-      const res = await fetch("/api/search/hot");
+      const res = await fetch("https://lelexue.cn/api/search/hot");
       console.log(
         "[search] fetchHotKeywords: response status:",
         res.status,
