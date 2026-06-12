@@ -165,7 +165,10 @@ function recordHistory(q) {
 
 /** Fire-and-forget: tell the server this term was searched (for hot keywords) */
 function trackSearchTerm(term) {
-  fetch(`https://lelexue.cn/api/search/track?q=${encodeURIComponent(term)}`).catch(() => {});
+  const url = DATAS.isTauri
+    ? `https://lelexue.cn/api/search/track?q=${encodeURIComponent(term)}`
+    : `/api/search/track?q=${encodeURIComponent(term)}`;
+  fetch(url).catch(() => {});
 }
 
 /**
@@ -223,6 +226,7 @@ export async function doSearch(q, cid, append = false) {
       saveToCache();
       if (!append) {
         recordHistory(trimmed);
+        trackSearchTerm(trimmed);
       }
       return;
     }

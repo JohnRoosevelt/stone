@@ -114,6 +114,12 @@ export async function GET({ url, platform }) {
       const cached = await getFromCache(kv, cacheKey);
       console.log("[search] KV cache result:", cached ? "HIT" : "MISS");
       if (cached) {
+        // Record search term even on cache hit so hot keyword counts keep updating
+        if (offset === 0) {
+          recordSearchTerm(kv, q.trim()).catch((e) =>
+            console.warn("[search] KV record term error:", e.message),
+          );
+        }
         return json(cached);
       }
       console.log("[search] KV cache miss — will query D1");
@@ -227,18 +233,40 @@ export async function GET({ url, platform }) {
       hasMore,
     );
 
-    // ── Store in KV cache (fire-and-forget; don't block response) ──
+    // ── Store in KV cache (use waitUntil so Pages Functions don't kill these) ──
+    //
+    // CRITICAL: Cloudflare Pages Functions terminate execution immediately
+    // after the response is returned, unlike Workers which wait for pending
+    // promises. Without waitUntil, fire-and-forget KV writes are silently
+    // killed and data is never persisted.
     if (kv) {
       const cacheKey = buildCacheKey({ q, lang, cid, bookId, limit, offset });
       console.log("[search] Writing D1 result to KV cache: key =", cacheKey);
-      // Write search results to KV cache asynchronously
-      setToCache(kv, cacheKey, response).catch((e) =>
-        console.warn("[search] KV cache write error:", e.message),
-      );
+
+      const ctx = platform?.context;
+      const writePromise = setToCache(kv, cacheKey, response);
+
       if (offset === 0) {
-        recordSearchTerm(kv, q.trim()).catch((e) =>
-          console.warn("[search] KV record term error:", e.message),
-        );
+        const recordPromise = recordSearchTerm(kv, q.trim());
+        if (ctx?.waitUntil) {
+          ctx.waitUntil(writePromise);
+          ctx.waitUntil(recordPromise);
+        } else {
+          writePromise.catch((e) =>
+            console.warn("[search] KV cache write error:", e.message),
+          );
+          recordPromise.catch((e) =>
+            console.warn("[search] KV record term error:", e.message),
+          );
+        }
+      } else {
+        if (ctx?.waitUntil) {
+          ctx.waitUntil(writePromise);
+        } else {
+          writePromise.catch((e) =>
+            console.warn("[search] KV cache write error:", e.message),
+          );
+        }
       }
     }
 

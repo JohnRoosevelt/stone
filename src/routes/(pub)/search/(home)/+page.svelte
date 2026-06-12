@@ -3,6 +3,7 @@
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import { safeGoBack } from "$lib";
+  import { DATAS } from "$lib/data.svelte";
   import {
     searchState,
     searchHistory,
@@ -65,7 +66,10 @@
   async function fetchHotKeywords() {
     try {
       console.log("[search] fetchHotKeywords: fetching /api/search/hot...");
-      const res = await fetch("https://lelexue.cn/api/search/hot");
+      const apiUrl = DATAS.isTauri
+        ? "https://lelexue.cn/api/search/hot"
+        : "/api/search/hot";
+      const res = await fetch(apiUrl);
       console.log(
         "[search] fetchHotKeywords: response status:",
         res.status,
