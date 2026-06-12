@@ -11,7 +11,7 @@
  */
 
 import { DATAS } from "$lib/data.svelte";
-import { isTauri } from "$lib/tauri";
+import { trackSearchTerm } from "$lib/tauri";
 
 /** @typedef {{ rowid: number, cid: number, book_id: number, chapter_id: number, id: string, num: number | null, text_content: string, format: string, lang_code: string, chapter_title: string, book_name: string }} SearchResult */
 
@@ -162,14 +162,6 @@ function recordHistory(q) {
   if (idx !== -1) searchHistory.splice(idx, 1);
   searchHistory.unshift(q);
   if (searchHistory.length > HISTORY_MAX) searchHistory.length = HISTORY_MAX;
-}
-
-/** Fire-and-forget: tell the server this term was searched (for hot keywords) */
-function trackSearchTerm(term) {
-  const url = isTauri()
-    ? `https://lelexue.cn/api/search/track?q=${encodeURIComponent(term)}`
-    : `/api/search/track?q=${encodeURIComponent(term)}`;
-  fetch(url).catch(() => {});
 }
 
 /**

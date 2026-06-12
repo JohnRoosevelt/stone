@@ -3,7 +3,7 @@
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import { safeGoBack } from "$lib";
-  import { isTauri } from "$lib/tauri";
+  import { fetchHotKeywords as fetchHotKeywordsAPI } from "$lib/tauri";
   import {
     searchState,
     searchHistory,
@@ -62,54 +62,22 @@
     submitSearch();
   }
 
-  /** Fetch hot keywords from KV-backed API */
+  /** Fetch hot keywords from KV-backed API (delegates to $lib/tauri for env-aware routing) */
   async function fetchHotKeywords() {
+    console.log("[search] fetchHotKeywords: fetching...");
     try {
-      console.log("[search] fetchHotKeywords: fetching /api/search/hot...");
-      const apiUrl = isTauri()
-        ? "https://lelexue.cn/api/search/hot"
-        : "/api/search/hot";
-      const res = await fetch(apiUrl);
+      const data = await fetchHotKeywordsAPI();
       console.log(
-        "[search] fetchHotKeywords: response status:",
-        res.status,
-        res.statusText,
+        "[search] fetchHotKeywords: got",
+        Array.isArray(data) ? data.length : "N/A",
+        "items",
+        JSON.stringify(data),
       );
-      if (res.ok) {
-        const data = await res.json();
-        console.log(
-          "[search] fetchHotKeywords: response data:",
-          JSON.stringify(data),
-        );
-        console.log(
-          "[search] fetchHotKeywords: isArray:",
-          Array.isArray(data),
-          "length:",
-          Array.isArray(data) ? data.length : "N/A",
-        );
-        if (Array.isArray(data)) {
-          hotKeywords = data;
-          console.log(
-            "[search] fetchHotKeywords: set hotKeywords to",
-            data.length,
-            "items",
-          );
-        } else {
-          console.warn(
-            "[search] fetchHotKeywords: response is not an array:",
-            typeof data,
-          );
-        }
-      } else {
-        console.warn(
-          "[search] fetchHotKeywords: response not OK, status:",
-          res.status,
-        );
-        const body = await res.text().catch(() => "(failed to read body)");
-        console.warn("[search] fetchHotKeywords: response body:", body);
+      if (Array.isArray(data) && data.length > 0) {
+        hotKeywords = data;
       }
     } catch (e) {
-      console.warn("[search] Failed to fetch hot keywords:", e.message);
+      console.warn("[search] fetchHotKeywords failed:", e.message || e);
     }
   }
 

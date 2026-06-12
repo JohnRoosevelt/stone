@@ -2,6 +2,7 @@ pub mod db;
 mod seed;
 
 use db::{init_database, DbState};
+use reqwest;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
@@ -290,6 +291,68 @@ fn get_all_reading_progress(
 }
 
 // ═══════════════════════════════════════════════════════════
+// Hot Keywords — fetch from production API via Rust HTTP (not WebView fetch)
+// ═══════════════════════════════════════════════════════════
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct HotKeyword {
+    text: String,
+    count: i64,
+}
+
+#[tauri::command]
+async fn fetch_hot_keywords() -> Result<Vec<HotKeyword>, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| format!("client build failed: {}", e))?;
+    let resp = client
+        .get("https://stone.lelexue.cn/api/search/hot")
+        .send()
+        .await
+        .map_err(|e| format!("fetch_hot_keywords request failed: {}", e))?;
+    let terms: Vec<HotKeyword> = resp
+        .json()
+        .await
+        .map_err(|e| format!("fetch_hot_keywords parse failed: {}", e))?;
+    Ok(terms)
+}
+
+#[tauri::command]
+async fn track_search_term(term: String) -> Result<(), String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| format!("client build failed: {}", e))?;
+    let url = format!(
+        "https://stone.lelexue.cn/api/search/track?q={}",
+        urlencoding(&term)
+    );
+    client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("track_search_term request failed: {}", e))?;
+    Ok(())
+}
+
+/// Minimal URL-encode for the query parameter (only encode space and special chars)
+fn urlencoding(s: &str) -> String {
+    let mut result = String::with_capacity(s.len() * 3);
+    for byte in s.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                result.push(byte as char);
+            }
+            _ => {
+                result.push_str(&format!("%{:02X}", byte));
+            }
+        }
+    }
+    result
+}
+
+// ═══════════════════════════════════════════════════════════
 // Devtools
 // ═══════════════════════════════════════════════════════════
 
@@ -373,6 +436,9 @@ pub fn run() {
             save_reading_progress,
             get_reading_progress,
             get_all_reading_progress,
+            // Hot Keywords (Rust HTTP)
+            fetch_hot_keywords,
+            track_search_term,
             // Devtools
             is_desktop,
             open_devtools,

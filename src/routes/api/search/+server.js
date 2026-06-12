@@ -87,6 +87,7 @@ export async function GET({ url, platform }) {
   try {
     const db = getDB(platform);
     const kv = platform?.env?.STONE_SEARCH_CACHE;
+    const ctx = platform?.context;
 
     const q = url.searchParams.get("q") || "";
     const lang = url.searchParams.get("lang") || "zh";
@@ -116,8 +117,12 @@ export async function GET({ url, platform }) {
       if (cached) {
         // Record search term even on cache hit so hot keyword counts keep updating
         if (offset === 0) {
-          recordSearchTerm(kv, q.trim()).catch((e) =>
-            console.warn("[search] KV record term error:", e.message),
+          const recordPromise = recordSearchTerm(kv, q.trim());
+          if (ctx?.waitUntil) {
+            ctx.waitUntil(recordPromise);
+          }
+          recordPromise.catch((e) =>
+            console.warn("[search] KV record term error:", e.message, e.stack),
           );
         }
         return json(cached);
@@ -243,7 +248,6 @@ export async function GET({ url, platform }) {
       const cacheKey = buildCacheKey({ q, lang, cid, bookId, limit, offset });
       console.log("[search] Writing D1 result to KV cache: key =", cacheKey);
 
-      const ctx = platform?.context;
       const writePromise = setToCache(kv, cacheKey, response);
 
       if (offset === 0) {

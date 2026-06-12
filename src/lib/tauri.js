@@ -226,3 +226,41 @@ export async function searchAPI(
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
+
+// ── Hot Keywords ───────────────────────────────────────────────
+// Tauri uses Rust HTTP (reqwest) for reliable SSL; web uses fetch.
+
+/**
+ * Fetch hot search keywords from the production API.
+ * Returns an empty array on failure (graceful degradation).
+ * @returns {Promise<Array<{text: string, count: number}>>}
+ */
+export async function fetchHotKeywords() {
+  if (isTauri()) {
+    try {
+      return await tauriInvoke("fetch_hot_keywords");
+    } catch {
+      return [];
+    }
+  }
+  try {
+    const res = await fetch("/api/search/hot");
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fire-and-forget: tell the server this term was searched.
+ * @param {string} term
+ */
+export function trackSearchTerm(term) {
+  if (isTauri()) {
+    tauriInvoke("track_search_term", { term }).catch(() => {});
+    return;
+  }
+  fetch(`/api/search/track?q=${encodeURIComponent(term)}`).catch(() => {});
+}

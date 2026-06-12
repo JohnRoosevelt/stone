@@ -33,5 +33,8 @@ tauri-plugin-opener = "2"
 # SQLite (bundled = 内嵌 SQLite，无需系统安装)
 rusqlite = { version = "0.32", features = ["bundled"] }
 
+# HTTP client with rustls (no OpenSSL dependency, works on Android)
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+
 # 异步运行时（Tauri async commands 需要）
 tokio = { version = "1", features = ["full"] }
