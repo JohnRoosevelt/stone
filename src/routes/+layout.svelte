@@ -1,5 +1,5 @@
 <script>
-  import { DATAS } from "$lib/data.svelte";
+  import { DATAS, refreshHotKeywords } from "$lib/data.svelte";
   import Dialog from "$lib/global/Dialog.svelte";
   import InitialImport from "$lib/global/InitialImport.svelte";
   import RouteLoading from "$lib/global/RouteLoading.svelte";
@@ -67,6 +67,9 @@
     // wakeLock() silently fails on initial load without user gesture
     // It only takes effect when the user opens an article to read (called actively on reader pages)
     wakeLock();
+
+    // ── Pre-warm hot keywords cache so /search renders instantly on entry ──
+    refreshHotKeywords();
 
     // ── Network Information ──
     // Tauri (Android WebView) has no `navigator.connection` — only `navigator.onLine`,

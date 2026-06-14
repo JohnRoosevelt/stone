@@ -3,7 +3,7 @@
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import { safeGoBack } from "$lib";
-  import { fetchHotKeywords as fetchHotKeywordsAPI } from "$lib/tauri";
+  import { DATAS, refreshHotKeywords } from "$lib/data.svelte";
   import {
     searchState,
     searchHistory,
@@ -14,13 +14,12 @@
   const SCOPE_OPTIONS = SCOPES;
 
   /**
-   * Hot search keywords — fetched from KV-backed API on mount.
-   * Only shows when users have actually searched (data exists in KV).
-   * Each entry includes a search count.
+   * Hot search keywords — read synchronously from the in-memory global cache
+   * (populated at app startup by root layout + on each /search mount).
+   * Shows immediately if cache is non-empty; otherwise the section is hidden
+   * until the background refresh completes.
    */
-  let hotKeywords = $state(
-    /** @type {Array<{text: string, count: number}>} */ ([]),
-  );
+  let hotKeywords = $derived(DATAS.hotKeywords);
 
   /** Local reference to ensure reactivity */
   let historyItems = $state(searchHistory);
@@ -62,31 +61,13 @@
     submitSearch();
   }
 
-  /** Fetch hot keywords from KV-backed API (delegates to $lib/tauri for env-aware routing) */
-  async function fetchHotKeywords() {
-    console.log("[search] fetchHotKeywords: fetching...");
-    try {
-      const data = await fetchHotKeywordsAPI();
-      console.log(
-        "[search] fetchHotKeywords: got",
-        Array.isArray(data) ? data.length : "N/A",
-        "items",
-        JSON.stringify(data),
-      );
-      if (Array.isArray(data) && data.length > 0) {
-        hotKeywords = data;
-      }
-    } catch (e) {
-      console.warn("[search] fetchHotKeywords failed:", e.message || e);
-    }
-  }
-
-  // Auto focus after mount, fetch hot keywords
+  // Auto focus after mount; hot keywords render immediately from cache (DATAS.hotKeywords).
+  // Refresh in the background so cache stays current on each visit.
   onMount(() => {
     requestAnimationFrame(() => {
       inputEl?.focus();
     });
-    fetchHotKeywords();
+    refreshHotKeywords();
   });
 </script>
 

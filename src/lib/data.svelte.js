@@ -11,6 +11,8 @@
  *   import { touchStore, touchP } from "$lib/stores/touch.svelte";
  */
 
+import { fetchHotKeywords } from "$lib/tauri";
+
 export const DATAS = $state({
   // ── Network ──
   online: false,
@@ -47,6 +49,32 @@ export const DATAS = $state({
 
   // ── Touch ──
   touchInfo: {},
+
+  // ── Hot Search Keywords (in-memory cache, populated at app start + on /search mount) ──
+  hotKeywords: [],
 });
 
 export const TOUCHP = $state({});
+
+/**
+ * Silently fetch hot keywords and update DATAS.hotKeywords.
+ * Safe to call multiple times — race-safe via single in-flight promise.
+ * Failures are swallowed (cache stays at previous value).
+ */
+let _inFlight = null;
+export async function refreshHotKeywords() {
+  if (_inFlight) return _inFlight;
+  _inFlight = (async () => {
+    try {
+      const data = await fetchHotKeywords();
+      if (Array.isArray(data) && data.length > 0) {
+        DATAS.hotKeywords = data;
+      }
+    } catch {
+      // ignore — keep prior cache
+    } finally {
+      _inFlight = null;
+    }
+  })();
+  return _inFlight;
+}
